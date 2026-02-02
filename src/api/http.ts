@@ -43,6 +43,7 @@ export function json(
   statusCode: number,
   body: unknown
 ): void {
+  if (res.headersSent || res.writableEnded) return;
   const payload = JSON.stringify(body, null, 2);
   res.statusCode = statusCode;
   res.setHeader("content-type", "application/json; charset=utf-8");

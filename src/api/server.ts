@@ -378,8 +378,10 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
     let timeout: NodeJS.Timeout | undefined;
     if (!isSseRequest && requestTimeoutMs > 0) {
       timeout = setTimeout(() => {
-        if (res.writableEnded) return;
-        json(res, 408, { error: "request_timeout", message: "Request timed out" });
+        if (res.headersSent || res.writableEnded) return;
+        try {
+          json(res, 408, { error: "request_timeout", message: "Request timed out" });
+        } catch { /* response already in flight */ }
         req.destroy();
       }, requestTimeoutMs);
       timeout.unref?.();

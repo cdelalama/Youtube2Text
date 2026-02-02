@@ -300,6 +300,12 @@ Second pass auditing CLI, config, YouTube modules, pipeline, and formatters.
 - `npm run api:contract:check`
 - `npm run test:docker-smoke` (may take >5 min locally; injects `Y2T_API_KEY=smoke`)
 
+## Bug Fix: ERR_HTTP_HEADERS_SENT crash (0.33.1)
+- `json()` in `src/api/http.ts` now guards against double-response (checks `headersSent`/`writableEnded`).
+- Request timeout handler in `src/api/server.ts` also guards and wraps in try/catch.
+- Root cause: async handlers completing after the request timeout already sent a 408.
+- Tests: `tests/apiRequestTimeout.test.ts` (2 tests).
+
 ## Secrets Management
 - Secrets can be provided via `.env` file or [Doppler](https://www.doppler.com/) secrets manager.
 - Doppler project: `youtube2text`, environment: `dev`.
