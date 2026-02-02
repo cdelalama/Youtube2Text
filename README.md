@@ -90,9 +90,34 @@ Configuration is loaded (lowest to highest precedence) from:
 
 1. Optional `output/_settings.json` for non-secret defaults (created via `GET/PATCH /settings` or the web UI Settings page).
 2. Optional `config.yaml` for non-secret defaults.
-3. `.env` (required for secrets and highest-precedence overrides).
+3. Environment variables — provided via `.env` file **or** a secrets manager such as [Doppler](https://www.doppler.com/).
 
 Per-run overrides (CLI flags, `runs.yaml`, `POST /runs` request fields) override these defaults for that run.
+
+### Secrets management
+
+You can provide secrets (API keys, auth tokens) in two ways:
+
+| Method | When to use |
+|--------|-------------|
+| `.env` file | Local development on a single machine. Copy `.env.example` to `.env` and fill in your keys. |
+| [Doppler](https://www.doppler.com/) | Recommended for teams or multi-machine setups. Secrets are stored centrally and injected at runtime — no `.env` file needed. |
+
+**Using Doppler:**
+
+```bash
+# One-time setup (per machine)
+doppler login
+cd ~/Youtube2Text
+doppler setup          # select project + environment
+
+# Run with secrets injected
+doppler run -- npm run dev:api
+doppler run -- npm run dev
+doppler run -- docker compose up --build
+```
+
+When using Doppler, you do not need a `.env` file. Both methods use the same environment variable names documented below.
 
 Example environment variables:
 
@@ -138,7 +163,7 @@ Notes:
 
 Example files:
 
-- `.env.example` - template of supported env vars (copy to `.env`).
+- `.env.example` - template of supported env vars (copy to `.env`, or import into Doppler).
 - `config.yaml.example` - optional non-secret defaults (copy to `config.yaml`).
 - `runs.yaml.example` - optional batch runs template (copy to `runs.yaml` or `runs.yml`).
 - `output/_settings.json` - optional non-secret defaults persisted by the API/web UI (never commit this file).

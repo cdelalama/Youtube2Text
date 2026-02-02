@@ -300,9 +300,15 @@ Second pass auditing CLI, config, YouTube modules, pipeline, and formatters.
 - `npm run api:contract:check`
 - `npm run test:docker-smoke` (may take >5 min locally; injects `Y2T_API_KEY=smoke`)
 
+## Secrets Management
+- Secrets can be provided via `.env` file or [Doppler](https://www.doppler.com/) secrets manager.
+- Doppler project: `youtube2text`, environment: `dev`.
+- When using Doppler, prefix commands with `doppler run --` (no `.env` file needed).
+- Documentation updated: README.md, HOW_TO_USE.md, DEPLOY_PLAYBOOK.md.
+
 ## Operator Notes
-- `.env` must include `ASSEMBLYAI_API_KEY` when `sttProvider=assemblyai`.
-- `.env` must include `OPENAI_API_KEY` or `Y2T_OPENAI_API_KEY` when `sttProvider=openai_whisper`.
+- Secrets must include `ASSEMBLYAI_API_KEY` when `sttProvider=assemblyai` (via `.env` or Doppler).
+- Secrets must include `OPENAI_API_KEY` or `Y2T_OPENAI_API_KEY` when `sttProvider=openai_whisper`.
 - Optional: `Y2T_MAX_AUDIO_MB` (cap before splitting) + `Y2T_SPLIT_OVERLAP_SECONDS` (overlap between chunks).
 - Optional: `Y2T_MAX_UPLOAD_MB` (max upload size for `POST /audio`).
 - `Y2T_API_KEY` is required for the HTTP API server (set `Y2T_ALLOW_INSECURE_NO_API_KEY=true` and `Y2T_ALLOW_INSECURE_NO_API_KEY_CONFIRM=I_UNDERSTAND` for local dev only).

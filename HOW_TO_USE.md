@@ -12,6 +12,16 @@ Most users should start with `README.md`. If you are integrating this into anoth
 - Use the Next.js admin UI (minimal) as a local control panel over the API.
 - Deploy API+Web via Docker Compose (still CLI-compatible; CLI is not removed).
 
+## Secrets
+
+Secrets (API keys, auth tokens) can be provided via a `.env` file or via [Doppler](https://www.doppler.com/) secrets manager.
+
+With **`.env`**: copy `.env.example` to `.env` and fill in your keys.
+
+With **Doppler** (recommended for multi-machine setups): run `doppler login`, then `doppler setup` in the project directory. Prefix any command with `doppler run --` to inject secrets automatically (no `.env` file needed).
+
+All quickstart examples below assume secrets are available in the environment (via either method).
+
 ## Quickstart (CLI)
 
 1) Install dependencies:
@@ -25,6 +35,8 @@ npm install
 ```powershell
 $env:ASSEMBLYAI_API_KEY="your_key_here"
 ```
+
+Or, with Doppler: `doppler run -- npm run dev -- https://...` (skip step 2).
 
 3) Run a URL:
 
@@ -77,6 +89,8 @@ $env:ASSEMBLYAI_API_KEY="your_key_here"
 $env:Y2T_API_KEY="your_admin_key_here"   # required unless Y2T_ALLOW_INSECURE_NO_API_KEY=true + confirm
 docker compose up --build
 ```
+
+Or, with Doppler: `doppler run -- docker compose up --build`.
 
 ## Auth (important)
 

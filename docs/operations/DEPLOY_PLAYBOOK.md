@@ -130,10 +130,25 @@ Notes:
 - If `Y2T_API_KEY` is set on the server (required by default), clients must include the header.
 - If the API is not exposed publicly, run this on the same host/container network (or via your reverse proxy if you intentionally expose it).
 
+## Secrets management
+
+Secrets can be provided via `.env` file or via [Doppler](https://www.doppler.com/) secrets manager.
+
+| Method | Setup |
+|--------|-------|
+| `.env` file | Copy `.env.example` to `.env` on the server and fill in secrets. Compose reads it automatically. |
+| Doppler | Install Doppler CLI, run `doppler login` + `doppler setup`, then prefix commands with `doppler run --`. No `.env` file needed. |
+
+When using Doppler with Docker Compose:
+
+```bash
+doppler run -- docker compose up --build -d
+```
+
 ## Suggested deployment steps (high level)
 
 1) Copy `docker-compose.yml` to your server.
-2) Provide env vars (shell env or `.env` loaded by compose):
+2) Provide env vars (`.env` file, Doppler, or shell env):
    - `ASSEMBLYAI_API_KEY`
    - `Y2T_API_KEY` (recommended)
    - `Y2T_CORS_ORIGINS` (recommended)
