@@ -14,3 +14,4 @@ Create new documents in this directory as your operational footprint grows.
 Index:
 - `API_CONTRACT.md` - OpenAPI + generated types/client + contract-check workflow to prevent endpoint/type drift.
 - `DEPLOY_PLAYBOOK.md` - Single-tenant server deployment guidance (Docker + reverse proxy + security).
+- `DOCS_VERSIONING_ROADMAP.md` - Delivery roadmap for documentation/versioning guardrails and release discipline.

@@ -3,7 +3,7 @@
 Local-first, modular CLI service that:
 1. Enumerates videos from a public YouTube channel, playlist, or a single video URL.
 2. Downloads audio-only tracks using `yt-dlp`.
-3. Transcribes audio with AssemblyAI (diarization) or OpenAI Whisper API.
+3. Transcribes audio with AssemblyAI (diarization), Deepgram (diarization), or OpenAI Whisper API.
 4. Stores structured results on disk for later analysis or UI browsing.
 
 The goal is to keep each stage separable and replaceable (e.g., swapping AssemblyAI for another ASR provider, adding semantic post-processing, or attaching a web dashboard).
@@ -13,12 +13,14 @@ Quick links:
 - Integration guide (curl/n8n/webhooks): `INTEGRATION.md`
 - LLM snapshot/roadmap: `docs/llm/HANDOFF.md`
 - Deployment playbook (single-tenant admin): `docs/operations/DEPLOY_PLAYBOOK.md`
+- Versioning policy: `docs/VERSIONING_RULES.md`
+- Docs/versioning roadmap: `docs/operations/DOCS_VERSIONING_ROADMAP.md`
 
 ## Core Capabilities
 
 - Channel/playlist enumeration via `yt-dlp --flat-playlist` (no YouTube API key required).
 - Audio-only download in `mp3` or `wav`.
-- AssemblyAI upload + diarized transcription (`speaker_labels: true`) or OpenAI Whisper API (no diarization).
+- AssemblyAI upload + diarized transcription (`speaker_labels: true`), Deepgram diarized transcription, or OpenAI Whisper API (no diarization).
 - Idempotent processing: skips videos already processed unless forced.
 - Output formats: `.json` (canonical), readable `.txt` + `.md` (timestamps + wrapping), `.jsonl` (LLM-friendly, one utterance per line), optional `.csv`.
 - Optional per-video comments dump via `yt-dlp` into `.comments.json`.
@@ -34,7 +36,7 @@ Pipeline stages with explicit module boundaries:
 
 - **InputResolver**: resolves a channel/playlist URL to a list of video IDs and metadata.
 - **AudioExtractor**: downloads and caches audio tracks locally.
-- **TranscriptionProvider**: interface for ASR backends (AssemblyAI + OpenAI Whisper).
+- **TranscriptionProvider**: interface for ASR backends (AssemblyAI + Deepgram + OpenAI Whisper).
 - **Formatter**: converts diarized transcript JSON into `.txt`, `.md`, `.jsonl` and optional `.csv` formats.
 - **Storage**: writes outputs and handles idempotency checks.
 - **Orchestrator (CLI)**: coordinates stages with concurrency, filtering, retries, and logging.
@@ -46,6 +48,7 @@ Later extensions read from `output/` only (e.g., React dashboard), keeping the p
 - Node.js 18+
 - `yt-dlp` installed and available on PATH (system dependency)
 - AssemblyAI API key (required when `sttProvider=assemblyai`)
+- Deepgram API key (required when `sttProvider=deepgram`)
 - OpenAI API key (required when `sttProvider=openai_whisper`)
 - Windows/macOS/Linux
 
@@ -77,6 +80,11 @@ npm run dev -- --ytDlpPath "C:\Users\cdela\AppData\Local\Microsoft\WinGet\Links\
 
 If you set `sttProvider=openai_whisper`, provide `OPENAI_API_KEY` (or `Y2T_OPENAI_API_KEY`).
 Whisper API does not provide speaker diarization.
+
+### Deepgram API
+
+If you set `sttProvider=deepgram`, provide `DEEPGRAM_API_KEY` (or `Y2T_DEEPGRAM_API_KEY`).
+Deepgram supports speaker diarization.
 
 ### yt-dlp extractor warnings (public videos)
 
@@ -124,12 +132,16 @@ Example environment variables:
 ```
 ASSEMBLYAI_API_KEY=your_key_here
 Y2T_ASSEMBLYAI_API_KEYS=key1,key2
+DEEPGRAM_API_KEY=your_key_here
+Y2T_DEEPGRAM_API_KEYS=key1,key2
 OPENAI_API_KEY=your_openai_key_here
 Y2T_OPENAI_API_KEY=
 Y2T_OUTPUT_DIR=output
 Y2T_AUDIO_DIR=audio
 Y2T_STT_PROVIDER=assemblyai
 Y2T_OPENAI_WHISPER_MODEL=whisper-1
+Y2T_DEEPGRAM_MODEL=nova-3
+Y2T_DEEPGRAM_DIARIZATION=true
 Y2T_MAX_AUDIO_MB=
 Y2T_SPLIT_OVERLAP_SECONDS=2
 Y2T_FILENAME_STYLE=title_id   # id | id_title | title_id
@@ -148,15 +160,21 @@ Y2T_CATALOG_MAX_AGE_HOURS=168
 Y2T_MAX_UPLOAD_MB=1024
 Y2T_ASSEMBLYAI_KEY_FAILURES=2
 Y2T_ASSEMBLYAI_KEY_COOLDOWN_MS=60000
+Y2T_DEEPGRAM_KEY_FAILURES=2
+Y2T_DEEPGRAM_KEY_COOLDOWN_MS=60000
 ```
 
 Notes:
 - Boolean env vars like `Y2T_CSV_ENABLED` / `Y2T_COMMENTS_ENABLED` only override config when set; accepted truthy values: `true`, `1`, `yes`.
 - For consistency, prefer `Y2T_*` env vars. Legacy unprefixed names (e.g. `OUTPUT_DIR`, `CONCURRENCY`, `COMMENTS_ENABLED`, `YT_DLP_PATH`) are still supported.
-- `Y2T_STT_PROVIDER` selects the speech-to-text backend (`assemblyai` or `openai_whisper`).
+- `Y2T_STT_PROVIDER` selects the speech-to-text backend (`assemblyai`, `deepgram`, or `openai_whisper`).
 - `Y2T_OPENAI_WHISPER_MODEL` sets the OpenAI Whisper model (default `whisper-1`).
 - `OPENAI_API_KEY` / `Y2T_OPENAI_API_KEY` provide OpenAI credentials.
+- `DEEPGRAM_API_KEY` / `Y2T_DEEPGRAM_API_KEY` provide Deepgram credentials.
+- `Y2T_DEEPGRAM_MODEL` sets the Deepgram model (default `nova-3`).
+- `Y2T_DEEPGRAM_DIARIZATION` enables speaker diarization in Deepgram (default `true`).
 - `Y2T_ASSEMBLYAI_API_KEYS` enables multi-key failover for AssemblyAI (comma-separated).
+- `Y2T_DEEPGRAM_API_KEYS` enables multi-key failover for Deepgram (comma-separated).
 - `Y2T_MAX_AUDIO_MB` sets a per-file audio size cap before splitting (provider limit applies if lower).
 - `Y2T_SPLIT_OVERLAP_SECONDS` sets overlap between chunks (default 2s).
 - API/settings inputs are normalized server-side: numeric fields are clamped to safe bounds, `afterDate` must be YYYY-MM-DD, and manual `languageCode` must be a supported AssemblyAI code (OpenAI Whisper accepts primary codes).
@@ -186,7 +204,9 @@ Options:
 | `--audioDir` | path | `audio` | Audio cache directory. |
 | `--filenameStyle` | `id|id_title|title_id` | `title_id` | Output/audio filename style. |
 | `--audioFormat` | `mp3|wav` | `mp3` | Audio download format. |
-| `--sttProvider` | `assemblyai|openai_whisper` | `assemblyai` | Speech-to-text provider. |
+| `--sttProvider` | `assemblyai|deepgram|openai_whisper` | `assemblyai` | Speech-to-text provider. |
+| `--deepgramModel` | string | `nova-3` | Deepgram model (only for `sttProvider=deepgram`). |
+| `--deepgramDiarization` | `true|false` | `true` | Deepgram diarization (only for `sttProvider=deepgram`). |
 | `--openaiWhisperModel` | string | `whisper-1` | OpenAI Whisper model (only for `sttProvider=openai_whisper`). |
 | `--maxAudioMB` | number | unset | Max audio size before splitting (provider limit applies if lower). |
 | `--splitOverlapSeconds` | number | `2` | Overlap seconds between chunks when splitting. |
@@ -344,7 +364,8 @@ Webhooks (optional, production guidance):
   - `X-Y2T-Signature` (`sha256=<hex>`), where HMAC-SHA256 is computed over `${timestamp}.${body}`
 
 STT provider selection:
-- `Y2T_STT_PROVIDER` selects the speech-to-text provider (`assemblyai` or `openai_whisper`).
+- `Y2T_STT_PROVIDER` selects the speech-to-text provider (`assemblyai`, `deepgram`, or `openai_whisper`).
+- Deepgram uses `DEEPGRAM_API_KEY`/`Y2T_DEEPGRAM_API_KEY` and `Y2T_DEEPGRAM_MODEL` (default `nova-3`).
 - OpenAI Whisper uses `OPENAI_API_KEY`/`Y2T_OPENAI_API_KEY` and `Y2T_OPENAI_WHISPER_MODEL` (default `whisper-1`).
 - `Y2T_ASSEMBLYAI_CREDITS_CHECK` only applies when `sttProvider=assemblyai`.
 - `Y2T_MAX_AUDIO_MB` sets a per-file audio size cap before splitting (provider limit applies if lower).

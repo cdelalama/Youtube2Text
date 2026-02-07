@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Youtube2Text API
-  version: 0.33.1
+  version: 0.34.0
   description: |
     Minimal local HTTP API for Youtube2Text.
     Notes:
@@ -924,7 +924,7 @@ components:
       properties:
         id:
           type: string
-          enum: [assemblyai, openai_whisper]
+          enum: [assemblyai, deepgram, openai_whisper]
         maxAudioBytes:
           type: integer
         supportsDiarization:
@@ -952,7 +952,11 @@ components:
           enum: [mp3, wav]
         sttProvider:
           type: string
-          enum: [assemblyai, openai_whisper]
+          enum: [assemblyai, deepgram, openai_whisper]
+        deepgramModel:
+          type: string
+        deepgramDiarization:
+          type: boolean
         openaiWhisperModel:
           type: string
         maxAudioMB:
@@ -995,6 +999,8 @@ components:
             filenameStyle: { $ref: "#/components/schemas/NonSecretSettingSource" }
             audioFormat: { $ref: "#/components/schemas/NonSecretSettingSource" }
             sttProvider: { $ref: "#/components/schemas/NonSecretSettingSource" }
+            deepgramModel: { $ref: "#/components/schemas/NonSecretSettingSource" }
+            deepgramDiarization: { $ref: "#/components/schemas/NonSecretSettingSource" }
             openaiWhisperModel: { $ref: "#/components/schemas/NonSecretSettingSource" }
             maxAudioMB: { $ref: "#/components/schemas/NonSecretSettingSource" }
             splitOverlapSeconds: { $ref: "#/components/schemas/NonSecretSettingSource" }
@@ -1029,7 +1035,9 @@ components:
           properties:
             filenameStyle: { type: [string, "null"], enum: [id, id_title, title_id, null] }
             audioFormat: { type: [string, "null"], enum: [mp3, wav, null] }
-            sttProvider: { type: [string, "null"], enum: [assemblyai, openai_whisper, null] }
+            sttProvider: { type: [string, "null"], enum: [assemblyai, deepgram, openai_whisper, null] }
+            deepgramModel: { type: [string, "null"] }
+            deepgramDiarization: { type: [boolean, "null"] }
             openaiWhisperModel: { type: [string, "null"] }
             maxAudioMB: { type: [integer, "null"] }
             splitOverlapSeconds: { type: [integer, "null"] }

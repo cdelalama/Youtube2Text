@@ -39,8 +39,10 @@ program
   .option("--audioFormat <fmt>", "mp3 or wav")
   .option(
     "--sttProvider <provider>",
-    "Speech-to-text provider (assemblyai | openai_whisper)"
+    "Speech-to-text provider (assemblyai | deepgram | openai_whisper)"
   )
+  .option("--deepgramModel <name>", "Deepgram model (default nova-3)")
+  .option("--deepgramDiarization <bool>", "Deepgram diarization: true | false")
   .option("--openaiWhisperModel <name>", "OpenAI Whisper model (default whisper-1)")
   .option("--maxAudioMB <n>", "Max audio size before splitting (MB)", (v) => Number(v))
   .option(
@@ -108,6 +110,18 @@ function allowAnyUrl(): boolean {
   return raw === "true" || raw === "1" || raw === "yes";
 }
 
+function parseOptionalBool(value: unknown, label: string): boolean | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value === "boolean") return value;
+  if (typeof value !== "string") {
+    throw new Error(`${label} must be true or false`);
+  }
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "true" || normalized === "1" || normalized === "yes") return true;
+  if (normalized === "false" || normalized === "0" || normalized === "no") return false;
+  throw new Error(`${label} must be true or false`);
+}
+
 async function main() {
   const inputUrl = program.args[0] as string | undefined;
   const baseConfig = loadConfig();
@@ -129,8 +143,12 @@ async function main() {
       audioFormat:
         (opts.audioFormat as "mp3" | "wav") ?? baseConfig.audioFormat,
       sttProvider:
-        (opts.sttProvider as "assemblyai" | "openai_whisper") ??
+        (opts.sttProvider as "assemblyai" | "deepgram" | "openai_whisper") ??
         baseConfig.sttProvider,
+      deepgramModel: opts.deepgramModel ?? baseConfig.deepgramModel,
+      deepgramDiarization:
+        parseOptionalBool(opts.deepgramDiarization, "--deepgramDiarization") ??
+        baseConfig.deepgramDiarization,
       openaiWhisperModel: opts.openaiWhisperModel ?? baseConfig.openaiWhisperModel,
       maxAudioMB: opts.maxAudioMB ?? baseConfig.maxAudioMB,
       splitOverlapSeconds: opts.splitOverlapSeconds ?? baseConfig.splitOverlapSeconds,
@@ -200,8 +218,12 @@ async function main() {
       audioFormat:
         (opts.audioFormat as "mp3" | "wav") ?? baseConfig.audioFormat,
       sttProvider:
-        (opts.sttProvider as "assemblyai" | "openai_whisper") ??
+        (opts.sttProvider as "assemblyai" | "deepgram" | "openai_whisper") ??
         baseConfig.sttProvider,
+      deepgramModel: opts.deepgramModel ?? baseConfig.deepgramModel,
+      deepgramDiarization:
+        parseOptionalBool(opts.deepgramDiarization, "--deepgramDiarization") ??
+        baseConfig.deepgramDiarization,
       openaiWhisperModel: opts.openaiWhisperModel ?? baseConfig.openaiWhisperModel,
       maxAudioMB: opts.maxAudioMB ?? baseConfig.maxAudioMB,
       splitOverlapSeconds: opts.splitOverlapSeconds ?? baseConfig.splitOverlapSeconds,
@@ -247,6 +269,8 @@ async function main() {
       filenameStyle: run.filenameStyle ?? baseConfig.filenameStyle,
       audioFormat: run.audioFormat ?? baseConfig.audioFormat,
       sttProvider: run.sttProvider ?? baseConfig.sttProvider,
+      deepgramModel: run.deepgramModel ?? baseConfig.deepgramModel,
+      deepgramDiarization: run.deepgramDiarization ?? baseConfig.deepgramDiarization,
       openaiWhisperModel: run.openaiWhisperModel ?? baseConfig.openaiWhisperModel,
       maxAudioMB: run.maxAudioMB ?? baseConfig.maxAudioMB,
       splitOverlapSeconds: run.splitOverlapSeconds ?? baseConfig.splitOverlapSeconds,

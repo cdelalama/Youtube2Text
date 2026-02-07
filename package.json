@@ -1,6 +1,6 @@
 {
   "name": "youtube2text",
-  "version": "0.33.1",
+  "version": "0.34.0",
   "description": "Local-first YouTube audio extraction and diarized transcription pipeline.",
   "type": "module",
   "main": "dist/cli.js",
@@ -20,6 +20,7 @@
     "api:spec:validate": "redocly lint openapi.yaml",
     "api:types:generate": "openapi-typescript openapi.yaml -o web/lib/apiTypes.gen.ts",
     "api:contract:check": "node scripts/apiContractCheck.mjs",
+    "version:check": "node scripts/versionCheck.mjs",
     "test:docker-smoke": "node scripts/dockerSmokeTest.mjs",
     "test": "node --import tsx --test tests/all.test.ts"
   },

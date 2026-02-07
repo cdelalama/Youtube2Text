@@ -90,6 +90,8 @@ function computeNonSecretSettingSources(
     "filenameStyle",
     "audioFormat",
     "sttProvider",
+    "deepgramModel",
+    "deepgramDiarization",
     "openaiWhisperModel",
     "maxAudioMB",
     "splitOverlapSeconds",
@@ -124,6 +126,10 @@ function envVarsForSetting(key: keyof NonSecretSettings): string[] {
       return ["Y2T_STT_PROVIDER", "STT_PROVIDER"];
     case "openaiWhisperModel":
       return ["Y2T_OPENAI_WHISPER_MODEL", "OPENAI_WHISPER_MODEL"];
+    case "deepgramModel":
+      return ["Y2T_DEEPGRAM_MODEL", "DEEPGRAM_MODEL"];
+    case "deepgramDiarization":
+      return ["Y2T_DEEPGRAM_DIARIZATION", "DEEPGRAM_DIARIZATION"];
     case "maxAudioMB":
       return ["Y2T_MAX_AUDIO_MB", "MAX_AUDIO_MB"];
     case "splitOverlapSeconds":

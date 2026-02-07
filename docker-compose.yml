@@ -40,7 +40,13 @@ services:
       Y2T_WEBHOOK_RETRIES: ${Y2T_WEBHOOK_RETRIES:-3}
       Y2T_WEBHOOK_TIMEOUT_MS: ${Y2T_WEBHOOK_TIMEOUT_MS:-5000}
       Y2T_WEBHOOK_MAX_AGE_SECONDS: ${Y2T_WEBHOOK_MAX_AGE_SECONDS:-}
+      # STT provider selection
+      Y2T_STT_PROVIDER: ${Y2T_STT_PROVIDER:-deepgram}
+
+      # Provider keys
       ASSEMBLYAI_API_KEY: ${ASSEMBLYAI_API_KEY}
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
     volumes:
       - ./output:/data/output
       - ./audio:/data/audio

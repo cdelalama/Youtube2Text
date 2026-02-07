@@ -48,9 +48,9 @@ Recommended reading order:
 ## Current Focus (Snapshot)
 
 Source of truth: docs/llm/HANDOFF.md.
-- Last Updated: 2025-12-14 - GPT-5.2
-- Working on: Phase 0 core service hardening (no web UI)
-- Status: Build + unit tests passing; next is yt-dlp reliability and minimal HTTP API runner.
+- Last Updated: 2026-02-02 - Claude Opus 4.5
+- Working on: Phases 0-3 complete. Optional roadmap: Phase C (Deepgram provider), Phase D (error categorization, ETA estimation).
+- Status: v0.33.1 stable. CLI + API + Web UI + Docker all operational. 120/120 tests passing. All P0/P1/P2 security items done.
 
 Keep this section synchronized with the "Current Status" block in docs/llm/HANDOFF.md.
 

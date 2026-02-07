@@ -1,47 +1,64 @@
 # Versioning Rules
 
+## Scope
+These rules define how Youtube2Text versions are bumped, documented, and validated.
+
 ## Version Format
-Use Semantic Versioning (SemVer): MAJOR.MINOR.PATCH.
+Use Semantic Versioning: `MAJOR.MINOR.PATCH`.
 
-## Version Location
-Document where version identifiers live in your project (e.g., VERSION="x.y.z" at the top of scripts, package.json, or pyproject.toml).
+## Canonical Version Sources
+The following files must stay synchronized:
+- `package.json` (`version`)
+- `openapi.yaml` (`info.version`)
 
-Current version sources:
-- package.json: 0.33.1
-- openapi.yaml (info.version): 0.33.1
+The following docs must mirror the same version:
+- `docs/llm/HANDOFF.md` (`Current Status -> Version`)
+- `docs/PROJECT_CONTEXT.md` (`Current Status -> vX.Y.Z stable`)
 
-## Version Bump Guidelines
+Automated check:
+- `npm run version:check`
 
-### Patch (x.y.Z)
-- Bug fixes or documentation updates
-- Non-breaking maintenance tasks
-- Logging improvements or refactoring without behaviour changes
+## Bump Matrix
 
-### Minor (x.Y.z)
+### Patch (`x.y.Z`)
+- Bug fixes
+- Non-breaking hardening/refactors
+- Documentation-only updates that do not change API behavior
+
+### Minor (`x.Y.z`)
 - Backward-compatible features
-- Optional configuration additions
-- New capabilities that do not break existing workflows
+- New optional settings/fields/endpoints
+- Additive provider/features without breaking existing inputs
 
-### Major (X.y.z)
-- Breaking changes or required configuration updates
-- Removals or incompatible behaviour changes
-- Large architectural shifts that require operator action
+### Major (`X.y.z`)
+- Breaking API/config/behavior changes
+- Removed options/endpoints
+- Required operator migration steps
 
-## Synchronization Rules
-When a change affects multiple files within the same component or module, update all relevant version identifiers to keep them aligned.
+## Required Steps Per Change
+1. Decide bump level (`patch`, `minor`, `major`).
+2. Update version in `package.json` and `openapi.yaml`.
+3. Update mirrored version markers in:
+   - `docs/llm/HANDOFF.md`
+   - `docs/PROJECT_CONTEXT.md`
+4. Add one append-only entry in `docs/llm/HISTORY.md`.
+5. Run verification:
+   - `npm run version:check`
+   - `npm run api:contract:check`
+   - `npm test`
+6. If API surface changed, regenerate and commit:
+   - `npm run api:types:generate`
 
-## Update Process
-1. Determine the impact level (patch, minor, major).
-2. Locate all affected version identifiers.
-3. Update version numbers and document the rationale in docs/llm/HISTORY.md.
-4. Reflect the change in docs/llm/HANDOFF.md (or a dedicated changelog) so the next contributor is aware.
+## PR Gate
+A PR touching API/config/docs must include:
+- Updated version markers (if behavior/API changed)
+- `docs/llm/HISTORY.md` entry
+- Passing `version:check`, `api:contract:check`, and tests
 
-## Environment Variables (If Applicable)
-- Avoid editing generated .env.example files directly; update the source .env or secrets management system and regenerate the template.
+## Secrets and Example Files
 - Never commit real credentials.
-- When adding new variables, document them and communicate the change in docs/llm/HISTORY.md and the relevant README.
+- Keep `.env.example`, `config.yaml.example`, and `runs.yaml.example` aligned with supported settings.
+- Document new env/config options in `README.md` and operational docs.
 
-## Tips
-- When in doubt, choose the higher-impact version bump to avoid underreporting changes.
-- Keep versioning consistent between code, documentation, and distribution artifacts.
-- Record every version change in the history log with reasoning.
+## Fail-Fast Rule
+If `npm run version:check` fails, do not merge or release.

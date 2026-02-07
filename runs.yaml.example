@@ -20,6 +20,18 @@ runs:
     commentsMax:
     ytDlpPath:
 
+  - url: "https://www.youtube.com/@somechannel"
+    maxNewVideos: 5
+    sttProvider: deepgram
+    deepgramModel: nova-3
+    deepgramDiarization: true
+    maxAudioMB:
+    splitOverlapSeconds: 2
+    filenameStyle: title_id
+    languageDetection: auto
+    languageCode:
+    commentsEnabled: false
+
   - url: "https://www.youtube.com/playlist?list=PLxxxxxxxxxxxx"
     maxNewVideos: 5
     after: "2023-06-01"

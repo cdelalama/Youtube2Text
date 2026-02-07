@@ -30,10 +30,16 @@ All quickstart examples below assume secrets are available in the environment (v
 npm install
 ```
 
-2) Configure AssemblyAI:
+2) Configure AssemblyAI (or Deepgram/OpenAI):
 
 ```powershell
 $env:ASSEMBLYAI_API_KEY="your_key_here"
+```
+
+For Deepgram:
+```powershell
+$env:DEEPGRAM_API_KEY="your_key_here"
+$env:Y2T_STT_PROVIDER="deepgram"
 ```
 
 Or, with Doppler: `doppler run -- npm run dev -- https://...` (skip step 2).

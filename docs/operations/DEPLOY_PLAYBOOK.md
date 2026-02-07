@@ -13,12 +13,14 @@ It does not replace the CLI: the CLI remains fully operational and can be run se
 
 - Docker + Docker Compose on the server
 - An AssemblyAI API key (when `sttProvider=assemblyai`)
+- A Deepgram API key (when `sttProvider=deepgram`)
 - An OpenAI API key (when `sttProvider=openai_whisper`)
 - A domain name + TLS termination (recommended)
 
 ## Required environment
 
 - `ASSEMBLYAI_API_KEY` (required when `sttProvider=assemblyai`)
+- `DEEPGRAM_API_KEY` (required when `sttProvider=deepgram`)
 - `OPENAI_API_KEY` or `Y2T_OPENAI_API_KEY` (required when `sttProvider=openai_whisper`)
 
 ## Strongly recommended (servers)

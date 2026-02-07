@@ -6,15 +6,88 @@ Older long-form notes were moved to `docs/llm/HANDOFF_ARCHIVE.md`.
 All content should be ASCII-only to avoid Windows encoding issues.
 
 ## Current Status
-- Version: 0.33.1 (versions must stay synced: `package.json` + `openapi.yaml`)
+- Version: 0.34.0 (versions must stay synced: `package.json` + `openapi.yaml`)
 - CLI: stable; primary workflow (must not break)
 - API: stable; OpenAPI at `openapi.yaml`; generated frontend types at `web/lib/apiTypes.gen.ts`
 - Web: Next.js admin UI (Runs/Library/Watchlist/Settings)
+- STT providers: AssemblyAI + Deepgram + OpenAI Whisper
 
-## Latest Checks (0.33.1)
-- Tests: `npm test` 118/118 pass
-- Build: `npm run build`, `npm --prefix web run build` OK
-- API contract: `npm run api:contract:check` OK
+## Deepgram Provider (0.34.0) - Implemented
+Goal: add Deepgram as a third STT provider (Nova-3 + diarization) while reusing existing interfaces.
+
+Decisions (confirmed):
+- Multi-key support: YES (`Y2T_DEEPGRAM_API_KEYS` + failure threshold/cooldown, reuse `MultiKeyProvider`).
+- Configurable model + diarization: YES (config + Settings UI + docs).
+
+Implementation summary:
+- Provider: `src/transcription/deepgram/index.ts` (sync API, raw binary body).
+- Config: `sttProvider=deepgram`, `deepgramApiKey(s)`, `deepgramModel`, `deepgramDiarization`.
+- Factory + registry: wired in `createTranscriptionProvider()` + `listProviderCapabilities()`.
+- API + Settings + OpenAPI: schemas/validation updated; types regenerated.
+- CLI + runs.yaml: support for `sttProvider=deepgram`, model, and diarization.
+- Docs/examples updated: README/HOW_TO_USE/INTEGRATION/.env.example/config.yaml.example/runs.yaml.example.
+- Tests updated: provider validation + /providers capability list + load balancer signature.
+
+### Claude review (2026-02-02) - Answers + additions
+
+**Answers to open questions:**
+- Model string: `nova-3` (query param `model=nova-3`).
+- Diarization: `diarize=true` query param. ALSO requires `utterances=true` to get speaker-labeled segments (without it, only word-level speaker labels).
+- Max upload: **2 GB** file size, 10-minute processing timeout. Set `maxAudioBytes` to `2 * 1024 * 1024 * 1024`. Audio splitting is effectively unnecessary for Deepgram.
+
+**Additions to the plan (GPT steps kept, these are supplements):**
+
+A) **Deepgram is synchronous** (like OpenAI Whisper, unlike AssemblyAI).
+   - Single `POST https://api.deepgram.com/v1/listen` returns the transcript in the response.
+   - No polling. `pollIntervalMs` and `maxPollMinutes` from `TranscriptionOptions` are unused.
+   - Follow the OpenAI provider pattern, not the AssemblyAI pattern.
+
+B) **Default query params** for every request:
+   ```
+   model=nova-3&diarize=true&utterances=true&punctuate=true&smart_format=true
+   ```
+   Plus either `detect_language=true` (auto) or `language=xx` (manual).
+
+C) **Auth header format** is non-standard: `Authorization: Token <key>` (not Bearer).
+
+D) **Multi-key support from day one**: add `Y2T_DEEPGRAM_API_KEYS=key1,key2` (plural) following the AssemblyAI pattern. Reuse existing `MultiKeyProvider` from `loadBalancer.ts`. Config fields: `deepgramApiKeys`, `deepgramKeyFailureThreshold`, `deepgramKeyCooldownMs`.
+
+E) **Request body is raw binary**, not multipart/form-data.
+   - Read file as Buffer, send as body with `Content-Type: audio/mpeg` (or appropriate mime).
+   - Detect mime from file extension (mp3->audio/mpeg, wav->audio/wav, etc.).
+
+F) **Timestamp conversion**: Deepgram returns seconds (float). Convert to ms: `Math.round(start * 1000)`.
+
+G) **Response mapping (concrete)**:
+   ```
+   results.utterances[] -> TranscriptUtterance[]
+     .speaker (number)    -> speaker
+     .start (seconds)     -> Math.round(start * 1000)
+     .end (seconds)       -> Math.round(end * 1000)
+     .transcript          -> text
+   results.channels[0].alternatives[0].transcript -> TranscriptJson.text
+   results.channels[0].detected_language          -> language_code
+   TranscriptJson.id     -> randomUUID() (Deepgram is stateless, no persistent ID)
+   TranscriptJson.status -> "completed"
+   ```
+
+H) **Step 4 correction**: registry.ts was removed in Phase 2.9. Capabilities live on `getCapabilities()`. Only wire in `factory.ts`.
+
+Response to H) (verified in repo, 2026-02-02):
+- `src/transcription/registry.ts` exists and is used by `/providers` (via `listProviderCapabilities()`).
+- Therefore Deepgram MUST be added to both `factory.ts` and `registry.ts` to keep `/providers` accurate.
+
+I) **Concurrency limits** (document in Operator Notes):
+   - Deepgram: 5 concurrent requests (pay-as-you-go), 15 (paid), 100 (enterprise).
+   - Interacts with `Y2T_MAX_CONCURRENT_RUNS_PER_KEY`.
+
+J) **Optional future**: `getAccount()` for pre-flight balance check via `GET /v1/projects/{project_id}/balances`. Requires knowing the project_id. Defer unless needed.
+
+## Latest Checks (0.34.0)
+- API types: `npm run api:types:generate` OK
+- Tests: `npm test` 123/123 pass
+- Build: not run (last known OK on 0.33.1)
+- API contract: not run (last known OK on 0.33.1)
 
 ## Documentation Alignment Fixes (0.33.0)
 - Added `assemblyAiApiKeys` to `config.yaml.example`.
@@ -36,7 +109,7 @@ All content should be ASCII-only to avoid Windows encoding issues.
 - Tests: `npm test` 110/110 pass
 - Build: OK (`npm run build`, `npm --prefix web run build`, `npm run api:contract:check`)
 - Docker: healthy
-- STT Providers: OpenAI Whisper + AssemblyAI both fully documented and implemented
+- STT Providers: AssemblyAI + Deepgram + OpenAI Whisper fully documented and implemented
 - npm audit: 0 vulnerabilities
 
 ## Security Audit v8 (Claude Opus 4.5, 2026-01-03) - FULL CODE REVIEW
@@ -306,6 +379,17 @@ Second pass auditing CLI, config, YouTube modules, pipeline, and formatters.
 - Root cause: async handlers completing after the request timeout already sent a 408.
 - Tests: `tests/apiRequestTimeout.test.ts` (2 tests).
 
+## Web UI Improvements (0.33.1)
+- Renamed labels: `live`/`offline` -> `Connected`/`Disconnected`, `Library` -> `View channel`, `Refresh` -> `Reload`.
+- Added "Re-run" button per video card in both RunArtifactsLive and library channel page. Calls `POST /runs` with `force: true` and redirects to the new run page.
+- Added "Fetch comments" button per video card. Calls new endpoint (see below).
+- New backend endpoint: `POST /library/channels/:channelDirName/videos/:basename/fetch-comments`
+  - Reads video metadata to get videoId, calls `fetchVideoComments()` via yt-dlp, saves `.comments.json`.
+  - Returns `{ ok: true, count: N }` on success, 502 on fetch failure.
+  - Protected by existing auth + write rate limiter.
+- New Next.js proxy route: `web/app/api/library/channels/[channelDirName]/videos/[basename]/fetch-comments/route.ts`.
+- New client component: `web/app/library/[channelDirName]/VideoActions.tsx` (Re-run + Fetch comments buttons).
+
 ## Secrets Management
 - Secrets can be provided via `.env` file or [Doppler](https://www.doppler.com/) secrets manager.
 - Doppler project: `youtube2text`, environment: `dev`.
@@ -420,7 +504,7 @@ Analyzed sibling project at `C:\Users\cdela\OneDrive\coding\Shell\ShellSpeechToT
 | Input sources | Local files only | YouTube + local files |
 | Interface | CLI only | CLI + REST API + Web UI |
 | Concurrency | 20 parallel default | Configurable per API key |
-| Tests | None | 110 tests |
+| Tests | None | 120 tests |
 | Audio splitting | 80MB threshold | Configurable Y2T_MAX_AUDIO_MB |
 
 ### Additional Patterns Found (Round 2 Analysis)
@@ -547,6 +631,123 @@ Goal: adopt the strongest ideas from `ShellSpeechToText` without copying code, p
 - NonSecretSettings: YES (providerTimeoutMs added)
 - Test framework: YES (node:test)
 - Error handling: Consistent
+
+## OpenClaw Skill Integration (Proposed)
+
+Goal: Expose youtube2text as an OpenClaw skill so Winston (and other agents) can transcribe YouTube videos with speaker diarization.
+
+### OpenClaw Skills Overview
+
+OpenClaw skills are modular packages with:
+- `SKILL.md` (required): YAML frontmatter (name + description) + markdown instructions
+- `scripts/` (optional): Shell/Python scripts for deterministic operations
+- `references/` (optional): Documentation to load on-demand
+- `assets/` (optional): Templates, boilerplate
+
+Key design principles:
+- Conciseness: Context window is precious; only non-obvious info
+- Progressive disclosure: Lean SKILL.md (<500 lines), split to references
+- Description triggers the skill: Must include "when to use" info
+
+### Existing Similar Skills (bundled with OpenClaw)
+
+| Skill | What it does | Diarization? |
+|-------|--------------|--------------|
+| `summarize` | YouTube transcript extraction (best-effort) | No |
+| `openai-whisper` | Local Whisper CLI transcription | No |
+| `openai-whisper-api` | OpenAI Whisper API transcription | No |
+| `video-frames` | Extract frames from video via ffmpeg | N/A |
+
+**youtube2text advantage**: Speaker diarization, structured output (JSON/JSONL), bulk processing, multiple STT providers.
+
+### Recommended Integration: HTTP API Wrapper
+
+Since youtube2text already exposes an HTTP API (port 8787), create a thin wrapper skill:
+
+```
+Youtube2Text/
+├── src/
+├── web/
+├── skill/                      # <- NEW
+│   ├── SKILL.md
+│   └── scripts/
+│       ├── transcribe.sh       # POST /runs with URL
+│       ├── plan.sh             # POST /runs/plan (preview)
+│       ├── upload-audio.sh     # POST /audio
+│       ├── fetch-artifact.sh   # GET /library/.../format
+│       └── wait-for-run.sh     # Poll /runs/{id}/events (SSE)
+└── package.json
+```
+
+**Why same repo (not separate)?**
+- Versionado junto con la API que consume
+- Un solo repo que mantener
+- Los scripts pueden referenciar el mismo openapi.yaml
+- Documentacion centralizada
+
+### Winston opinion (2026-02-04)
+For Carlos' goals (avoid operating a remote multi-user service and reduce support burden), prefer a SEPARATE repo for the OpenClaw skill (thin HTTP API wrapper).
+
+Rationale:
+- Decouple release cycles: Youtube2Text can evolve without forcing skill packaging changes.
+- Keep the main repo focused: avoid OpenClaw-specific scaffolding in core product.
+- Reduce accidental support/ownership: the skill can default to self-host (localhost) and make remote use an explicit opt-in via Y2T_API_BASE_URL.
+- The "reference openapi.yaml" benefit is nice but not required; the skill can validate capabilities via /health and /providers and pin minimum API expectations.
+
+### Claude Code opinion (2026-02-04)
+Disagree with separate repo. Recommend keeping skill in same repo (`skill/` or `integrations/openclaw/`).
+
+Where Winston is right:
+- Decoupling release cycles makes sense
+- Avoiding OpenClaw scaffolding in core repo is clean
+
+Where I disagree:
+- The skill is ~200 lines total (5 curl scripts + 1 SKILL.md). Not significant "scaffolding".
+- Separate repo for something this small adds:
+  - Another repo to maintain (issues, PRs, CI)
+  - Manual sync when API changes
+  - More friction for contributors
+
+The "accidental support/ownership" concern is solved with documentation: "This skill assumes youtube2text API running locally. Remote use is your responsibility."
+
+Recommendation: Start in same repo. Extract to separate repo only if skill grows significantly or needs to be published to an OpenClaw registry.
+
+**Why wrapper (not monolithic)?**
+- No need to bundle Node.js + yt-dlp + 200MB node_modules
+- Shell scripts ~50 lines each
+- Auto-benefits from youtube2text updates
+- Lean context for LLM
+
+### SKILL.md Frontmatter (Draft)
+
+```yaml
+---
+name: youtube2text-api
+description: "Transcribe YouTube videos with speaker diarization and structured output.
+  Use when: (1) transcribe YouTube video/channel/playlist, (2) need speaker labels (who said what),
+  (3) want structured output (JSON/JSONL/Markdown). Requires youtube2text API at http://127.0.0.1:8787."
+---
+```
+
+### Implementation Roadmap
+
+1. Verify youtube2text API running: `curl http://127.0.0.1:8787/health`
+2. Create `skill/` directory structure
+3. Write SKILL.md with triggers + workflow + API reference
+4. Implement wrapper scripts (curl-based)
+5. Test with OpenClaw: `openclaw skills install ./skill`
+
+### API Endpoints Used by Skill
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /health` | Check API is running |
+| `POST /runs/plan` | Preview what will be processed (no credits) |
+| `POST /runs` | Start transcription run |
+| `GET /runs/{id}/events` | SSE progress stream |
+| `GET /runs/{id}/artifacts` | Retrieve outputs |
+| `POST /audio` | Upload local audio file |
+| `GET /library/channels/{ch}/videos/{id}/{format}` | Download transcript |
 
 ## Where To Read More
 - `docs/llm/HISTORY.md` (append-only change log)

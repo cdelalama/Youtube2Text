@@ -513,7 +513,7 @@ export interface components {
         };
         ProviderCapability: {
             /** @enum {string} */
-            id: "assemblyai" | "openai_whisper";
+            id: "assemblyai" | "deepgram" | "openai_whisper";
             maxAudioBytes: number;
             supportsDiarization: boolean;
         };
@@ -527,7 +527,9 @@ export interface components {
             /** @enum {string} */
             audioFormat?: "mp3" | "wav";
             /** @enum {string} */
-            sttProvider?: "assemblyai" | "openai_whisper";
+            sttProvider?: "assemblyai" | "deepgram" | "openai_whisper";
+            deepgramModel?: string;
+            deepgramDiarization?: boolean;
             openaiWhisperModel?: string;
             maxAudioMB?: number;
             splitOverlapSeconds?: number;
@@ -557,6 +559,8 @@ export interface components {
                 filenameStyle?: components["schemas"]["NonSecretSettingSource"];
                 audioFormat?: components["schemas"]["NonSecretSettingSource"];
                 sttProvider?: components["schemas"]["NonSecretSettingSource"];
+                deepgramModel?: components["schemas"]["NonSecretSettingSource"];
+                deepgramDiarization?: components["schemas"]["NonSecretSettingSource"];
                 openaiWhisperModel?: components["schemas"]["NonSecretSettingSource"];
                 maxAudioMB?: components["schemas"]["NonSecretSettingSource"];
                 splitOverlapSeconds?: components["schemas"]["NonSecretSettingSource"];
@@ -586,7 +590,9 @@ export interface components {
                 /** @enum {string|null} */
                 audioFormat?: "mp3" | "wav" | null;
                 /** @enum {string|null} */
-                sttProvider?: "assemblyai" | "openai_whisper" | null;
+                sttProvider?: "assemblyai" | "deepgram" | "openai_whisper" | null;
+                deepgramModel?: string | null;
+                deepgramDiarization?: boolean | null;
                 openaiWhisperModel?: string | null;
                 maxAudioMB?: number | null;
                 splitOverlapSeconds?: number | null;

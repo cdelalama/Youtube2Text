@@ -25,6 +25,10 @@ Multi-key AssemblyAI (optional):
 - Set `Y2T_ASSEMBLYAI_API_KEYS=key1,key2` to enable round-robin + failover.
 - Use `Y2T_ASSEMBLYAI_KEY_FAILURES` and `Y2T_ASSEMBLYAI_KEY_COOLDOWN_MS` to tune failure threshold and cooldown.
 
+Multi-key Deepgram (optional):
+- Set `Y2T_DEEPGRAM_API_KEYS=key1,key2` to enable round-robin + failover.
+- Use `Y2T_DEEPGRAM_KEY_FAILURES` and `Y2T_DEEPGRAM_KEY_COOLDOWN_MS` to tune failure threshold and cooldown.
+
 ## Core endpoints
 
 ### 1) Health

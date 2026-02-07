@@ -1,7 +1,7 @@
 # Youtube2Text Architecture (Service First, Web Later)
 
-> Version: 1.2.7
-> Last Updated: 2026-01-02
+> Version: 1.2.8
+> Last Updated: 2026-02-02
 > Status: Design / Roadmap
 > Authors: Claude + GPT-5.2 (viewpoints preserved)
 
@@ -92,7 +92,7 @@ Runners decide how to consume events:
 
 ## Transcription, Language Handling, Credits
 
-Transcription is abstracted via a `TranscriptionProvider` (AssemblyAI + OpenAI Whisper).
+Transcription is abstracted via a `TranscriptionProvider` (AssemblyAI + Deepgram + OpenAI Whisper). Multi-key load balancing with automatic failover is supported for AssemblyAI and Deepgram.
 
 Language handling requirement: non-English videos transcribe poorly when forced to `en_us`.
 
@@ -105,7 +105,7 @@ Implemented approach (Phase 0):
 3. If still undetected, enable provider automatic language detection (AssemblyAI `language_detection: true`, OpenAI Whisper by omitting language).
 
 Audio size limits:
-- Providers declare a max upload size (e.g., OpenAI Whisper 25 MB).
+- Providers declare a max upload size (e.g., OpenAI Whisper 25 MB, Deepgram 2 GB).
 - If an audio file exceeds the effective limit, the pipeline splits it into chunks with overlap, transcribes each chunk, then merges timestamps while trimming the overlap region.
 
 Persist detected language in per-video `.meta.json` for later UI/RAG use.
@@ -242,7 +242,13 @@ Phase 2.9 - STT provider capability refactor (DONE in v0.28.1):
 3) Pipeline reads max upload size from the active provider instance.
 4) `/providers` endpoint returns provider-sourced capabilities.
 
-### Phase 3+ - Cloud multi-tenant platform (optional)
+### Phase 3.0 - Direct audio input (DONE in v0.31.0)
+
+- Accept local audio files (skip yt-dlp) via CLI (`--audio` + `--audioTitle`) or API (`POST /audio` + `POST /runs` with `audioId`).
+- Upload size limit: `Y2T_MAX_UPLOAD_MB` (default 1024).
+- Output goes under `output/uploads/*` and `audio/uploads/*`.
+
+### Phase 3+ - Cloud multi-tenant platform (optional, not started)
 
 Add:
 - user auth + private workspaces per user
@@ -250,9 +256,6 @@ Add:
 - object storage for artifacts
 - workers/queues for background processing
 - usage tracking + admin controls (foundation for future billing)
-
-Direct audio input:
-- Accept local audio files (skip yt-dlp) via CLI or API (`POST /audio` + `POST /runs` with `audioId`).
 
 ## Tech Debt Backlog (post-Phase 2.8)
 - Phase 2.8 backlog items completed in v0.23.x.

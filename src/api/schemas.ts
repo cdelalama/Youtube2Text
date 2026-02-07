@@ -144,7 +144,9 @@ export const settingsPatchSchema = z.object({
     .object({
       filenameStyle: optionalEnumOrNull(["id", "id_title", "title_id"]),
       audioFormat: optionalEnumOrNull(["mp3", "wav"]),
-      sttProvider: optionalEnumOrNull(["assemblyai", "openai_whisper"]),
+      sttProvider: optionalEnumOrNull(["assemblyai", "deepgram", "openai_whisper"]),
+      deepgramModel: optionalStringOrNull(),
+      deepgramDiarization: optionalBooleanOrNull(),
       openaiWhisperModel: optionalStringOrNull(),
       maxAudioMB: optionalClampedIntOrNull(1, 50000),
       splitOverlapSeconds: optionalClampedIntOrNull(0, 30),

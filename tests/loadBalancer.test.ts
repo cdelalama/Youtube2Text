@@ -4,6 +4,8 @@ import { MultiKeyProvider } from "../src/transcription/loadBalancer.js";
 
 test("MultiKeyProvider rotates keys round-robin", async () => {
   const provider = new MultiKeyProvider(
+    "assemblyai",
+    "AssemblyAI",
     ["k1", "k2"],
     (key) => ({
       name: "assemblyai",
@@ -42,6 +44,8 @@ test("MultiKeyProvider rotates keys round-robin", async () => {
 
 test("MultiKeyProvider fails over after consecutive errors", async () => {
   const provider = new MultiKeyProvider(
+    "assemblyai",
+    "AssemblyAI",
     ["bad", "good"],
     (key) => ({
       name: "assemblyai",

@@ -174,10 +174,24 @@ export function normalizeNonSecretSettings(
   const sttProvider = normalizeOptionalEnum(
     "sttProvider",
     input.sttProvider,
-    ["assemblyai", "openai_whisper"],
+    ["assemblyai", "deepgram", "openai_whisper"],
     errors
   );
   if (sttProvider !== undefined) out.sttProvider = sttProvider;
+
+  const deepgramModel = normalizeOptionalString(
+    "deepgramModel",
+    input.deepgramModel,
+    errors
+  );
+  if (deepgramModel !== undefined) out.deepgramModel = deepgramModel;
+
+  const deepgramDiarization = normalizeOptionalBool(
+    "deepgramDiarization",
+    input.deepgramDiarization,
+    errors
+  );
+  if (deepgramDiarization !== undefined) out.deepgramDiarization = deepgramDiarization;
 
   const openaiWhisperModel = normalizeOptionalString(
     "openaiWhisperModel",

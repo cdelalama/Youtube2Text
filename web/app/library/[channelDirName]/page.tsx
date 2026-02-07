@@ -2,6 +2,7 @@ import Link from "next/link";
 import { apiGetJson } from "../../../lib/api";
 import type { ChannelMetaResponse, VideosResponse, VideoInfo } from "../../../lib/apiSchema";
 import { ChannelActions } from "./ChannelActions";
+import { VideoActions } from "./VideoActions";
 
 function youtubeThumb(videoId: string): string {
   return `https://i.ytimg.com/vi/${encodeURIComponent(videoId)}/mqdefault.jpg`;
@@ -75,6 +76,7 @@ export default async function ChannelPage({
                 Audio
               </a>
             </div>
+            <VideoActions videoId={v.videoId} channelDirName={channelDirName} basename={v.basename} />
           </div>
         </div>
       </div>

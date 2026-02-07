@@ -8,7 +8,7 @@ import type { AppConfig } from "../config/schema.js";
 import { RunManager } from "./runManager.js";
 import { badRequest, json, notFound, payloadTooLarge, readJsonBody, BodyTooLargeError } from "./http.js";
 import { getLastEventId, initSse, writeSseEvent } from "./sse.js";
-import { FileSystemStorageAdapter, saveChannelMetaJson } from "../storage/index.js";
+import { FileSystemStorageAdapter, saveChannelMetaJson, saveVideoCommentsJson } from "../storage/index.js";
 import { makeChannelDirName } from "../storage/naming.js";
 import { requireApiKey, validateExpectedApiKey } from "./auth.js";
 import { getClientIp } from "./ip.js";
@@ -28,7 +28,8 @@ import {
 import { sanitizeConfigOverrides } from "./sanitize.js";
 import { planRun } from "../pipeline/plan.js";
 import { classifyYoutubeUrl, tryExtractVideoIdFromUrl } from "../youtube/url.js";
-import { fetchChannelMetadata, safeChannelThumbnailUrl } from "../youtube/index.js";
+import { fetchChannelMetadata, fetchVideoComments, safeChannelThumbnailUrl } from "../youtube/index.js";
+import { validateYtDlpInstalled } from "../utils/deps.js";
 import { join } from "node:path";
 import { getDeepHealth, getHealth } from "./health.js";
 import { runRetentionCleanup } from "./retention.js";
@@ -884,6 +885,48 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
         }
 
         return notFound(res);
+      }
+
+      // POST /library/channels/:channelDirName/videos/:basename/fetch-comments
+      if (
+        req.method === "POST" &&
+        seg.length === 6 &&
+        seg[0] === "library" &&
+        seg[1] === "channels" &&
+        seg[3] === "videos" &&
+        seg[5] === "fetch-comments"
+      ) {
+        const channelDirName = decodePathSegment(seg[2]!);
+        const baseName = decodePathSegment(seg[4]!);
+        if (!channelDirName || !isSafeBaseName(channelDirName)) return badRequest(res, "Invalid channelDirName");
+        if (!baseName || !isSafeBaseName(baseName)) return badRequest(res, "Invalid basename");
+
+        const videos = await storage.listVideos(channelDirName);
+        const video = videos.find((v) => v.basename === baseName);
+        if (!video) return notFound(res);
+
+        const videoId = video.videoId;
+        if (!videoId) return badRequest(res, "Video has no videoId");
+
+        const videoUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`;
+
+        let ytDlpCommand: string;
+        try {
+          ytDlpCommand = await validateYtDlpInstalled(config.ytDlpPath);
+        } catch {
+          json(res, 500, { error: "yt_dlp_not_found", message: "yt-dlp is not installed or not found" });
+          return;
+        }
+
+        const comments = await fetchVideoComments(videoUrl, ytDlpCommand);
+        if (!comments) {
+          json(res, 502, { error: "fetch_failed", message: "Failed to fetch comments from YouTube" });
+          return;
+        }
+
+        await saveVideoCommentsJson(video.paths.commentsPath, comments);
+        json(res, 200, { ok: true, count: comments.length });
+        return;
       }
 
       if (req.method === "POST" && seg.length === 1 && seg[0] === "runs") {

@@ -48,6 +48,18 @@ function loadEnvConfig(): PartialConfig {
     assemblyAiKeyCooldownMs: parseOptionalNumber(
       getEnv("Y2T_ASSEMBLYAI_KEY_COOLDOWN_MS", "ASSEMBLYAI_KEY_COOLDOWN_MS")
     ),
+    deepgramApiKey: getEnv("Y2T_DEEPGRAM_API_KEY", "DEEPGRAM_API_KEY"),
+    deepgramApiKeys: parseCsvList(getEnv("Y2T_DEEPGRAM_API_KEYS", "DEEPGRAM_API_KEYS")),
+    deepgramKeyFailureThreshold: parseOptionalNumber(
+      getEnv("Y2T_DEEPGRAM_KEY_FAILURES", "DEEPGRAM_KEY_FAILURES")
+    ),
+    deepgramKeyCooldownMs: parseOptionalNumber(
+      getEnv("Y2T_DEEPGRAM_KEY_COOLDOWN_MS", "DEEPGRAM_KEY_COOLDOWN_MS")
+    ),
+    deepgramModel: getEnv("Y2T_DEEPGRAM_MODEL", "DEEPGRAM_MODEL"),
+    deepgramDiarization: parseOptionalBool(
+      getEnv("Y2T_DEEPGRAM_DIARIZATION", "DEEPGRAM_DIARIZATION")
+    ),
     openaiApiKey: getEnv("Y2T_OPENAI_API_KEY", "OPENAI_API_KEY"),
     sttProvider: getEnv("Y2T_STT_PROVIDER", "STT_PROVIDER"),
     openaiWhisperModel: getEnv("Y2T_OPENAI_WHISPER_MODEL", "OPENAI_WHISPER_MODEL"),
@@ -81,7 +93,7 @@ function loadEnvConfig(): PartialConfig {
 
 function filterUndefined(obj: PartialConfig): PartialConfig {
   return Object.fromEntries(
-    Object.entries(obj).filter(([, v]) => v !== undefined)
+    Object.entries(obj).filter(([, v]) => v !== undefined && v !== "")
   );
 }
 

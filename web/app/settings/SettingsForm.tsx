@@ -9,7 +9,7 @@ type Sources = SettingsGetResponse["sources"];
 type TriBool = "" | "true" | "false";
 type FilenameStyleOpt = "" | "id" | "id_title" | "title_id";
 type AudioFormatOpt = "" | "mp3" | "wav";
-type SttProviderOpt = "" | "assemblyai" | "openai_whisper";
+type SttProviderOpt = "" | "assemblyai" | "deepgram" | "openai_whisper";
 type LanguageDetectionOpt = "" | "auto" | "manual";
 
 function Tooltip({ text, effective }: { text: string; effective?: string }) {
@@ -97,7 +97,7 @@ export function SettingsForm({ initial }: { initial: SettingsGetResponse }) {
     const audioFormat: AudioFormatOpt =
       s.audioFormat === "mp3" || s.audioFormat === "wav" ? s.audioFormat : "";
     const sttProvider: SttProviderOpt =
-      s.sttProvider === "assemblyai" || s.sttProvider === "openai_whisper"
+      s.sttProvider === "assemblyai" || s.sttProvider === "deepgram" || s.sttProvider === "openai_whisper"
         ? s.sttProvider
         : "";
     const languageDetection: LanguageDetectionOpt =
@@ -106,6 +106,8 @@ export function SettingsForm({ initial }: { initial: SettingsGetResponse }) {
       filenameStyle,
       audioFormat,
       sttProvider,
+      deepgramModel: (s.deepgramModel as string | undefined) ?? "",
+      deepgramDiarization: toTriBool(s.deepgramDiarization),
       openaiWhisperModel: (s.openaiWhisperModel as string | undefined) ?? "",
       maxAudioMB: s.maxAudioMB === undefined ? "" : String(s.maxAudioMB),
       splitOverlapSeconds:
@@ -213,6 +215,11 @@ export function SettingsForm({ initial }: { initial: SettingsGetResponse }) {
           filenameStyle: form.filenameStyle === "" ? null : form.filenameStyle,
           audioFormat: form.audioFormat === "" ? null : form.audioFormat,
           sttProvider: form.sttProvider === "" ? null : form.sttProvider,
+          deepgramModel:
+            form.deepgramModel.trim().length === 0
+              ? null
+              : form.deepgramModel.trim(),
+          deepgramDiarization: parseTriBool(form.deepgramDiarization),
           openaiWhisperModel:
             form.openaiWhisperModel.trim().length === 0
               ? null
@@ -350,9 +357,49 @@ export function SettingsForm({ initial }: { initial: SettingsGetResponse }) {
                 >
                   <option value="">(inherit)</option>
                   <option value="assemblyai">assemblyai</option>
+                  <option value="deepgram">deepgram</option>
                   <option value="openai_whisper">openai_whisper</option>
                 </select>
                 {form.sttProvider === "" && <span className="muted effectiveHint">{fmtEffective(effective.sttProvider)}</span>}
+              </div>
+
+              <div className="formRow">
+                <span className="formLabel">
+                  deepgramModel
+                  <Tooltip
+                    text="Deepgram model name (default nova-3)."
+                    effective={form.deepgramModel.trim().length === 0 ? `${fmtEffective(effective.deepgramModel)} (${fmtSource(sources.deepgramModel)})` : undefined}
+                  />
+                </span>
+                <input
+                  className="inputSm"
+                  value={form.deepgramModel}
+                  onChange={(e) => setForm({ ...form, deepgramModel: e.target.value })}
+                  placeholder="nova-3"
+                />
+                {form.deepgramModel.trim().length === 0 && <span className="muted effectiveHint">{fmtEffective(effective.deepgramModel)}</span>}
+              </div>
+
+              <div className="formRow">
+                <span className="formLabel">
+                  deepgramDiarization
+                  <Tooltip
+                    text="Enable Deepgram diarization (speaker labels)."
+                    effective={form.deepgramDiarization === "" ? `${fmtEffective(effective.deepgramDiarization)} (${fmtSource(sources.deepgramDiarization)})` : undefined}
+                  />
+                </span>
+                <select
+                  className="inputSm"
+                  value={form.deepgramDiarization}
+                  onChange={(e) =>
+                    setForm({ ...form, deepgramDiarization: e.target.value as TriBool })
+                  }
+                >
+                  <option value="">(inherit)</option>
+                  <option value="true">true</option>
+                  <option value="false">false</option>
+                </select>
+                {form.deepgramDiarization === "" && <span className="muted effectiveHint">{fmtEffective(effective.deepgramDiarization)}</span>}
               </div>
 
               <div className="formRow">

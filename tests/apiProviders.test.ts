@@ -41,6 +41,7 @@ test("GET /providers returns provider capabilities", async () => {
     assert.ok(Array.isArray(body.providers));
     const ids = body.providers.map((p: any) => p.id);
     assert.ok(ids.includes("assemblyai"));
+    assert.ok(ids.includes("deepgram"));
     assert.ok(ids.includes("openai_whisper"));
   });
 });

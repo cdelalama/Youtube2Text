@@ -7,6 +7,11 @@ sttProvider: assemblyai
 assemblyAiApiKeys: []         # Optional: use multiple AssemblyAI keys
 assemblyAiKeyFailureThreshold: 2
 assemblyAiKeyCooldownMs: 60000
+deepgramApiKeys: []           # Optional: use multiple Deepgram keys
+deepgramKeyFailureThreshold: 2
+deepgramKeyCooldownMs: 60000
+deepgramModel: nova-3          # only used when sttProvider=deepgram
+deepgramDiarization: true      # only used when sttProvider=deepgram
 openaiWhisperModel: whisper-1   # only used when sttProvider=openai_whisper
 maxAudioMB:
 splitOverlapSeconds: 2

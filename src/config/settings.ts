@@ -16,6 +16,8 @@ export type NonSecretSettings = Pick<
   | "filenameStyle"
   | "audioFormat"
   | "sttProvider"
+  | "deepgramModel"
+  | "deepgramDiarization"
   | "openaiWhisperModel"
   | "maxAudioMB"
   | "splitOverlapSeconds"
@@ -94,6 +96,8 @@ export function sanitizeNonSecretSettings(input: unknown): Partial<NonSecretSett
   allow("filenameStyle", obj.filenameStyle);
   allow("audioFormat", obj.audioFormat);
   allow("sttProvider", obj.sttProvider);
+  allow("deepgramModel", obj.deepgramModel);
+  allow("deepgramDiarization", obj.deepgramDiarization);
   allow("openaiWhisperModel", obj.openaiWhisperModel);
   allow("maxAudioMB", obj.maxAudioMB);
   allow("splitOverlapSeconds", obj.splitOverlapSeconds);
@@ -129,6 +133,8 @@ export function pickNonSecretSettings(config: AppConfig): NonSecretSettings {
     filenameStyle: config.filenameStyle,
     audioFormat: config.audioFormat,
     sttProvider: config.sttProvider,
+    deepgramModel: config.deepgramModel,
+    deepgramDiarization: config.deepgramDiarization,
     openaiWhisperModel: config.openaiWhisperModel,
     maxAudioMB: config.maxAudioMB,
     splitOverlapSeconds: config.splitOverlapSeconds,

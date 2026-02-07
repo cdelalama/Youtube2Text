@@ -1,4 +1,5 @@
 import { logWarn } from "../utils/logger.js";
+import type { SttProviderId } from "../config/schema.js";
 import type { ProviderCapabilities, TranscriptionProvider } from "./provider.js";
 import type { TranscriptJson, TranscriptionOptions } from "./types.js";
 
@@ -14,17 +15,20 @@ type KeyState = {
 };
 
 export class MultiKeyProvider implements TranscriptionProvider {
-  name: "assemblyai" = "assemblyai";
+  name: SttProviderId;
   private states: KeyState[];
   private providers = new Map<string, TranscriptionProvider>();
   private nextIndex = 0;
 
   constructor(
+    providerId: SttProviderId,
+    private providerLabel: string,
     keys: string[],
     private createProvider: (key: string) => TranscriptionProvider,
     private capabilities: ProviderCapabilities,
     private options: LoadBalancerOptions
   ) {
+    this.name = providerId;
     this.states = keys.map((key) => ({
       key,
       failures: 0,
@@ -39,7 +43,7 @@ export class MultiKeyProvider implements TranscriptionProvider {
   async getAccount(): Promise<Record<string, unknown>> {
     const provider = this.pickAvailableProvider();
     if (!provider.getAccount) {
-      throw new Error("STT provider does not support credits check");
+      throw new Error(`${this.providerLabel} provider does not support credits check`);
     }
     return await provider.getAccount();
   }
@@ -63,13 +67,13 @@ export class MultiKeyProvider implements TranscriptionProvider {
       }
     }
     if (lastError instanceof Error) throw lastError;
-    throw new Error("No AssemblyAI keys available (all in cooldown)");
+    throw new Error(`No ${this.providerLabel} keys available (all in cooldown)`);
   }
 
   private pickAvailableProvider(): TranscriptionProvider {
     const state = this.pickAvailableState();
     if (!state) {
-      throw new Error("No AssemblyAI keys available (all in cooldown)");
+      throw new Error(`No ${this.providerLabel} keys available (all in cooldown)`);
     }
     return this.getProvider(state.key);
   }
@@ -101,7 +105,7 @@ export class MultiKeyProvider implements TranscriptionProvider {
     state.failures = 0;
     state.disabledUntil = Date.now() + this.options.cooldownMs;
     logWarn(
-      `AssemblyAI key ${maskKey(state.key)} disabled for ${Math.round(
+      `${this.providerLabel} key ${maskKey(state.key)} disabled for ${Math.round(
         this.options.cooldownMs / 1000
       )}s after consecutive failures.`
     );

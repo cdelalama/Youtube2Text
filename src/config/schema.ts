@@ -8,11 +8,17 @@ const safePathString = z
   });
 
 const configObjectSchema = z.object({
-  sttProvider: z.enum(["assemblyai", "openai_whisper"]).default("assemblyai"),
+  sttProvider: z.enum(["assemblyai", "deepgram", "openai_whisper"]).default("assemblyai"),
   assemblyAiApiKey: z.string().min(1).optional(),
   assemblyAiApiKeys: z.array(z.string().min(1)).optional(),
   assemblyAiKeyFailureThreshold: z.number().int().positive().default(2),
   assemblyAiKeyCooldownMs: z.number().int().positive().default(60000),
+  deepgramApiKey: z.string().min(1).optional(),
+  deepgramApiKeys: z.array(z.string().min(1)).optional(),
+  deepgramKeyFailureThreshold: z.number().int().positive().default(2),
+  deepgramKeyCooldownMs: z.number().int().positive().default(60000),
+  deepgramModel: z.string().min(1).default("nova-3"),
+  deepgramDiarization: z.boolean().default(true),
   openaiApiKey: z.string().min(1).optional(),
   openaiWhisperModel: z.string().min(1).default("whisper-1"),
   maxAudioMB: z.number().int().positive().optional(),
@@ -60,6 +66,15 @@ export const configSchema = configObjectSchema.superRefine((cfg, ctx) => {
       message: "openaiApiKey is required when sttProvider=openai_whisper",
       path: ["openaiApiKey"],
     });
+  }
+  if (cfg.sttProvider === "deepgram" && !cfg.deepgramApiKey) {
+    if (!cfg.deepgramApiKeys || cfg.deepgramApiKeys.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "deepgramApiKey or deepgramApiKeys is required when sttProvider=deepgram",
+        path: ["deepgramApiKey"],
+      });
+    }
   }
 });
 

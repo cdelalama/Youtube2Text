@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { RunArtifactsResponse, VideoInfo } from "../../../lib/apiSchema";
+import type { RunArtifactsResponse, RunCreateResponse, VideoInfo } from "../../../lib/apiSchema";
 
 function youtubeThumb(videoId: string): string {
   return `https://i.ytimg.com/vi/${encodeURIComponent(videoId)}/mqdefault.jpg`;
@@ -27,6 +28,54 @@ export function RunArtifactsLive({
   const [videos, setVideos] = useState<VideoInfo[]>(initialVideos ?? []);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
+  const [busyAction, setBusyAction] = useState<{ videoId: string; action: "rerun" | "comments" } | undefined>(undefined);
+  const [info, setInfo] = useState<string | undefined>(undefined);
+  const router = useRouter();
+
+  async function rerunVideo(videoId: string) {
+    setBusyAction({ videoId, action: "rerun" });
+    setError(undefined);
+    try {
+      const res = await fetch("/api/runs", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          url: `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,
+          force: true,
+        }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`POST /runs failed: ${res.status} ${text}`);
+      }
+      const data = (await res.json()) as RunCreateResponse;
+      router.push(`/runs/${encodeURIComponent(data.run.runId)}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setBusyAction(undefined);
+    }
+  }
+
+  async function fetchCommentsForVideo(videoId: string, basename: string, dirName: string) {
+    setBusyAction({ videoId, action: "comments" });
+    setError(undefined);
+    try {
+      const res = await fetch(
+        `/api/library/channels/${encodeURIComponent(dirName)}/videos/${encodeURIComponent(basename)}/fetch-comments`,
+        { method: "POST" }
+      );
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Fetch comments failed: ${res.status} ${text}`);
+      }
+      const data = (await res.json()) as { ok: boolean; count: number };
+      setInfo(`Fetched ${data.count} comments for ${videoId}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusyAction(undefined);
+    }
+  }
 
   const url = useMemo(() => `/api/runs/${encodeURIComponent(runId)}/events`, [runId]);
   const refreshTimer = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -92,20 +141,21 @@ export function RunArtifactsLive({
         <strong>Downloads</strong>
         <div className="flexWrap">
           <span className={`pill ${connected ? "ok" : "bad"}`}>
-            {connected ? "live" : "offline"}
+            {connected ? "Connected" : "Disconnected"}
           </span>
           {libraryLink && (
             <Link className="pill" href={libraryLink}>
-              Library
+              View channel
             </Link>
           )}
           <button className="button secondary" type="button" onClick={() => refresh()}>
-            Refresh
+            Reload
           </button>
         </div>
       </div>
 
       {error ? <div className="muted textBad mb10 break">{error}</div> : null}
+      {info ? <div className="muted mb10 break">{info}</div> : null}
 
       {!channelDirName ? (
         <p className="muted">No channel artifacts yet (channelDirName unknown).</p>
@@ -169,6 +219,24 @@ export function RunArtifactsLive({
                 >
                   Audio
                 </a>
+              </div>
+              <div className="row mt8">
+                <button
+                  className="button secondary"
+                  type="button"
+                  onClick={() => rerunVideo(v.videoId)}
+                  disabled={busyAction?.videoId === v.videoId}
+                >
+                  {busyAction?.videoId === v.videoId && busyAction.action === "rerun" ? "Re-running..." : "Re-run"}
+                </button>
+                <button
+                  className="button secondary"
+                  type="button"
+                  onClick={() => fetchCommentsForVideo(v.videoId, v.basename, channelDirName)}
+                  disabled={busyAction?.videoId === v.videoId}
+                >
+                  {busyAction?.videoId === v.videoId && busyAction.action === "comments" ? "Fetching..." : "Fetch comments"}
+                </button>
               </div>
             </div>
           ))}

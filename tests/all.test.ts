@@ -51,3 +51,4 @@ import "./apiAudioUpload.test.js";
 import "./apiRunManagerAudio.test.js";
 import "./apiRunCreateSchema.test.js";
 import "./apiRequestTimeout.test.js";
+import "./versionCheck.test.js";
