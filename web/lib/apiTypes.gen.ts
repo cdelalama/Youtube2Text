@@ -428,7 +428,8 @@ export interface paths {
         get: operations["getLibraryChannelMeta"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete a channel and all its videos */
+        delete: operations["deleteLibraryChannel"];
         options?: never;
         head?: never;
         patch?: never;
@@ -446,6 +447,23 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/library/channels/{channelDirName}/videos/{basename}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a video and all its files */
+        delete: operations["deleteLibraryVideo"];
         options?: never;
         head?: never;
         patch?: never;
@@ -874,6 +892,21 @@ export interface components {
         VideosResponse: {
             channelDirName: string;
             videos: components["schemas"]["VideoInfo"][];
+        };
+        DeleteChannelResponse: {
+            ok: boolean;
+            deleted: {
+                outputFiles: number;
+                audioRemoved: boolean;
+                catalogCacheRemoved: boolean;
+            };
+        };
+        DeleteVideoResponse: {
+            ok: boolean;
+            deleted: {
+                outputFiles: number;
+                audioFiles: number;
+            };
         };
         /** @enum {string} */
         ArtifactKind: "txt" | "md" | "json" | "jsonl" | "meta" | "comments" | "csv" | "audio";
@@ -1929,6 +1962,73 @@ export interface operations {
             };
         };
     };
+    deleteLibraryChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                channelDirName: components["parameters"]["ChannelDirName"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteChannelResponse"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict - an active run targets this channel */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     listLibraryVideos: {
         parameters: {
             query?: never;
@@ -1960,6 +2060,74 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deleteLibraryVideo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                channelDirName: components["parameters"]["ChannelDirName"];
+                basename: components["parameters"]["Basename"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteVideoResponse"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict - an active run targets this channel */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -45,7 +45,7 @@ function catalogPath(outputDir: string, channelId: string): string {
 
 const SAFE_CHANNEL_ID_RE = /^[A-Za-z0-9_-]{1,128}$/;
 
-function safeCatalogId(channelId: string): string {
+export function safeCatalogId(channelId: string): string {
   const trimmed = channelId.trim();
   if (SAFE_CHANNEL_ID_RE.test(trimmed)) return trimmed;
   const hash = createHash("sha256").update(trimmed).digest("hex").slice(0, 12);

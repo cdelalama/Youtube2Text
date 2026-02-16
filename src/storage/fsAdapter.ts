@@ -1,8 +1,15 @@
 import { promises as fs } from "node:fs";
 import { join, basename as pathBasename, extname } from "node:path";
-import { StorageAdapter, ChannelInfo, VideoInfo } from "./adapter.js";
+import {
+  StorageAdapter,
+  ChannelInfo,
+  VideoInfo,
+  DeleteChannelResult,
+  DeleteVideoResult,
+} from "./adapter.js";
 import { ChannelMeta, OutputPaths, VideoMeta } from "./index.js";
 import { parseChannelDirName, parseVideoIdFromBaseName } from "./naming.js";
+import { safeCatalogId } from "../youtube/catalogCache.js";
 import { TranscriptJson } from "../transcription/types.js";
 
 const CHANNEL_META_FILENAME = "_channel.json";
@@ -163,5 +170,113 @@ export class FileSystemStorageAdapter implements StorageAdapter {
 
   getAudioPath(paths: OutputPaths): string {
     return paths.audioPath;
+  }
+
+  async deleteChannel(channelDirName: string): Promise<DeleteChannelResult> {
+    if (!isSafeDirName(channelDirName)) {
+      throw new Error("Invalid channel directory name");
+    }
+
+    const outputPath = join(this.dirs.outputDir, channelDirName);
+    const audioPath = join(this.dirs.audioDir, channelDirName);
+
+    // Verify output dir exists and is not a symlink
+    const outputStat = await fs.lstat(outputPath).catch(() => undefined);
+    if (!outputStat || !outputStat.isDirectory() || outputStat.isSymbolicLink()) {
+      throw new Error("NOT_FOUND");
+    }
+
+    // Count output files before deletion
+    const outputEntries = await fs.readdir(outputPath).catch(() => []);
+    const outputFiles = outputEntries.length;
+
+    // Delete output directory
+    await fs.rm(outputPath, { recursive: true, force: true });
+
+    // Delete audio directory (may not exist)
+    let audioRemoved = false;
+    const audioStat = await fs.lstat(audioPath).catch(() => undefined);
+    if (audioStat && audioStat.isDirectory() && !audioStat.isSymbolicLink()) {
+      await fs.rm(audioPath, { recursive: true, force: true });
+      audioRemoved = true;
+    }
+
+    // Delete catalog cache
+    let catalogCacheRemoved = false;
+    const parsed = parseChannelDirName(channelDirName);
+    if (parsed.channelId) {
+      const catalogPath = join(
+        this.dirs.outputDir,
+        "_catalog",
+        `${safeCatalogId(parsed.channelId)}.json`
+      );
+      try {
+        await fs.unlink(catalogPath);
+        catalogCacheRemoved = true;
+      } catch {
+        // Catalog cache may not exist
+      }
+    }
+
+    return { outputFiles, audioRemoved, catalogCacheRemoved };
+  }
+
+  async deleteVideo(
+    channelDirName: string,
+    basename: string
+  ): Promise<DeleteVideoResult> {
+    if (!isSafeDirName(channelDirName)) {
+      throw new Error("Invalid channel directory name");
+    }
+    if (basename.length === 0 || basename !== pathBasename(basename) || basename.includes("..")) {
+      throw new Error("Invalid basename");
+    }
+
+    const channelDir = join(this.dirs.outputDir, channelDirName);
+    const audioChannelDir = join(this.dirs.audioDir, channelDirName);
+
+    // Verify channel dir exists
+    const dirStat = await fs.lstat(channelDir).catch(() => undefined);
+    if (!dirStat || !dirStat.isDirectory()) {
+      throw new Error("NOT_FOUND");
+    }
+
+    // Delete all output file variants
+    const extensions = [".json", ".txt", ".md", ".jsonl", ".csv", ".meta.json", ".comments.json"];
+    let outputFiles = 0;
+    for (const ext of extensions) {
+      const filePath = join(channelDir, `${basename}${ext}`);
+      try {
+        await fs.unlink(filePath);
+        outputFiles++;
+      } catch {
+        // File may not exist for this extension
+      }
+    }
+
+    if (outputFiles === 0) {
+      throw new Error("NOT_FOUND");
+    }
+
+    // Delete audio file (any format)
+    let audioFiles = 0;
+    try {
+      const audioEntries = await fs.readdir(audioChannelDir);
+      for (const entry of audioEntries) {
+        const entryBase = entry.slice(0, entry.lastIndexOf("."));
+        if (entryBase === basename) {
+          const audioPath = join(audioChannelDir, entry);
+          const stat = await fs.lstat(audioPath);
+          if (stat.isFile() && !stat.isSymbolicLink()) {
+            await fs.unlink(audioPath);
+            audioFiles++;
+          }
+        }
+      }
+    } catch {
+      // Audio directory may not exist
+    }
+
+    return { outputFiles, audioFiles };
   }
 }

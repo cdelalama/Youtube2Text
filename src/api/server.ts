@@ -929,6 +929,67 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
         return;
       }
 
+      // DELETE /library/channels/:channelDirName
+      if (
+        req.method === "DELETE" &&
+        seg.length === 3 &&
+        seg[0] === "library" &&
+        seg[1] === "channels"
+      ) {
+        const channelDirName = decodePathSegment(seg[2]!);
+        if (!channelDirName || !isSafeBaseName(channelDirName)) return badRequest(res, "Invalid channelDirName");
+
+        // Check for active runs targeting this channel
+        const activeRun = manager.listRuns().find(
+          (r) => (r.status === "queued" || r.status === "running") && r.channelDirName === channelDirName
+        );
+        if (activeRun) {
+          json(res, 409, { error: "conflict", message: "An active run targets this channel" });
+          return;
+        }
+
+        try {
+          const result = await storage.deleteChannel(channelDirName);
+          json(res, 200, { ok: true, deleted: result });
+        } catch (e) {
+          if (e instanceof Error && e.message === "NOT_FOUND") return notFound(res);
+          throw e;
+        }
+        return;
+      }
+
+      // DELETE /library/channels/:channelDirName/videos/:basename
+      if (
+        req.method === "DELETE" &&
+        seg.length === 5 &&
+        seg[0] === "library" &&
+        seg[1] === "channels" &&
+        seg[3] === "videos"
+      ) {
+        const channelDirName = decodePathSegment(seg[2]!);
+        const baseName = decodePathSegment(seg[4]!);
+        if (!channelDirName || !isSafeBaseName(channelDirName)) return badRequest(res, "Invalid channelDirName");
+        if (!baseName || !isSafeBaseName(baseName)) return badRequest(res, "Invalid basename");
+
+        // Check for active runs targeting this channel
+        const activeRun = manager.listRuns().find(
+          (r) => (r.status === "queued" || r.status === "running") && r.channelDirName === channelDirName
+        );
+        if (activeRun) {
+          json(res, 409, { error: "conflict", message: "An active run targets this channel" });
+          return;
+        }
+
+        try {
+          const result = await storage.deleteVideo(channelDirName, baseName);
+          json(res, 200, { ok: true, deleted: result });
+        } catch (e) {
+          if (e instanceof Error && e.message === "NOT_FOUND") return notFound(res);
+          throw e;
+        }
+        return;
+      }
+
       if (req.method === "POST" && seg.length === 1 && seg[0] === "runs") {
         const read = await readJsonBodySafe(req, res);
         if (!read.ok) return;

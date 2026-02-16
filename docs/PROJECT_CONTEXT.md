@@ -45,7 +45,7 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
 ## Current Status (2026-02-07)
-v0.34.0 stable. All planned phases (0-3.0) and security hardening (P0/P1/P2) complete.
+v0.35.0 stable. All planned phases (0-3.0) and security hardening (P0/P1/P2) complete.
 
 Completed:
 - CLI supports channel/playlist/single-video URLs + direct audio input

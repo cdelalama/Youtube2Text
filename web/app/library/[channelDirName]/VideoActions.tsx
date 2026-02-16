@@ -16,6 +16,7 @@ export function VideoActions({
   const router = useRouter();
   const [rerunning, setRerunning] = useState(false);
   const [fetching, setFetching] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [fetchResult, setFetchResult] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | undefined>(undefined);
 
@@ -65,6 +66,26 @@ export function VideoActions({
     }
   }
 
+  async function deleteVideo() {
+    if (!window.confirm(`Delete video "${basename}" and all its files?`)) return;
+    setDeleting(true);
+    setError(undefined);
+    try {
+      const res = await fetch(
+        `/api/library/channels/${encodeURIComponent(channelDirName)}/videos/${encodeURIComponent(basename)}`,
+        { method: "DELETE" }
+      );
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Delete failed: ${res.status} ${text}`);
+      }
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setDeleting(false);
+    }
+  }
+
   return (
     <div className="row mt8">
       <button
@@ -82,6 +103,15 @@ export function VideoActions({
         disabled={fetching}
       >
         {fetching ? "Fetching..." : "Fetch comments"}
+      </button>
+      <button
+        className="button secondary"
+        type="button"
+        onClick={deleteVideo}
+        disabled={deleting}
+        style={{ color: "var(--bad, #c00)" }}
+      >
+        {deleting ? "Deleting..." : "Delete"}
       </button>
       {fetchResult && <span className="muted">{fetchResult}</span>}
       {error && <span className="muted textBad break">{error}</span>}

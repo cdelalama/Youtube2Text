@@ -590,10 +590,11 @@ Polling and retry configuration (optional):
 
 ## Roadmap
 
-- Alternative `TranscriptionProvider` implementations.
-- Semantic post-processing: summarization, topic clustering.
-- Ops hardening for hosted use (timeouts/healthcheck/rate limiting as needed).
-- Optional multi-tenant cloud platform (Phase 3+).
+- DONE: Phase 0 (core service hardening), Phase 1 (local-first web UI), Phase 2 (single-tenant hosted admin), Phase 3.0 (direct audio input).
+- DONE: Security hardening roadmaps v7 and v8 (P0/P1/P2).
+- DONE: Feature Mining Phases A/B/C (atomic writes + provider timeouts, multi-key load balancer, Deepgram provider).
+- NEXT (optional): Feature Mining Phase D (error categorization + ETA estimation).
+- NEXT (optional): Phase 3+ multi-tenant cloud platform.
 
 ## Testing
 

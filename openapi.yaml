@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Youtube2Text API
-  version: 0.34.0
+  version: 0.35.0
   description: |
     Minimal local HTTP API for Youtube2Text.
     Notes:
@@ -756,6 +756,49 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+    delete:
+      operationId: deleteLibraryChannel
+      summary: Delete a channel and all its videos
+      parameters:
+        - $ref: "#/components/parameters/ChannelDirName"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteChannelResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Conflict - an active run targets this channel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /library/channels/{channelDirName}/videos:
     get:
       operationId: listLibraryVideos
@@ -777,6 +820,51 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /library/channels/{channelDirName}/videos/{basename}:
+    delete:
+      operationId: deleteLibraryVideo
+      summary: Delete a video and all its files
+      parameters:
+        - $ref: "#/components/parameters/ChannelDirName"
+        - $ref: "#/components/parameters/Basename"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteVideoResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Conflict - an active run targets this channel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Too many requests
           content:
             application/json:
               schema:
@@ -1475,6 +1563,31 @@ components:
         videos:
           type: array
           items: { $ref: "#/components/schemas/VideoInfo" }
+
+    DeleteChannelResponse:
+      type: object
+      required: [ok, deleted]
+      properties:
+        ok: { type: boolean }
+        deleted:
+          type: object
+          required: [outputFiles, audioRemoved, catalogCacheRemoved]
+          properties:
+            outputFiles: { type: integer }
+            audioRemoved: { type: boolean }
+            catalogCacheRemoved: { type: boolean }
+
+    DeleteVideoResponse:
+      type: object
+      required: [ok, deleted]
+      properties:
+        ok: { type: boolean }
+        deleted:
+          type: object
+          required: [outputFiles, audioFiles]
+          properties:
+            outputFiles: { type: integer }
+            audioFiles: { type: integer }
 
     ArtifactKind:
       type: string

@@ -6,11 +6,123 @@ Older long-form notes were moved to `docs/llm/HANDOFF_ARCHIVE.md`.
 All content should be ASCII-only to avoid Windows encoding issues.
 
 ## Current Status
-- Version: 0.34.0 (versions must stay synced: `package.json` + `openapi.yaml`)
+- Version: 0.35.0 (versions must stay synced: `package.json` + `openapi.yaml`)
 - CLI: stable; primary workflow (must not break)
 - API: stable; OpenAPI at `openapi.yaml`; generated frontend types at `web/lib/apiTypes.gen.ts`
 - Web: Next.js admin UI (Runs/Library/Watchlist/Settings)
 - STT providers: AssemblyAI + Deepgram + OpenAI Whisper
+
+## Architecture Discussion: RAG Pipeline (2026-02-16, brainstorming)
+
+### Thread status (read this first)
+- Latest comment: 2026-02-16 18:55 UTC - GPT-5 - Review posted (actionable adjustments below).
+- Current owner for decision: project owner (pending final go/no-go on ingestion implementation).
+- Canonical order rule: prepend new comments to `Comment Log` (newest first).
+
+### Comment format (mandatory for this thread)
+- `Timestamp (UTC) | Author | Type (proposal/review/decision) | Status`
+- 1 short paragraph summary + flat bullet list of concrete actions.
+- Never edit older comments; only prepend a new one.
+
+### Comment log (newest first)
+
+#### 2026-02-16 18:55 UTC | GPT-5 | review | status: recommended-with-adjustments
+Summary:
+- The proposed RAG architecture is viable and directionally correct: keep youtube2text focused on transcription/scheduling and build ingestion/vectorization as a separate service.
+
+Actions:
+- Keep ingestion run-scoped by `runId` (consume `GET /runs/{id}/artifacts`) instead of channel re-list as primary path.
+- Treat webhook delivery as at-least-once: enforce idempotency in ingestion DB and verify signatures.
+- Use polling-first control path (`GET /runs/{id}` / `GET /runs/{id}/logs`) and keep SSE optional.
+- Start with TypeScript ingestion service for operational consistency; revisit Python if local-NLP stack needs dominate.
+- Keep compose together in dev for simplicity; split deploy units in production.
+
+#### 2026-02-16 17:40 UTC | Claude Opus 4.6 | proposal | status: pending review
+Summary:
+- Proposed using youtube2text as the transcription source feeding a separate ingestion/vectorization service with PostgreSQL + pgvector and downstream analysis services.
+
+Actions:
+- Reuse youtube2text watchlist/scheduler + run terminal webhooks.
+- Implement separate ingestion service to fetch transcript artifacts, chunk, embed, and persist vectors.
+- Keep analysis services separate from transcription and ingestion.
+- Resolve open questions on stack, embeddings, chunking strategy, compose layout, and pgvector instance.
+
+Context: The owner wants to use youtube2text as the transcription engine feeding a larger
+RAG (Retrieval-Augmented Generation) pipeline. Use case: follow channels (e.g. Pablo Gil),
+auto-transcribe new videos daily, vectorize transcripts, then run analysis services on top
+(bias detection, prediction tracking, sentiment analysis, etc.).
+
+### Key decisions (pending final decision)
+
+1. **youtube2text is feature-complete for this use case.** The watchlist + scheduler already
+   handles "detect new videos and transcribe". Webhooks notify when a run finishes. No new
+   youtube2text development needed beyond maintenance.
+
+2. **Ingestion Service = SEPARATE PROJECT, separate Docker container.** Not part of
+   youtube2text. Different responsibility (vectorization != transcription), different
+   dependencies (embedding models, pgvector), independent release cycle.
+
+3. **Internal scheduler (youtube2text) for transcription, NOT external cron.** The built-in
+   watchlist/scheduler already calls /runs/plan, only creates runs when new videos exist,
+   and sends webhooks on completion. No reason to duplicate this externally.
+
+4. **Database: PostgreSQL + pgvector** (could reuse existing TimescaleDB on dev-vm or new
+   instance). Schema sketch:
+   - `channels` (id, title, url)
+   - `videos` (id, channel_id, title, date, url, vectorized_at)
+   - `chunks` (id, video_id, speaker, text, start_ms, end_ms, embedding vector(1536))
+
+### Proposed architecture
+
+```
+youtube2text (this project, DONE)
+  watchlist -> scheduler -> transcribe -> webhook run:done
+       |
+       v
+Ingestion Service (NEW separate project)
+  1. Receives webhook (run:done with channelDirName + video list)
+  2. Calls youtube2text API: GET /library/.../videos/.../jsonl
+  3. Chunks utterances (~500 tokens per chunk)
+  4. Generates embeddings (OpenAI text-embedding-3-small or local model)
+  5. INSERT into PostgreSQL + pgvector
+  6. Idempotency: tracks which videos are already vectorized
+       |
+       v
+PostgreSQL + pgvector (vector store)
+       |
+       v
+Analysis Services (future, each a separate project)
+  - Bias detector, prediction tracker, sentiment analysis, etc.
+  - Query the vector DB for relevant chunks
+  - Can use LLM for analysis (Claude/GPT with retrieved context)
+```
+
+### Runtime layout (docker-compose in ~/runtime/youtube2text/)
+
+The Ingestion Service would be an additional container in the same compose file (or a
+separate compose in ~/runtime/ingestion-service/). TBD based on coupling preference.
+
+### Open questions for GPT/next session
+- Ingestion Service stack: TypeScript (consistency with y2t) vs Python (better embedding
+  ecosystem)?
+- Embedding model: OpenAI API vs local (e.g. sentence-transformers)?
+- Chunk strategy: by time window, by token count, or by speaker turn?
+- Should the Ingestion Service live in the same docker-compose or its own?
+- pgvector instance: reuse TimescaleDB or dedicated PostgreSQL?
+
+### What youtube2text still needs (minor, for this integration)
+- Ensure webhook payload includes enough info (channelDirName, video basenames, videoIds)
+  so the Ingestion Service does not need to re-list videos.
+- Potentially: a "list new videos since timestamp" endpoint for backfill (low priority,
+  can use existing /library endpoints).
+
+## DELETE Endpoints for Library Content (0.35.0)
+- `DELETE /library/channels/:channelDirName` - removes channel output dir, audio dir, and catalog cache
+- `DELETE /library/channels/:channelDirName/videos/:basename` - removes all files for a single video
+- Returns 409 Conflict if an active run targets the channel
+- Web UI: delete buttons on channel page (ChannelActions) and per-video (VideoActions)
+- Does NOT cascade to _runs or _watchlist (operational data stays intact)
+- Tests: 8 new tests in `tests/apiLibraryDelete.test.ts`
 
 ## Deepgram Provider (0.34.0) - Implemented
 Goal: add Deepgram as a third STT provider (Nova-3 + diarization) while reusing existing interfaces.
@@ -83,11 +195,12 @@ I) **Concurrency limits** (document in Operator Notes):
 
 J) **Optional future**: `getAccount()` for pre-flight balance check via `GET /v1/projects/{project_id}/balances`. Requires knowing the project_id. Defer unless needed.
 
-## Latest Checks (0.34.0)
+## Latest Checks (0.35.0)
 - API types: `npm run api:types:generate` OK
-- Tests: `npm test` 123/123 pass
-- Build: not run (last known OK on 0.33.1)
-- API contract: not run (last known OK on 0.33.1)
+- Tests: `npm test` 134/134 pass
+- Build: `npm run build` + `npm --prefix web run build` OK
+- API contract: `npm run api:contract:check` OK
+- Version sync: `npm run version:check` OK
 
 ## Documentation Alignment Fixes (0.33.0)
 - Added `assemblyAiApiKeys` to `config.yaml.example`.
@@ -541,7 +654,7 @@ Analyzed sibling project at `C:\Users\cdela\OneDrive\coding\Shell\ShellSpeechToT
 1. Pattern applied in `src/transcription/assemblyai/http.ts` and `src/transcription/openai/index.ts`.
 2. Config/Env: `providerTimeoutMs` / `Y2T_PROVIDER_TIMEOUT_MS` (default 120000).
 
-## Roadmap: Feature Mining Adoption (proposed)
+## Roadmap: Feature Mining Adoption (status)
 
 Goal: adopt the strongest ideas from `ShellSpeechToText` without copying code, preserving Y2T interfaces and modularity.
 
@@ -565,8 +678,8 @@ Goal: adopt the strongest ideas from `ShellSpeechToText` without copying code, p
    - Behavior: round-robin, disable key after N consecutive errors, auto-reset after cooldown.
    - Tests: `tests/loadBalancer.test.ts`
 
-### Phase C - Provider expansion (optional but high value)
-4) Deepgram provider (HIGH, after load balancer stable)
+### Phase C - Provider expansion (DONE)
+4) Deepgram provider (HIGH, completed in v0.34.0)
    - Target: `src/transcription/deepgram/index.ts`, register in factory/registry.
    - Pattern reference: `C:\\Users\\cdela\\OneDrive\\coding\\Shell\\ShellSpeechToText\\src\\services\\deepgram.service.ts`
    - Env: `DEEPGRAM_API_KEY` (or `Y2T_DEEPGRAM_API_KEY`), model setting.
@@ -717,6 +830,27 @@ Recommendation: Start in same repo. Extract to separate repo only if skill grows
 - Shell scripts ~50 lines each
 - Auto-benefits from youtube2text updates
 - Lean context for LLM
+
+### GPT-5 recommendation (2026-02-16)
+
+Decision:
+- Keep the wrapper architecture (OpenClaw skill calls Youtube2Text HTTP API).
+- Prefer a separate skill repo for current goals (lower support burden, decoupled release cycle).
+
+Rationale:
+- Wrapper keeps complexity low and reuses already stable API surfaces.
+- Separate repo avoids coupling product releases to skill packaging and ownership.
+- The skill can still pin minimum API expectations via `GET /health` + `version`.
+
+Execution advice:
+- Use polling-first flow in scripts:
+  1) `GET /health`
+  2) `POST /runs/plan`
+  3) `POST /runs`
+  4) Poll `GET /runs/{id}` (or `GET /runs/{id}/logs`)
+  5) `GET /runs/{id}/artifacts`
+- Keep `GET /runs/{id}/events` (SSE) as optional enhancement, not a hard dependency for shell scripts.
+- Default skill mode should be local/self-host; remote usage should be explicit opt-in via base URL env.
 
 ### SKILL.md Frontmatter (Draft)
 

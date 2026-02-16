@@ -99,6 +99,7 @@ export default async function ChannelPage({
       <ChannelActions
         channelId={channelId}
         channelUrl={channelUrl}
+        channelDirName={channelDirName}
         downloadedCount={videosData.videos.length}
       />
 

@@ -1,7 +1,7 @@
 # Youtube2Text Architecture (Service First, Web Later)
 
-> Version: 1.2.8
-> Last Updated: 2026-02-02
+> Version: 1.2.9
+> Last Updated: 2026-02-16
 > Status: Design / Roadmap
 > Authors: Claude + GPT-5.2 (viewpoints preserved)
 
@@ -297,8 +297,8 @@ Phase B - Provider resiliency (DONE):
 3) Multi-key load balancer for STT providers (round-robin + failover). (DONE)
    - Reference: `C:\Users\cdela\OneDrive\coding\Shell\ShellSpeechToText\src\services\deepgram-load-balancer.service.ts`
 
-Phase C - Provider expansion (optional):
-4) Deepgram provider (after load balancer is stable).
+Phase C - Provider expansion (DONE):
+4) Deepgram provider (completed in v0.34.0).
    - Reference: `C:\Users\cdela\OneDrive\coding\Shell\ShellSpeechToText\src\services\deepgram.service.ts`
 
 Phase D - UX/observability:

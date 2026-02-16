@@ -18,6 +18,17 @@ export type VideoInfo = {
   meta?: VideoMeta;
 };
 
+export type DeleteChannelResult = {
+  outputFiles: number;
+  audioRemoved: boolean;
+  catalogCacheRemoved: boolean;
+};
+
+export type DeleteVideoResult = {
+  outputFiles: number;
+  audioFiles: number;
+};
+
 export interface StorageAdapter {
   listChannels(): Promise<ChannelInfo[]>;
   listVideos(channelDirName: string): Promise<VideoInfo[]>;
@@ -30,4 +41,7 @@ export interface StorageAdapter {
   exists(path: string): Promise<boolean>;
 
   getAudioPath(paths: OutputPaths): string;
+
+  deleteChannel(channelDirName: string): Promise<DeleteChannelResult>;
+  deleteVideo(channelDirName: string, basename: string): Promise<DeleteVideoResult>;
 }

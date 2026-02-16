@@ -24,10 +24,12 @@ async function copyToClipboard(text: string): Promise<boolean> {
 export function ChannelActions({
   channelId,
   channelUrl,
+  channelDirName,
   downloadedCount,
 }: {
   channelId?: string;
   channelUrl?: string;
+  channelDirName: string;
   downloadedCount: number;
 }) {
   const url = useMemo(() => normalizeChannelUrl(channelUrl, channelId), [channelUrl, channelId]);
@@ -35,6 +37,7 @@ export function ChannelActions({
 
   const [copied, setCopied] = useState(false);
   const [planning, setPlanning] = useState(false);
+  const [channelDeleting, setChannelDeleting] = useState(false);
   const [plan, setPlan] = useState<RunPlanResponse["plan"] | undefined>(undefined);
   const [error, setError] = useState<string | undefined>(undefined);
 
@@ -75,6 +78,31 @@ export function ChannelActions({
     }
   }
 
+  async function deleteChannel() {
+    if (
+      !window.confirm(
+        `Delete channel "${channelDirName}" and all ${downloadedCount} video(s)? This cannot be undone.`
+      )
+    )
+      return;
+    setChannelDeleting(true);
+    setError(undefined);
+    try {
+      const res = await fetch(
+        `/api/library/channels/${encodeURIComponent(channelDirName)}`,
+        { method: "DELETE" }
+      );
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Delete failed: ${res.status} ${text}`);
+      }
+      window.location.href = "/library";
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setChannelDeleting(false);
+    }
+  }
+
   return (
     <div className="stack">
       <div className="flexWrap">
@@ -97,6 +125,15 @@ export function ChannelActions({
         ) : null}
         <button className="button secondary" type="button" onClick={computeTotals} disabled={!url || planning}>
           {planning ? "Computing..." : "Compute totals"}
+        </button>
+        <button
+          className="button secondary"
+          type="button"
+          onClick={deleteChannel}
+          disabled={channelDeleting}
+          style={{ color: "var(--bad, #c00)" }}
+        >
+          {channelDeleting ? "Deleting..." : "Delete channel"}
         </button>
       </div>
 
