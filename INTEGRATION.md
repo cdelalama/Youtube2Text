@@ -186,6 +186,40 @@ Example:
 curl -L "http://127.0.0.1:8787/library/channels/<CHANNEL_DIR>/videos/<BASENAME>/md" -o transcript.md
 ```
 
+### 6) Delete library content
+
+Delete an entire channel (output dir + audio dir + catalog cache):
+
+```bash
+curl -sS -X DELETE http://127.0.0.1:8787/library/channels/<CHANNEL_DIR> \
+  -H "X-API-Key: $Y2T_API_KEY"
+```
+
+Response:
+
+```json
+{ "ok": true, "deleted": { "outputFiles": 42, "audioRemoved": true, "catalogCacheRemoved": true } }
+```
+
+Delete a single video (all file variants + audio):
+
+```bash
+curl -sS -X DELETE http://127.0.0.1:8787/library/channels/<CHANNEL_DIR>/videos/<BASENAME> \
+  -H "X-API-Key: $Y2T_API_KEY"
+```
+
+Response:
+
+```json
+{ "ok": true, "deleted": { "outputFiles": 7, "audioFiles": 1 } }
+```
+
+Notes:
+- Returns 404 if the channel or video does not exist.
+- Returns 409 Conflict if an active run (queued or running) targets the channel.
+- Does not cascade to `_runs/` or `_watchlist.json` (operational data stays intact).
+- Historical runs referencing deleted content will show "Content has been deleted" in the web UI.
+
 ## Webhooks (callbackUrl)
 
 `POST /runs` supports `callbackUrl`. When the run ends, the API sends a POST webhook:

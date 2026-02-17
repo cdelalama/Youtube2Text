@@ -44,7 +44,7 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Storage | Persist outputs + idempotency | TBD | Layout: `output/<channel_title_slug>__<channel_id>/<basename>.*`. |
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
-## Current Status (2026-02-07)
+## Current Status (2026-02-17)
 v0.35.0 stable. All planned phases (0-3.0) and security hardening (P0/P1/P2) complete.
 
 Completed:
@@ -57,7 +57,7 @@ Completed:
 - Structured JSONL events via `--json-events` (for a future service/UI)
 - Language auto-detection via yt-dlp metadata/captions (with manual override)
 - AssemblyAI automatic language detection fallback when yt-dlp has no language
-- 120 tests (node:test framework)
+- 134 tests (node:test framework)
 - yt-dlp error classification + smarter retries (no retries for access-denied)
 - HTTP API runner with OpenAPI spec (SSE events + artifacts listing)
 - API run/event persistence on disk (restart-safe by default)
@@ -77,6 +77,8 @@ Completed:
 - Feature Mining Phase A: Atomic file writes + provider timeouts
 - Feature Mining Phase B: Multi-key load balancer with failover
 - Next.js admin UI (Runs/Library/Watchlist/Settings)
+- DELETE endpoints for library channels and videos (web UI + API)
+- Graceful handling of deleted content in run detail pages
 
 Optional / not yet implemented:
 - Feature Mining Phase D: Error categorization + ETA estimation

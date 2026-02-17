@@ -887,7 +887,7 @@ description: "Transcribe YouTube videos with speaker diarization and structured 
 | `GET /runs/{id}/events` | SSE progress stream |
 | `GET /runs/{id}/artifacts` | Retrieve outputs |
 | `POST /audio` | Upload local audio file |
-| `GET /library/channels/{ch}/videos/{id}/{format}` | Download transcript |
+| `GET /library/channels/{channelDirName}/videos/{basename}/{kind}` | Download transcript |
 
 ## Where To Read More
 - `docs/llm/HISTORY.md` (append-only change log)

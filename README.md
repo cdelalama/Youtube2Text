@@ -154,8 +154,8 @@ Y2T_AFTER_DATE=
 Y2T_CSV_ENABLED=false
 Y2T_ASSEMBLYAI_CREDITS_CHECK=warn   # warn | abort | none
 Y2T_ASSEMBLYAI_MIN_BALANCE_MINUTES=60
-Y2T_COMMENTS_ENABLED=false
-Y2T_COMMENTS_MAX=
+Y2T_COMMENTS_ENABLED=true
+Y2T_COMMENTS_MAX=100
 Y2T_CATALOG_MAX_AGE_HOURS=168
 Y2T_MAX_UPLOAD_MB=1024
 Y2T_ASSEMBLYAI_KEY_FAILURES=2
@@ -217,8 +217,8 @@ Options:
 | `--csv` | boolean | false | Emit `.csv` alongside `.json`/`.txt`. |
 | `--assemblyAiCreditsCheck` | `warn|abort|none` | `warn` | Preflight AssemblyAI credits check mode (only for `sttProvider=assemblyai`). |
 | `--assemblyAiMinBalanceMinutes` | number | `60` | Warn/abort if remaining credits below N minutes. |
-| `--comments` | boolean | false | Fetch comments via yt-dlp and save `.comments.json`. |
-| `--commentsMax` | number | unset | Limit comments per video when fetching. |
+| `--comments` | boolean | true | Fetch comments via yt-dlp and save `.comments.json`. |
+| `--commentsMax` | number | 100 | Limit comments per video when fetching. |
 | `--json-events` | boolean | false | Emit JSONL pipeline events to stdout (logs go to stderr). |
 
 Note: The CLI accepts only YouTube URLs by default. Override (not recommended): set `Y2T_RUN_ALLOW_ANY_URL=true`.
@@ -400,6 +400,8 @@ Endpoints:
 - `GET /library/channels/:channelDirName`
 - `GET /library/channels/:channelDirName/videos`
 - `GET /library/channels/:channelDirName/videos/:basename/:kind` where `kind` is `txt|md|json|jsonl|meta|comments|csv|audio`
+- `DELETE /library/channels/:channelDirName` (delete channel: output dir + audio dir + catalog cache; returns 409 if active run targets channel)
+- `DELETE /library/channels/:channelDirName/videos/:basename` (delete single video: all file variants + audio)
 
 ## Docker (API runner)
 
