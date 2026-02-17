@@ -89,7 +89,12 @@ export class FileSystemStorageAdapter implements StorageAdapter {
   async listVideos(channelDirName: string): Promise<VideoInfo[]> {
     if (!isSafeDirName(channelDirName)) return [];
     const channelDir = join(this.dirs.outputDir, channelDirName);
-    const entries = await fs.readdir(channelDir, { withFileTypes: true });
+    let entries: import("node:fs").Dirent[];
+    try {
+      entries = await fs.readdir(channelDir, { withFileTypes: true });
+    } catch {
+      return [];
+    }
 
     const videos: VideoInfo[] = [];
     for (const entry of entries) {

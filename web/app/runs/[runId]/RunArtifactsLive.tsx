@@ -19,10 +19,12 @@ export function RunArtifactsLive({
   runId,
   initialChannelDirName,
   initialVideos,
+  runStatus,
 }: {
   runId: string;
   initialChannelDirName?: string;
   initialVideos?: VideoInfo[];
+  runStatus?: string;
 }) {
   const [channelDirName, setChannelDirName] = useState<string | undefined>(initialChannelDirName);
   const [videos, setVideos] = useState<VideoInfo[]>(initialVideos ?? []);
@@ -241,6 +243,8 @@ export function RunArtifactsLive({
             </div>
           ))}
         </div>
+      ) : channelDirName && (runStatus === "done" || runStatus === "error" || runStatus === "cancelled") ? (
+        <p className="muted">Content has been deleted.</p>
       ) : (
         <p className="muted">No artifacts yet.</p>
       )}

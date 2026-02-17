@@ -116,6 +116,12 @@ separate compose in ~/runtime/ingestion-service/). TBD based on coupling prefere
 - Potentially: a "list new videos since timestamp" endpoint for backfill (low priority,
   can use existing /library endpoints).
 
+## Graceful Handling of Deleted Content in Runs (0.35.0)
+- `listVideos()` in fsAdapter.ts now returns `[]` if channel dir is missing (instead of throwing)
+- Run detail page catches artifact fetch errors and shows empty state
+- `RunArtifactsLive` shows "Content has been deleted" when a finished run has 0 artifacts
+- Historical runs remain visible in the runs list for reference
+
 ## DELETE Endpoints for Library Content (0.35.0)
 - `DELETE /library/channels/:channelDirName` - removes channel output dir, audio dir, and catalog cache
 - `DELETE /library/channels/:channelDirName/videos/:basename` - removes all files for a single video

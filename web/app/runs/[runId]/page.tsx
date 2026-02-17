@@ -51,7 +51,12 @@ function getFirstArtifactVideo(artifacts: unknown): { videoId?: string; title?: 
 export default async function RunPage({ params }: { params: { runId: string } }) {
   const { runId } = params;
   const runData = await apiGetJson<RunResponse>(`/runs/${runId}`);
-  const artifactsData = await apiGetJson<RunArtifactsResponse>(`/runs/${runId}/artifacts`);
+  let artifactsData: RunArtifactsResponse;
+  try {
+    artifactsData = await apiGetJson<RunArtifactsResponse>(`/runs/${runId}/artifacts`);
+  } catch {
+    artifactsData = { run: runData.run, artifacts: { channelDirName: runData.run.channelDirName, videos: [] } };
+  }
   const channelLink = runData.run.channelDirName
     ? `/library/${encodeURIComponent(runData.run.channelDirName)}`
     : undefined;
@@ -141,6 +146,7 @@ export default async function RunPage({ params }: { params: { runId: string } })
             runId={runId}
             initialChannelDirName={artifactsData.artifacts?.channelDirName ?? channelDirName}
             initialVideos={artifactsData.artifacts?.videos ?? []}
+            runStatus={runData.run.status}
           />
         </div>
         <div className="card">
