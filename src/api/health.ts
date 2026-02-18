@@ -19,9 +19,16 @@ export type HealthResponse = {
   deps?: DeepHealthDeps;
 };
 
-async function getGitLikeVersion(): Promise<string | undefined> {
+async function getVersion(): Promise<string | undefined> {
   const v = process.env.npm_package_version;
-  return typeof v === "string" && v.trim().length > 0 ? v.trim() : undefined;
+  if (typeof v === "string" && v.trim().length > 0) return v.trim();
+  try {
+    const raw = await fs.readFile(join(process.cwd(), "package.json"), "utf8");
+    const pkg = JSON.parse(raw) as { version?: string };
+    return typeof pkg.version === "string" ? pkg.version : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 async function checkCommandVersion(
@@ -93,7 +100,7 @@ export async function getHealth(
   return {
     ok: true,
     service: "youtube2text-api",
-    version: await getGitLikeVersion(),
+    version: await getVersion(),
   };
 }
 
@@ -158,7 +165,7 @@ export async function getDeepHealth(
   return {
     ok: overallOk,
     service: "youtube2text-api",
-    version: await getGitLikeVersion(),
+    version: await getVersion(),
     deps,
   };
 }

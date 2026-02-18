@@ -35,6 +35,8 @@ test("GET /health returns basic response (no auth required)", async () => {
     const body = await res.json();
     assert.equal(body.ok, true);
     assert.equal(body.service, "youtube2text-api");
+    assert.equal(typeof body.version, "string");
+    assert.ok(body.version.length > 0, "version should not be empty");
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }
