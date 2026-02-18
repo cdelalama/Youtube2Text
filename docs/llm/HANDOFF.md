@@ -26,6 +26,26 @@ All content should be ASCII-only to avoid Windows encoding issues.
 
 ### Comment log (newest first)
 
+#### 2026-02-18 13:06 UTC | Carlos + Assistant | proposal | status: actionable
+Summary:
+- The owner confirmed that the external database must be the single source of truth for ingestion state (what is done, what is missing, what is new), while Youtube2Text should act as a lightweight YouTube gateway and transcription engine.
+
+Actions:
+- Do not rely on local `output/` files for historical completeness decisions.
+- Keep Youtube2Text responsible for discovery/transcription/artifacts; keep orchestration/state in external service.
+- Add API support for exact date windows by introducing `beforeDate` alongside existing `afterDate` on plan and run requests.
+- Add a lightweight catalog endpoint (channel video metadata only) for external reconciliation without requiring local transcript presence.
+- Add run-by-explicit-video-ids support so external orchestrator can send exact missing sets (for example backfill batches of 100/day).
+- Optionally add catalog diff semantics (`since` or equivalent) for daily "what is new" checks.
+- Use webhook-driven ingestion completion and idempotent upserts by `videoId` in external DB.
+- Keep a periodic drift audit (optional) instead of building a second full YouTube crawler outside Youtube2Text.
+
+Operational model notes:
+- Backfill mode: external DB selects pending subset (oldest-first or strategy), submits bounded batches, marks done/error per `videoId`.
+- Incremental mode: catalog sync, compute new IDs vs DB, process according to policy, report counts.
+- Query "what is missing?" must be answered by external DB, not by local file existence in Youtube2Text.
+- Local retention/purge in Youtube2Text is acceptable if DB keeps canonical state and artifacts are copied to external storage when needed.
+
 #### 2026-02-16 18:55 UTC | GPT-5 | review | status: recommended-with-adjustments
 Summary:
 - The proposed RAG architecture is viable and directionally correct: keep youtube2text focused on transcription/scheduling and build ingestion/vectorization as a separate service.
