@@ -1,7 +1,7 @@
 import { enumerateVideos } from "../youtube/enumerate.js";
 import type { YoutubeListing } from "../youtube/types.js";
 import type { AppConfig } from "../config/schema.js";
-import { isAfterDate } from "../utils/date.js";
+import { isAfterDate, isBeforeDate } from "../utils/date.js";
 import { validateYtDlpInstalled } from "../utils/deps.js";
 import { makeVideoBaseName } from "../storage/naming.js";
 import { getOutputPaths } from "../storage/index.js";
@@ -28,7 +28,9 @@ export type RunPlan = {
   toProcess: number;
   filters: {
     afterDate?: string;
+    beforeDate?: string;
     maxNewVideos?: number;
+    videoIds?: string[];
   };
   videos: PlannedVideo[];
   selectedVideos: PlannedVideo[];
@@ -43,9 +45,15 @@ export async function planFromListing(
   options: { force: boolean },
   deps?: { buildProcessedVideoIdSet?: BuildProcessedSetFn }
 ): Promise<RunPlan> {
-  const filteredVideos = listing.videos.filter((v) =>
-    isAfterDate(v.uploadDate, config.afterDate)
-  );
+  const videoIdSet = config.videoIds ? new Set(config.videoIds) : undefined;
+
+  // When videoIds is provided, filter to only those IDs (ignoring date filters).
+  // Otherwise, apply date-range filters as before.
+  const filteredVideos = videoIdSet
+    ? listing.videos.filter((v) => videoIdSet.has(v.id))
+    : listing.videos.filter((v) =>
+        isAfterDate(v.uploadDate, config.afterDate) && isBeforeDate(v.uploadDate, config.beforeDate)
+      );
 
   const planned = filteredVideos.map((video) => {
     const basename = makeVideoBaseName(video.id, video.title, config.filenameStyle);
@@ -64,19 +72,25 @@ export async function planFromListing(
     return { video, basename, jsonPath: paths.jsonPath };
   });
 
+  // When videoIds is provided, Cortex is the source of truth for what's processed.
+  // Skip processedIndex entirely — all matched videos are considered unprocessed.
+  const skipProcessedCheck = Boolean(videoIdSet);
+
   // Fast "processed" detection: scan existing outputs once per channelId rather than
   // doing a filesystem existence check for every video in the channel listing.
   const buildFn = deps?.buildProcessedVideoIdSet ?? buildProcessedVideoIdSet;
   const processedSet =
-    options.force ? new Set<string>() : await buildFn(config.outputDir, listing.channelId);
+    options.force || skipProcessedCheck
+      ? new Set<string>()
+      : await buildFn(config.outputDir, listing.channelId);
 
-  const videos: PlannedVideo[] = planned.map((p, idx) => ({
+  const videos: PlannedVideo[] = planned.map((p) => ({
     id: p.video.id,
     title: p.video.title,
     url: p.video.url,
     uploadDate: p.video.uploadDate,
     basename: p.basename,
-    processed: options.force ? false : processedSet.has(p.video.id),
+    processed: options.force || skipProcessedCheck ? false : processedSet.has(p.video.id),
   }));
 
   const alreadyProcessed = videos.filter((v) => v.processed).length;
@@ -85,7 +99,7 @@ export async function planFromListing(
 
   const maxNewVideos = config.maxNewVideos;
   const selectedVideos =
-    options.force
+    options.force || skipProcessedCheck
       ? videos.slice(0, maxNewVideos ?? videos.length).map((v) => ({ ...v, processed: false }))
       : videos
           .filter((v) => !v.processed)
@@ -101,8 +115,10 @@ export async function planFromListing(
     unprocessed,
     toProcess: selectedVideos.length,
     filters: {
-      afterDate: config.afterDate,
+      afterDate: videoIdSet ? undefined : config.afterDate,
+      beforeDate: videoIdSet ? undefined : config.beforeDate,
       maxNewVideos: config.maxNewVideos,
+      videoIds: config.videoIds,
     },
     videos,
     selectedVideos,

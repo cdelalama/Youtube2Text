@@ -42,6 +42,7 @@ export type PipelineEvent =
   | {
       type: "video:skip";
       videoId: string;
+      basename: string;
       reason: string;
       index: number;
       total: number;
@@ -52,6 +53,7 @@ export type PipelineEvent =
   | {
       type: "video:done";
       videoId: string;
+      basename: string;
       index: number;
       total: number;
       completed: number;
@@ -61,6 +63,7 @@ export type PipelineEvent =
   | {
       type: "video:error";
       videoId: string;
+      basename: string;
       error: string;
       stage?: PipelineStage;
       index: number;

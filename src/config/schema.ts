@@ -32,6 +32,7 @@ const configObjectSchema = z.object({
   concurrency: z.number().int().positive().default(2),
   maxNewVideos: z.number().int().positive().optional(),
   afterDate: z.string().optional(),
+  beforeDate: z.string().optional(),
   csvEnabled: z.boolean().default(false),
   assemblyAiCreditsCheck: z
     .enum(["warn", "abort", "none"])
@@ -47,6 +48,7 @@ const configObjectSchema = z.object({
   // Channel catalog cache TTL for exact planning. When exceeded, we force a full refresh.
   // Set <= 0 to disable TTL (cache never expires).
   catalogMaxAgeHours: z.number().int().default(168),
+  videoIds: z.array(z.string().min(1)).optional(),
   ytDlpPath: safePathString.optional(),
 });
 

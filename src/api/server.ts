@@ -36,6 +36,7 @@ import { runRetentionCleanup } from "./retention.js";
 import { Scheduler, loadSchedulerConfigFromEnv } from "./scheduler.js";
 import { WatchlistStore } from "./watchlist.js";
 import { getCatalogMetricsSnapshot } from "../youtube/catalogMetrics.js";
+import { listCachedCatalogs, readCatalogByChannelId, safeCatalogId } from "../youtube/catalogCache.js";
 import { getSettingsResponse, patchSettings } from "./settings.js";
 import { applySettingsToConfig, readSettingsFile, sanitizeNonSecretSettings } from "../config/settings.js";
 import {
@@ -597,6 +598,30 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
         return;
       }
 
+      // GET /catalog – list cached catalog summaries
+      if (req.method === "GET" && seg.length === 1 && seg[0] === "catalog") {
+        const catalogs = await listCachedCatalogs(config.outputDir);
+        json(res, 200, { catalogs });
+        return;
+      }
+
+      // GET /catalog/:channelId – full cached catalog with videos
+      if (req.method === "GET" && seg.length === 2 && seg[0] === "catalog") {
+        const rawId = seg[1] ?? "";
+        const channelId = decodeURIComponent(rawId);
+        if (!channelId || channelId.length > 128) {
+          badRequest(res, "Invalid channelId");
+          return;
+        }
+        const catalog = await readCatalogByChannelId(config.outputDir, channelId);
+        if (!catalog) {
+          notFound(res);
+          return;
+        }
+        json(res, 200, { catalog });
+        return;
+      }
+
       if (req.method === "GET" && seg.length === 1 && seg[0] === "runs") {
         json(res, 200, { runs: manager.listRuns() });
         return;
@@ -724,7 +749,7 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
           badRequest(res, "Invalid run payload");
           return;
         }
-        const { url, force, maxNewVideos, afterDate, config: configOverrides } = parsed.data;
+        const { url, force, maxNewVideos, afterDate, beforeDate, videoIds, config: configOverrides } = parsed.data;
         if (!allowAnyRunUrl()) {
           const kind = classifyYoutubeUrl(url).kind;
           if (kind === "unknown") {
@@ -748,6 +773,12 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
             : {}),
           ...(afterDate !== undefined
             ? { afterDate }
+            : {}),
+          ...(beforeDate !== undefined
+            ? { beforeDate }
+            : {}),
+          ...(videoIds !== undefined
+            ? { videoIds }
             : {}),
         };
         const effectiveBase = await getEffectiveConfig();
@@ -1004,6 +1035,8 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
           force,
           maxNewVideos,
           afterDate,
+          beforeDate,
+          videoIds,
           callbackUrl,
           config: configOverrides,
         } = parsed.data;
@@ -1038,6 +1071,12 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
             : {}),
           ...(afterDate !== undefined
             ? { afterDate }
+            : {}),
+          ...(beforeDate !== undefined
+            ? { beforeDate }
+            : {}),
+          ...(videoIds !== undefined
+            ? { videoIds }
             : {}),
         };
         const effectiveBase = await getEffectiveConfig();

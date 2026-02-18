@@ -38,6 +38,7 @@ export type RunRecord = {
   previewVideoId?: string;
   previewTitle?: string;
   stats?: { succeeded: number; failed: number; skipped: number; total: number };
+  videoResults?: Array<{ videoId: string; basename: string; status: "done" | "error" | "skipped" }>;
 };
 
 export type GlobalEvent =
@@ -408,6 +409,11 @@ export class RunManager {
           this.persistRun(run);
           this.emitGlobal({ type: "run:updated", run, timestamp: new Date().toISOString() });
         }
+      }
+      if (event.type === "video:done" || event.type === "video:error" || event.type === "video:skip") {
+        if (!run.videoResults) run.videoResults = [];
+        const status = event.type === "video:done" ? "done" : event.type === "video:error" ? "error" : "skipped";
+        run.videoResults.push({ videoId: event.videoId, basename: event.basename, status });
       }
       if (event.type === "run:start") {
         run.channelId = event.channelId;

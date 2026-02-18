@@ -179,13 +179,34 @@ export const watchlistUpdateSchema = z.object({
   enabled: optionalBoolean(),
 });
 
-export const runPlanSchema = z.object({
+const YOUTUBE_VIDEO_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+
+const optionalVideoIds = () =>
+  z.preprocess(
+    (value) => (value === null ? undefined : value),
+    z
+      .array(z.string().regex(YOUTUBE_VIDEO_ID_RE, "invalid video ID format"))
+      .max(5000)
+      .optional()
+  );
+
+const runPlanBase = z.object({
   url: z.string().url(),
   force: optionalBoolean(),
   maxNewVideos: optionalClampedInt(1, 5000),
   afterDate: optionalIsoDateOrEmpty(),
+  beforeDate: optionalIsoDateOrEmpty(),
+  videoIds: optionalVideoIds(),
   config: safeConfigRecord().optional(),
 });
+
+export const runPlanSchema = runPlanBase.refine(
+  (v) => {
+    if (!v.afterDate || !v.beforeDate) return true;
+    return v.beforeDate >= v.afterDate;
+  },
+  { message: "beforeDate must be >= afterDate" }
+);
 
 export const runCreateSchema = z
   .object({
@@ -194,6 +215,8 @@ export const runCreateSchema = z
   force: optionalBoolean(),
   maxNewVideos: optionalClampedInt(1, 5000),
   afterDate: optionalIsoDateOrEmpty(),
+  beforeDate: optionalIsoDateOrEmpty(),
+  videoIds: optionalVideoIds(),
   callbackUrl: optionalUrl(),
   config: safeConfigRecord().optional(),
   })
@@ -202,7 +225,14 @@ export const runCreateSchema = z
   })
   .refine((value) => !(value.url && value.audioId), {
     message: "Provide either url or audioId, not both",
-  });
+  })
+  .refine(
+    (v) => {
+      if (!v.afterDate || !v.beforeDate) return true;
+      return v.beforeDate >= v.afterDate;
+    },
+    { message: "beforeDate must be >= afterDate" }
+  );
 
 export type SettingsPatchInput = z.infer<typeof settingsPatchSchema>;
 export type WatchlistCreateInput = z.infer<typeof watchlistCreateSchema>;

@@ -270,5 +270,65 @@ export async function getListingWithCatalogCache(
   };
 }
 
+/** Read a catalog from disk by channelId (no yt-dlp). */
+export async function readCatalogByChannelId(
+  outputDir: string,
+  channelId: string
+): Promise<
+  | {
+      channelId: string;
+      channelTitle?: string;
+      inputUrl: string;
+      retrievedAt: string;
+      complete: boolean;
+      videos: YoutubeVideo[];
+    }
+  | undefined
+> {
+  const catalogId = safeCatalogId(channelId);
+  const path = catalogPath(outputDir, catalogId);
+  return readCatalog(path);
+}
+
+/** List summaries of all cached catalogs (no yt-dlp). */
+export async function listCachedCatalogs(
+  outputDir: string
+): Promise<
+  Array<{
+    channelId: string;
+    channelTitle?: string;
+    inputUrl: string;
+    retrievedAt: string;
+    videoCount: number;
+  }>
+> {
+  const dir = join(outputDir, "_catalog");
+  try {
+    const files = await fs.readdir(dir);
+    const results: Array<{
+      channelId: string;
+      channelTitle?: string;
+      inputUrl: string;
+      retrievedAt: string;
+      videoCount: number;
+    }> = [];
+    for (const file of files) {
+      if (!file.endsWith(".json")) continue;
+      const catalog = await readCatalog(join(dir, file));
+      if (!catalog) continue;
+      results.push({
+        channelId: catalog.channelId,
+        channelTitle: catalog.channelTitle,
+        inputUrl: catalog.inputUrl,
+        retrievedAt: catalog.retrievedAt,
+        videoCount: catalog.videos.length,
+      });
+    }
+    return results;
+  } catch {
+    return [];
+  }
+}
+
 // Exported for unit tests.
 export const _test = { mergeNewestFirst };

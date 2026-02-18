@@ -259,6 +259,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List cached catalog summaries
+         * @description Returns a summary of all cached channel catalogs. No yt-dlp call;
+         *     catalogs are populated as a side effect of POST /runs/plan or POST /runs.
+         */
+        get: operations["listCatalogs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/catalog/{channelId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get full cached catalog for a channel
+         * @description Returns the full cached catalog (all videos) for a channel.
+         *     Returns 404 if no catalog has been cached yet for this channelId.
+         */
+        get: operations["getCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/runs": {
         parameters: {
             query?: never;
@@ -731,6 +773,8 @@ export interface components {
             previewVideoId?: string;
             previewTitle?: string;
             stats?: components["schemas"]["RunStats"];
+            /** @description Per-video outcome populated as the pipeline processes each video. */
+            videoResults?: components["schemas"]["VideoResult"][];
         };
         RunsResponse: {
             runs: components["schemas"]["RunRecord"][];
@@ -750,6 +794,14 @@ export interface components {
             maxNewVideos?: number | null;
             /** @description Only include videos after YYYY-MM-DD (best-effort; based on yt-dlp upload_date). */
             afterDate?: string | null;
+            /** @description Only include videos before YYYY-MM-DD (best-effort; based on yt-dlp upload_date). Must be >= afterDate. */
+            beforeDate?: string | null;
+            /**
+             * @description Process exactly these video IDs. When set, date filters and processedIndex are
+             *     ignored — the external orchestrator (Cortex) is the source of truth for what
+             *     needs processing.
+             */
+            videoIds?: string[];
             /**
              * @description Optional. If set, the API sends a POST webhook when the run ends:
              *     - `run:done` when status becomes done
@@ -774,6 +826,13 @@ export interface components {
             maxNewVideos?: number | null;
             /** @description Only include videos after YYYY-MM-DD (best-effort; based on yt-dlp upload_date). */
             afterDate?: string | null;
+            /** @description Only include videos before YYYY-MM-DD (best-effort; based on yt-dlp upload_date). Must be >= afterDate. */
+            beforeDate?: string | null;
+            /**
+             * @description Plan for exactly these video IDs. When set, date filters and processedIndex are
+             *     ignored — the external orchestrator (Cortex) is the source of truth.
+             */
+            videoIds?: string[];
             config?: {
                 [key: string]: unknown;
             };
@@ -820,7 +879,9 @@ export interface components {
             toProcess: number;
             filters: {
                 afterDate?: string;
+                beforeDate?: string;
                 maxNewVideos?: number;
+                videoIds?: string[];
             };
             videos: components["schemas"]["PlannedVideo"][];
             /** @description Videos selected to be processed for this run (unprocessed + capped by `maxNewVideos`). */
@@ -919,6 +980,40 @@ export interface components {
         RunArtifactsResponse: {
             run: components["schemas"]["RunRecord"];
             artifacts: components["schemas"]["RunArtifacts"];
+        };
+        VideoResult: {
+            videoId: string;
+            basename: string;
+            /** @enum {string} */
+            status: "done" | "error" | "skipped";
+        };
+        CatalogVideo: {
+            id: string;
+            title: string;
+            url: string;
+            uploadDate?: string;
+            description?: string;
+        };
+        CatalogSummary: {
+            channelId: string;
+            channelTitle?: string;
+            inputUrl: string;
+            retrievedAt: string;
+            videoCount: number;
+        };
+        CatalogDetail: {
+            channelId: string;
+            channelTitle?: string;
+            inputUrl: string;
+            retrievedAt: string;
+            complete: boolean;
+            videos: components["schemas"]["CatalogVideo"][];
+        };
+        CatalogListResponse: {
+            catalogs: components["schemas"]["CatalogSummary"][];
+        };
+        CatalogDetailResponse: {
+            catalog: components["schemas"]["CatalogDetail"];
         };
     };
     responses: {
@@ -1557,6 +1652,84 @@ export interface operations {
                 };
             };
             429: components["responses"]["RateLimited"];
+        };
+    };
+    listCatalogs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogListResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                channelId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogDetailResponse"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     listRuns: {

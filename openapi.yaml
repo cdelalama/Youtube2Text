@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Youtube2Text API
-  version: 0.35.0
+  version: 0.36.0
   description: |
     Minimal local HTTP API for Youtube2Text.
     Notes:
@@ -461,6 +461,67 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "429":
           $ref: "#/components/responses/RateLimited"
+
+  /catalog:
+    get:
+      operationId: listCatalogs
+      summary: List cached catalog summaries
+      description: |
+        Returns a summary of all cached channel catalogs. No yt-dlp call;
+        catalogs are populated as a side effect of POST /runs/plan or POST /runs.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogListResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /catalog/{channelId}:
+    get:
+      operationId: getCatalog
+      summary: Get full cached catalog for a channel
+      description: |
+        Returns the full cached catalog (all videos) for a channel.
+        Returns 404 if no catalog has been cached yet for this channelId.
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+            maxLength: 128
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogDetailResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /runs:
     get:
@@ -1300,6 +1361,11 @@ components:
         previewVideoId: { type: string }
         previewTitle: { type: string }
         stats: { $ref: "#/components/schemas/RunStats" }
+        videoResults:
+          type: array
+          description: Per-video outcome populated as the pipeline processes each video.
+          items:
+            $ref: "#/components/schemas/VideoResult"
 
     RunsResponse:
       type: object
@@ -1331,6 +1397,19 @@ components:
         afterDate:
           type: [string, "null"]
           description: Only include videos after YYYY-MM-DD (best-effort; based on yt-dlp upload_date).
+        beforeDate:
+          type: [string, "null"]
+          description: Only include videos before YYYY-MM-DD (best-effort; based on yt-dlp upload_date). Must be >= afterDate.
+        videoIds:
+          type: array
+          items:
+            type: string
+            pattern: "^[A-Za-z0-9_-]{1,64}$"
+          maxItems: 5000
+          description: |
+            Process exactly these video IDs. When set, date filters and processedIndex are
+            ignored — the external orchestrator (Cortex) is the source of truth for what
+            needs processing.
         callbackUrl:
           type: [string, "null"]
           description: |
@@ -1362,6 +1441,18 @@ components:
         afterDate:
           type: [string, "null"]
           description: Only include videos after YYYY-MM-DD (best-effort; based on yt-dlp upload_date).
+        beforeDate:
+          type: [string, "null"]
+          description: Only include videos before YYYY-MM-DD (best-effort; based on yt-dlp upload_date). Must be >= afterDate.
+        videoIds:
+          type: array
+          items:
+            type: string
+            pattern: "^[A-Za-z0-9_-]{1,64}$"
+          maxItems: 5000
+          description: |
+            Plan for exactly these video IDs. When set, date filters and processedIndex are
+            ignored — the external orchestrator (Cortex) is the source of truth.
         config:
           type: object
           additionalProperties: true
@@ -1443,7 +1534,11 @@ components:
           required: []
           properties:
             afterDate: { type: string }
+            beforeDate: { type: string }
             maxNewVideos: { type: integer }
+            videoIds:
+              type: array
+              items: { type: string }
         videos:
           type: array
           items: { $ref: "#/components/schemas/PlannedVideo" }
@@ -1610,3 +1705,60 @@ components:
       properties:
         run: { $ref: "#/components/schemas/RunRecord" }
         artifacts: { $ref: "#/components/schemas/RunArtifacts" }
+
+    VideoResult:
+      type: object
+      required: [videoId, basename, status]
+      properties:
+        videoId: { type: string }
+        basename: { type: string }
+        status:
+          type: string
+          enum: [done, error, skipped]
+
+    CatalogVideo:
+      type: object
+      required: [id, title, url]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        url: { type: string }
+        uploadDate: { type: string }
+        description: { type: string }
+
+    CatalogSummary:
+      type: object
+      required: [channelId, inputUrl, retrievedAt, videoCount]
+      properties:
+        channelId: { type: string }
+        channelTitle: { type: string }
+        inputUrl: { type: string }
+        retrievedAt: { type: string }
+        videoCount: { type: integer }
+
+    CatalogDetail:
+      type: object
+      required: [channelId, inputUrl, retrievedAt, complete, videos]
+      properties:
+        channelId: { type: string }
+        channelTitle: { type: string }
+        inputUrl: { type: string }
+        retrievedAt: { type: string }
+        complete: { type: boolean }
+        videos:
+          type: array
+          items: { $ref: "#/components/schemas/CatalogVideo" }
+
+    CatalogListResponse:
+      type: object
+      required: [catalogs]
+      properties:
+        catalogs:
+          type: array
+          items: { $ref: "#/components/schemas/CatalogSummary" }
+
+    CatalogDetailResponse:
+      type: object
+      required: [catalog]
+      properties:
+        catalog: { $ref: "#/components/schemas/CatalogDetail" }

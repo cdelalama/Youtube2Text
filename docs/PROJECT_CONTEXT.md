@@ -44,8 +44,8 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Storage | Persist outputs + idempotency | TBD | Layout: `output/<channel_title_slug>__<channel_id>/<basename>.*`. |
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
-## Current Status (2026-02-17)
-v0.35.0 stable. All planned phases (0-3.0) and security hardening (P0/P1/P2) complete.
+## Current Status (2026-02-18)
+v0.36.0 stable. All planned phases (0-3.0) and security hardening (P0/P1/P2) complete. Pipeline Integration API added for external orchestration.
 
 Completed:
 - CLI supports channel/playlist/single-video URLs + direct audio input
@@ -57,7 +57,7 @@ Completed:
 - Structured JSONL events via `--json-events` (for a future service/UI)
 - Language auto-detection via yt-dlp metadata/captions (with manual override)
 - AssemblyAI automatic language detection fallback when yt-dlp has no language
-- 134 tests (node:test framework)
+- 146 tests (node:test framework)
 - yt-dlp error classification + smarter retries (no retries for access-denied)
 - HTTP API runner with OpenAPI spec (SSE events + artifacts listing)
 - API run/event persistence on disk (restart-safe by default)

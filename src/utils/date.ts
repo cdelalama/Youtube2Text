@@ -21,3 +21,11 @@ export function isAfterDate(uploadDate?: string, after?: string): boolean {
   if (!u || !a) return true;
   return u >= a;
 }
+
+export function isBeforeDate(uploadDate?: string, before?: string): boolean {
+  if (!before) return true;
+  const u = normalizeUploadDate(uploadDate);
+  const b = normalizeUploadDate(before);
+  if (!u || !b) return true;
+  return u <= b;
+}

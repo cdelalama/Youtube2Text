@@ -48,9 +48,9 @@ Recommended reading order:
 ## Current Focus (Snapshot)
 
 Source of truth: docs/llm/HANDOFF.md.
-- Last Updated: 2026-02-17 - Claude Opus 4.6
-- Working on: Phases 0-3.0 complete. Optional roadmap: Phase D (error categorization, ETA estimation) and Phase 3+ (multi-tenant cloud platform).
-- Status: v0.35.0 stable. CLI + API + Web UI + Docker all operational. 134/134 tests passing. Build + API contract checks passing. Security roadmap v8 P0/P1/P2 done.
+- Last Updated: 2026-02-18 - Claude Opus 4.6
+- Working on: Phases 0-3.0 complete. v0.36.0 adds Pipeline Integration API (beforeDate, videoResults, GET /catalog, videoIds). Optional roadmap: Phase D (error categorization, ETA estimation) and Phase 3+ (multi-tenant cloud platform).
+- Status: v0.36.0 stable. CLI + API + Web UI + Docker all operational. 146/146 tests passing. Build + API contract checks passing. Security roadmap v8 P0/P1/P2 done.
 
 Keep this section synchronized with the "Current Status" block in docs/llm/HANDOFF.md.
 

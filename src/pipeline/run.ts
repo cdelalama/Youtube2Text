@@ -38,7 +38,7 @@ import { splitAudioByLimit } from "../utils/audio.js";
 import { mergeChunkTranscripts } from "../transcription/merge.js";
 import { promises as fs } from "node:fs";
 import { dirname, basename as pathBasename, extname } from "node:path";
-import { makeChannelDirName } from "../storage/naming.js";
+import { makeChannelDirName, makeVideoBaseName } from "../storage/naming.js";
 
 type AssemblyAiAccountResponse = Record<string, unknown> & {
   credit_balance?: number;
@@ -204,9 +204,12 @@ export async function runPipeline(
           maxAgeHours: config.catalogMaxAgeHours,
         }
       );
-  const candidateVideos = listing.videos.filter((v) =>
-    isAfterDate(v.uploadDate, config.afterDate)
-  );
+  const videoIdSet = config.videoIds ? new Set(config.videoIds) : undefined;
+  const candidateVideos = videoIdSet
+    ? listing.videos.filter((v) => videoIdSet.has(v.id))
+    : listing.videos.filter((v) =>
+        isAfterDate(v.uploadDate, config.afterDate)
+      );
 
   const audioExt = audioInput
     ? (() => {
@@ -244,7 +247,8 @@ export async function runPipeline(
   let candidateUnprocessed = candidateTotal;
   let candidateProcessedFlags: boolean[] = [];
 
-  if (!options.force) {
+  const skipProcessedCheck = Boolean(videoIdSet);
+  if (!options.force && !skipProcessedCheck) {
     const processedSet = await buildProcessedVideoIdSet(config.outputDir, listing.channelId);
     candidateProcessedFlags = candidateJobs.map((j) => processedSet.has(j.video.id));
     candidateAlreadyProcessed = candidateProcessedFlags.filter(Boolean).length;
@@ -256,7 +260,7 @@ export async function runPipeline(
   }
 
   const maxNewVideos = config.maxNewVideos;
-  const selectedVideos = options.force
+  const selectedVideos = options.force || skipProcessedCheck
     ? candidateVideos.slice(0, maxNewVideos ?? candidateVideos.length)
     : candidateVideos
         .filter((_, idx) => !candidateProcessedFlags[idx])
@@ -264,6 +268,7 @@ export async function runPipeline(
 
   const videoJobs = selectedVideos.map((video, index) => ({
     video,
+    basename: makeVideoBaseName(video.id, video.title, config.filenameStyle),
     index: index + 1,
     paths: getOutputPaths(
       listing.channelId,
@@ -376,7 +381,7 @@ export async function runPipeline(
 
   try {
     await Promise.all(
-      videoJobs.map(({ video, paths, index }) =>
+      videoJobs.map(({ video, basename: videoBasename, paths, index }) =>
         limit(async () => {
           let stageForError: PipelineStage = "download";
           let hintForError: string | undefined;
@@ -394,6 +399,7 @@ export async function runPipeline(
             emitter?.emit({
               type: "video:skip",
               videoId: video.id,
+              basename: videoBasename,
               reason,
               index,
               total: totalVideos,
@@ -429,6 +435,7 @@ export async function runPipeline(
               emitter?.emit({
                 type: "video:done",
                 videoId: video.id,
+                basename: videoBasename,
                 index,
                 total: totalVideos,
                 completed: completedVideos,
@@ -440,6 +447,7 @@ export async function runPipeline(
               emitter?.emit({
                 type: "video:error",
                 videoId: video.id,
+                basename: videoBasename,
                 error: errorMessage ?? "Unknown error",
                 stage: stageForError,
                 index,
@@ -461,6 +469,7 @@ export async function runPipeline(
               emitter?.emit({
                 type: "video:skip",
                 videoId: video.id,
+                basename: videoBasename,
                 reason: "already_processed",
                 index,
                 total: totalVideos,

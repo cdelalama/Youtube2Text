@@ -6,7 +6,7 @@ Older long-form notes were moved to `docs/llm/HANDOFF_ARCHIVE.md`.
 All content should be ASCII-only to avoid Windows encoding issues.
 
 ## Current Status
-- Version: 0.35.0 (versions must stay synced: `package.json` + `openapi.yaml`)
+- Version: 0.36.0 (versions must stay synced: `package.json` + `openapi.yaml`)
 - CLI: stable; primary workflow (must not break)
 - API: stable; OpenAPI at `openapi.yaml`; generated frontend types at `web/lib/apiTypes.gen.ts`
 - Web: Next.js admin UI (Runs/Library/Watchlist/Settings)
@@ -136,6 +136,32 @@ separate compose in ~/runtime/ingestion-service/). TBD based on coupling prefere
 - Potentially: a "list new videos since timestamp" endpoint for backfill (low priority,
   can use existing /library endpoints).
 
+## Pipeline Integration API (0.36.0)
+
+New features to support external orchestration by Cortex (or any external service):
+
+1. **beforeDate filter**: `beforeDate` param on POST /runs/plan and POST /runs for date-window filtering.
+   - Range validation: beforeDate must be >= afterDate (400 otherwise).
+   - Files: `src/utils/date.ts`, `src/config/schema.ts`, `src/api/schemas.ts`, `src/pipeline/plan.ts`, `src/pipeline/run.ts`, `src/api/server.ts`
+
+2. **videoResults in RunRecord**: Per-video outcome tracking (done/error/skipped with videoId + basename).
+   - Populated from pipeline events (video:done, video:error, video:skip).
+   - Automatically included in webhook payload (RunRecord flows to webhook).
+   - Files: `src/pipeline/events.ts` (basename added), `src/pipeline/run.ts` (emit basename), `src/api/runManager.ts` (videoResults field)
+
+3. **GET /catalog**: Read-only access to cached channel catalogs (no yt-dlp needed).
+   - `GET /catalog` - list summaries (channelId, title, videoCount, retrievedAt)
+   - `GET /catalog/:channelId` - full catalog with video list, 404 if not cached
+   - Files: `src/youtube/catalogCache.ts` (readCatalogByChannelId, listCachedCatalogs), `src/api/server.ts`
+
+4. **videoIds param**: Process exactly specified video IDs (external orchestrator is source of truth).
+   - `videoIds: string[]` on POST /runs/plan and POST /runs (max 5000, regex validated).
+   - When set: skips processedIndex, ignores date filters, processes all matched IDs.
+   - IDs not found in catalog are silently excluded.
+   - Files: `src/api/schemas.ts`, `src/config/schema.ts`, `src/pipeline/plan.ts`, `src/pipeline/run.ts`, `src/api/server.ts`
+
+Tests: `tests/apiPlan.test.ts` (6 new), `tests/apiRunValidation.test.ts` (1 new), `tests/videoResults.test.ts` (new), `tests/apiCatalog.test.ts` (new, 5 tests), `tests/apiRunCreateSchema.test.ts` (1 new)
+
 ## Graceful Handling of Deleted Content in Runs (0.35.0)
 - `listVideos()` in fsAdapter.ts now returns `[]` if channel dir is missing (instead of throwing)
 - Run detail page catches artifact fetch errors and shows empty state
@@ -221,9 +247,9 @@ I) **Concurrency limits** (document in Operator Notes):
 
 J) **Optional future**: `getAccount()` for pre-flight balance check via `GET /v1/projects/{project_id}/balances`. Requires knowing the project_id. Defer unless needed.
 
-## Latest Checks (0.35.0)
+## Latest Checks (0.36.0)
 - API types: `npm run api:types:generate` OK
-- Tests: `npm test` 134/134 pass
+- Tests: `npm test` 146/146 pass
 - Build: `npm run build` + `npm --prefix web run build` OK
 - API contract: `npm run api:contract:check` OK
 - Version sync: `npm run version:check` OK

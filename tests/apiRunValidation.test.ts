@@ -60,6 +60,14 @@ test("POST /runs/plan clamps maxNewVideos and validates afterDate", async () => 
     const body = (await ok.json()) as any;
     assert.equal(body.plan.maxNewVideosSeen, 5000);
     assert.equal(body.plan.afterDateSeen, "2024-01-01");
+
+    // beforeDate < afterDate returns 400
+    const badRange = await fetch(`http://127.0.0.1:${port}/runs/plan`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-api-key": "test-api-key-aaaaaaaaaaaaaaaaaaaaaa" },
+      body: JSON.stringify({ url: "https://www.youtube.com/watch?v=abc", afterDate: "2024-06-01", beforeDate: "2024-01-01" }),
+    });
+    assert.equal(badRange.status, 400, "beforeDate < afterDate should return 400");
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }
