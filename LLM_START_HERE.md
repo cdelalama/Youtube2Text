@@ -5,7 +5,7 @@
 Welcome to Youtube2Text. Before you contribute, review and adapt the sections below to match the project requirements. Replace angle-bracket placeholders (<...>) with real values and share this file with every LLM agent.
 
 Recommended reading order:
-0. `~/infrastructure/` (network, servers, services, conventions — shared across all projects)
+0. `~/src/home-infra/docs/` (network, servers, services, conventions -- shared across all projects)
 1. This file (rules, workflows, and current expectations)
 2. docs/PROJECT_CONTEXT.md (vision, architecture, current state)
 3. docs/VERSIONING_RULES.md (version management policy)
