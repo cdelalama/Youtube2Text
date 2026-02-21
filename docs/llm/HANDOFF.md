@@ -11,6 +11,16 @@ All content should be ASCII-only to avoid Windows encoding issues.
 - API: stable; OpenAPI at `openapi.yaml`; generated frontend types at `web/lib/apiTypes.gen.ts`
 - Web: Next.js admin UI (Runs/Library/Watchlist/Settings)
 - STT providers: AssemblyAI + Deepgram + OpenAI Whisper
+- Deployed: dev (dev-vm) + production (NAS)
+
+## NAS Production Deployment (2026-02-21)
+- Images: `youtube2text-api:v0.36.0`, `youtube2text-web:v0.36.0` (transferred via `docker save | ssh | docker load`)
+- Secrets: Doppler service token (`prd` config) via `dopplerhq/cli` Docker image
+- Auth enforced (`Y2T_ALLOW_INSECURE_NO_API_KEY=false`)
+- Scheduler: OFF (`Y2T_SCHEDULER_ENABLED=false`) -- enable after e2e validation
+- Security: `Y2T_HEALTH_DEEP_PUBLIC=false`, `Y2T_HEALTH_INCLUDE_PATHS=false`, CORS restricted
+- Healthcheck: Node.js-based (wget not available in `node:20-slim` container)
+- Full NAS-specific details (IPs, paths, gotchas): see private infra docs (`home-infra/docs/DEPLOY_YOUTUBE2TEXT_NAS.md`)
 
 ## Architecture Discussion: RAG Pipeline (2026-02-16, brainstorming)
 

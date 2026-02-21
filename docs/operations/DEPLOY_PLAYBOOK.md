@@ -147,7 +147,7 @@ When using Doppler with Docker Compose:
 doppler run -- docker compose up --build -d
 ```
 
-## Suggested deployment steps (high level)
+## Suggested deployment steps (generic server)
 
 1) Copy `docker-compose.yml` to your server.
 2) Provide env vars (`.env` file, Doppler, or shell env):
@@ -159,3 +159,63 @@ doppler run -- docker compose up --build -d
    - Web loads at your domain
    - `GET /health?deep=true` reports `ok: true`
 5) Periodically check disk usage and retention settings.
+
+---
+
+## Production deployment notes
+
+The production deployment uses Docker Compose with pre-built images (no `build:` in
+compose). Secrets are managed via Doppler service tokens fetched at startup using the
+`dopplerhq/cli` Docker image.
+
+Key design decisions:
+- Healthcheck uses `node` (not `wget`/`curl`) since `node:20-slim` does not include them
+- `start.sh` uses `umask 077` + `trap` to protect ephemeral secrets files
+- `NEXT_PUBLIC_Y2T_API_BASE_URL` is the browser-reachable API URL for SSE streaming
+- Scheduler is OFF by default in production; enable after e2e validation
+- `Y2T_CORS_ORIGINS` must match the web UI origin
+
+### Healthcheck (important)
+
+The API container has no `wget` or `curl`. Use this Node.js healthcheck:
+
+```yaml
+healthcheck:
+  test: ["CMD", "node", "-e", "const h=require('http');h.get('http://localhost:8787/health',r=>{process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))"]
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 15s
+```
+
+If the healthcheck fails, `depends_on: condition: service_healthy` will block the web
+container from starting.
+
+### Deploy a new version
+
+```bash
+# 1. Build new images
+npm run build && npm --prefix web run build
+docker build -t youtube2text-api:v<VERSION> .
+docker build -t youtube2text-web:v<VERSION> -f web/Dockerfile web/
+
+# 2. Transfer images to production server
+docker save youtube2text-api:v<VERSION> | ssh <SERVER> 'docker load'
+docker save youtube2text-web:v<VERSION> | ssh <SERVER> 'docker load'
+
+# 3. Update docker-compose.yml image tags, copy to server, restart
+
+# 4. Verify
+curl -s http://<SERVER>:8787/health
+# Expected: {"ok":true,"version":"<VERSION>"}
+```
+
+### Verification checklist
+
+- [ ] `/health` returns OK with correct version
+- [ ] `/runs` without API key returns 401
+- [ ] `/runs` with API key returns 200
+- [ ] Web UI loads and shows correct version
+
+For server-specific deployment details (paths, credentials, workarounds), see the
+private infrastructure documentation.
