@@ -258,6 +258,27 @@ Persistence (default enabled):
 Auth (required for server/Docker):
 - `Y2T_API_KEY` is required to run the HTTP API server (clients must send `X-API-Key: ...`, except `GET /health`).
   - For local development only, you can set `Y2T_ALLOW_INSECURE_NO_API_KEY=true` **and** `Y2T_ALLOW_INSECURE_NO_API_KEY_CONFIRM=I_UNDERSTAND` to start the API server without auth.
+
+### Quick auth sanity check (common pitfall)
+
+If `/health` works but `/runs` or `/runs/plan` returns `unauthorized`, the request is missing `X-API-Key`.
+
+Minimal check:
+
+```bash
+# 1) health does not require key
+curl -sS http://127.0.0.1:8787/health
+
+# 2) protected endpoint requires key
+curl -sS -X POST http://127.0.0.1:8787/runs/plan \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $Y2T_API_KEY" \
+  -d '{"url":"https://youtu.be/SeaHznJrqdM"}'
+```
+
+Notes:
+- In production/NAS, key injection may come from Doppler or container env.
+- Calling the API directly without the key will always fail by design.
 - Example:
   - `curl -H "X-API-Key: $Y2T_API_KEY" http://127.0.0.1:8787/runs`
 
