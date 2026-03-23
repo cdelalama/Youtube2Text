@@ -47,9 +47,12 @@ services:
       ASSEMBLYAI_API_KEY: ${ASSEMBLYAI_API_KEY}
       DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      # Stable yt-dlp path (wrapper injects --js-runtimes node,deno)
+      YT_DLP_PATH: ${YT_DLP_PATH:-/usr/local/bin/yt-dlp-wrapper}
     volumes:
       - ./output:/data/output
       - ./audio:/data/audio
+      - ./scripts/yt-dlp-wrapper.sh:/usr/local/bin/yt-dlp-wrapper:ro
 
   youtube2text-web:
     build:
