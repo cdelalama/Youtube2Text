@@ -131,7 +131,8 @@ export async function planRun(
   options: { force: boolean }
 ): Promise<RunPlan> {
   const ytDlpCommand = await validateYtDlpInstalled(config.ytDlpPath);
-  const ytDlpExtraArgs: string[] = [];
+  // Keep planning behavior aligned with run() for yt-dlp EJS/runtime handling.
+  const ytDlpExtraArgs: string[] = ["--js-runtimes", "node,deno"];
   const listing = await getListingWithCatalogCache(inputUrl, config.outputDir, {
     ytDlpCommand,
     ytDlpExtraArgs,
