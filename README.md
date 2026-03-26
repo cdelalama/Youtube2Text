@@ -90,8 +90,6 @@ Deepgram supports speaker diarization.
 
 If you see warnings about a missing JavaScript runtime (EJS), upgrade `yt-dlp` and install a supported JS runtime as documented by yt-dlp (this project does not expose arbitrary yt-dlp flags via Settings/UI/API for security reasons).
 
-Note: Youtube2Text now passes an explicit runtime list to yt-dlp (`--js-runtimes node,deno`) in planning/run paths to reduce EJS-related extraction failures while keeping args non-user-configurable.
-
 Note: Youtube2Text only targets public videos. If a channel contains members-only/private/age-restricted videos, yt-dlp will fail for those and Youtube2Text will record the failure and continue with the rest.
 
 ## Configuration

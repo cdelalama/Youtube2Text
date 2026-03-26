@@ -176,11 +176,7 @@ export async function runPipeline(
     }
   }
 
-  // Force an explicit JS runtime list for yt-dlp EJS extraction.
-  // Recent yt-dlp versions may degrade/fail on some YouTube pages when relying
-  // on implicit defaults (e.g., "No supported JavaScript runtime could be found").
-  // Keep this hardcoded (not user-configurable) to preserve security posture.
-  const ytDlpExtraArgs: string[] = ["--js-runtimes", "node,deno"];
+  const ytDlpExtraArgs: string[] = [];
   const listing: YoutubeListing = audioInput
     ? {
         channelId: "uploads",
