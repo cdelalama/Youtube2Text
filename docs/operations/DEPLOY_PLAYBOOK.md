@@ -1,6 +1,8 @@
 # Deploy Playbook (Single-Tenant Admin)
 
-This playbook documents a pragmatic server deployment for Youtube2Text as a single-tenant (admin-only) service.
+This playbook documents a pragmatic server deployment for Media2Text as a
+single-tenant (admin-only) service. The runtime/image names remain
+`youtube2text-*` by design.
 It does not replace the CLI: the CLI remains fully operational and can be run separately.
 
 ## Goals

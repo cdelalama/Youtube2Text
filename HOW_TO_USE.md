@@ -1,4 +1,7 @@
-# How to Use Youtube2Text
+# How to Use Media2Text
+
+Media2Text is the visible product brand. CLI commands and runtime identifiers
+still use `youtube2text`.
 
 This is a practical usage guide for this repository (not a scaffold).
 

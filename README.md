@@ -1,11 +1,17 @@
-<!-- doc-version: 0.36.0 -->
-# Youtube2Text
+<!-- doc-version: 0.36.1 -->
+# Media2Text
 
-Local-first, modular CLI service that:
+Media2Text is the visible product name for the `youtube2text` engine: a
+local-first, modular CLI/API/Web service that:
 1. Enumerates videos from a public YouTube channel, playlist, or a single video URL.
-2. Downloads audio-only tracks using `yt-dlp`.
-3. Transcribes audio with AssemblyAI (diarization), Deepgram (diarization), or OpenAI Whisper API.
-4. Stores structured results on disk for later analysis or UI browsing.
+2. Accepts direct local audio input without YouTube.
+3. Downloads audio-only tracks using `yt-dlp` when the source is YouTube.
+4. Transcribes audio with AssemblyAI (diarization), Deepgram (diarization), or OpenAI Whisper API.
+5. Stores structured results on disk for later analysis or UI browsing.
+
+Technical naming contract: `youtube2text`, `youtube2text-api`,
+`youtube2text-web`, and all `Y2T_` environment variables are intentional
+runtime identifiers. Do not rename them to match the Media2Text brand.
 
 The goal is to keep each stage separable and replaceable (e.g., swapping AssemblyAI for another ASR provider, adding semantic post-processing, or attaching a web dashboard).
 
@@ -55,13 +61,13 @@ Later extensions read from `output/` only (e.g., React dashboard), keeping the p
 
 ### Production Note
 
-For local development, Youtube2Text relies on a system-installed `yt-dlp`.
+For local development, Media2Text relies on a system-installed `yt-dlp`.
 When deploying to a server or container, ensure `yt-dlp` is installed in that environment as well. For the HTTP API runner, a Docker image/docker-compose setup is included (see "Docker (API runner)" below).
 
 ### Troubleshooting yt-dlp on Windows
 
 If you installed `yt-dlp` via `winget`, PowerShell can sometimes resolve it via an alias while child processes (like Node.js) cannot.
-If Youtube2Text reports "yt-dlp not found" but `yt-dlp --version` works in your shell, restart the shell or ensure the real `yt-dlp.exe` path is on PATH.
+If Media2Text reports "yt-dlp not found" but `yt-dlp --version` works in your shell, restart the shell or ensure the real `yt-dlp.exe` path is on PATH.
 The pipeline also attempts to resolve the executable via PowerShell automatically.
 
 If VSCode's integrated terminal still cannot find it, set an explicit path (preferred `Y2T_YT_DLP_PATH`, legacy `YT_DLP_PATH` also supported):
@@ -91,7 +97,7 @@ Deepgram supports speaker diarization.
 
 If you see warnings about a missing JavaScript runtime (EJS), upgrade `yt-dlp` and install a supported JS runtime as documented by yt-dlp (this project does not expose arbitrary yt-dlp flags via Settings/UI/API for security reasons).
 
-Note: Youtube2Text only targets public videos. If a channel contains members-only/private/age-restricted videos, yt-dlp will fail for those and Youtube2Text will record the failure and continue with the rest.
+Note: Media2Text only targets public videos. If a channel contains members-only/private/age-restricted videos, yt-dlp will fail for those and Media2Text will record the failure and continue with the rest.
 
 ## Configuration
 
@@ -117,7 +123,7 @@ You can provide secrets (API keys, auth tokens) in two ways:
 ```bash
 # One-time setup (per machine)
 doppler login
-cd ~/Youtube2Text
+cd ~/src/youtube2text
 doppler setup          # select project + environment
 
 # Run with secrets injected
@@ -499,7 +505,7 @@ docker compose up --build
 
 ### runs.yaml (optional)
 
-If you run the CLI **without** providing a URL, and a `runs.yaml` (or `runs.yml`) file exists in the project root, Youtube2Text will execute each run in sequence. Each run can use either `url` (YouTube channel/playlist/video) or `audioPath` (local file).
+If you run the CLI **without** providing a URL, and a `runs.yaml` (or `runs.yml`) file exists in the project root, Media2Text will execute each run in sequence. Each run can use either `url` (YouTube channel/playlist/video) or `audioPath` (local file).
 
 YAML must use spaces (no tabs). You can use either:
 

@@ -1,6 +1,7 @@
 # Repository Structure Guide
 
-This document describes the current repository layout for Youtube2Text.
+This document describes the current repository layout for Media2Text. The
+repository/runtime name remains `youtube2text` by design.
 
 ## Top-Level Layout
 

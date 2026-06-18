@@ -2,6 +2,7 @@ process.env.Y2T_API_KEY = "test-api-key-aaaaaaaaaaaaaaaaaaaaaa";
 delete process.env.Y2T_ALLOW_INSECURE_NO_API_KEY;
 
 import "./naming.test.js";
+import "./namingContract.test.js";
 import "./language.test.js";
 import "./txtFormatter.test.js";
 import "./outputFormats.test.js";

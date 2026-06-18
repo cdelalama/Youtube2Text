@@ -97,6 +97,21 @@ while read -r filepath markertype; do
             fi
             CHECKED=$((CHECKED + 1))
             ;;
+        package-lock-version)
+            # package-lock stores the project version twice near the top:
+            # top-level version and packages[""].version. Dependency versions
+            # later in the lockfile are unrelated.
+            FOUND=$(grep '"version":' "$filepath" 2>/dev/null | head -2 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | sort -u | tr '\n' ' ')
+            COUNT=$(grep '"version":' "$filepath" 2>/dev/null | head -2 | grep -cE '[0-9]+\.[0-9]+\.[0-9]+' || true)
+            if [ "$COUNT" -lt 2 ]; then
+                echo "DRIFT: $filepath missing package-lock root version entries"
+                ERRORS=$((ERRORS + 1))
+            elif [ "$FOUND" != "$EXPECTED " ]; then
+                echo "DRIFT: $filepath has '${FOUND% }', expected '$EXPECTED'"
+                ERRORS=$((ERRORS + 1))
+            fi
+            CHECKED=$((CHECKED + 1))
+            ;;
         yaml-info-version)
             # Indented "version: X.Y.Z" (openapi.yaml info.version). Anchored to a
             # semver value so schema properties named "version:" are not matched.

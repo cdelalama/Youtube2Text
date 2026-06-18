@@ -7,6 +7,7 @@
 #
 # This script:
 # - Updates VERSION file
+# - Updates package.json, package-lock.json, and openapi.yaml version markers
 # - Updates <!-- doc-version: X.Y.Z --> markers in tracked docs
 # - Adds a new ## [X.Y.Z] section to CHANGELOG.md
 # - Runs check-version-sync.sh as self-test
@@ -92,6 +93,32 @@ while read -r filepath markertype; do
                 mv "$TMPOUT" "$filepath"
                 printf "  %-40s OK (json-version)\n" "$filepath"
                 UPDATED=$((UPDATED + 1))
+            else
+                printf "  %-40s FAIL (no \"version\" field)\n" "$filepath"
+                FAILED=$((FAILED + 1))
+            fi
+            ;;
+        package-lock-version)
+            # Replace the package-lock top-level version and the root package version.
+            # Dependency versions later in the lockfile must remain untouched.
+            if grep -q '"version":' "$filepath"; then
+                TMPOUT=$(mktemp)
+                if awk -v ver="$NEW_VERSION" '
+                    /"version": *"[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*"/ && count < 2 {
+                        sub(/"version": *"[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*"/, "\"version\": \"" ver "\"")
+                        count++
+                    }
+                    { print }
+                    END { if (count < 2) exit 2 }
+                ' "$filepath" > "$TMPOUT"; then
+                    mv "$TMPOUT" "$filepath"
+                    printf "  %-40s OK (package-lock-version)\n" "$filepath"
+                    UPDATED=$((UPDATED + 1))
+                else
+                    rm -f "$TMPOUT"
+                    printf "  %-40s FAIL (expected top-level and root package versions)\n" "$filepath"
+                    FAILED=$((FAILED + 1))
+                fi
             else
                 printf "  %-40s FAIL (no \"version\" field)\n" "$filepath"
                 FAILED=$((FAILED + 1))

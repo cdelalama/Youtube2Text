@@ -15,6 +15,20 @@ function createFixture(version = "1.2.3") {
     "utf8",
   );
   writeFileSync(
+    join(root, "package-lock.json"),
+    JSON.stringify(
+      {
+        name: "fixture",
+        version,
+        lockfileVersion: 3,
+        packages: { "": { name: "fixture", version } },
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+  writeFileSync(
     join(root, "openapi.yaml"),
     `openapi: 3.1.0\ninfo:\n  title: Fixture API\n  version: ${version}\npaths: {}\n`,
     "utf8",
@@ -50,6 +64,27 @@ test("version check detects package/openapi mismatch", async () => {
   const state = await collectVersionState(root);
   const { errors } = validateVersionState(state);
   assert.equal(errors.some((msg) => msg.includes("Version mismatch: package.json=1.0.0 openapi.yaml=1.0.1")), true);
+});
+
+test("version check detects package-lock mismatch", async () => {
+  const root = createFixture("1.0.0");
+  writeFileSync(
+    join(root, "package-lock.json"),
+    JSON.stringify(
+      {
+        name: "fixture",
+        version: "1.0.1",
+        lockfileVersion: 3,
+        packages: { "": { name: "fixture", version: "1.0.1" } },
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+  const state = await collectVersionState(root);
+  const { errors } = validateVersionState(state);
+  assert.equal(errors.some((msg) => msg.includes("package-lock.json=1.0.1")), true);
 });
 
 test("repository keeps version markers synchronized", async () => {

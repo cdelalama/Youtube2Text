@@ -191,12 +191,27 @@ check_history_entry() {
         return
     fi
 
-    # Look for today's date anywhere in the history entries (not in header/format lines)
-    if grep -q "^- $TODAY" "$HISTORY" 2>/dev/null; then
-        add_result "history-entry" "PASS" "HISTORY.md has entry for $TODAY"
-    else
-        add_result "history-entry" "FAIL" "No HISTORY.md entry for $TODAY"
-    fi
+    # Enforce the declared HISTORY format and newest-first ordering:
+    # YYYY-MM-DD - <LLM_NAME> - <Brief summary> - Files: [...] - Version impact: ...
+    first_entry=$(awk '
+        /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] - / { print; exit }
+        /^- [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] - / { print; exit }
+    ' "$HISTORY")
+
+    case "$first_entry" in
+        "$TODAY - "*)
+            add_result "history-entry" "PASS" "HISTORY.md first entry is for $TODAY"
+            ;;
+        "- $TODAY - "*)
+            add_result "history-entry" "FAIL" "HISTORY.md first entry has obsolete leading dash; expected '$TODAY - ...'"
+            ;;
+        "")
+            add_result "history-entry" "FAIL" "No formatted HISTORY.md entries found"
+            ;;
+        *)
+            add_result "history-entry" "FAIL" "Latest HISTORY.md entry is not for $TODAY: $first_entry"
+            ;;
+    esac
 }
 
 check_decisions_referenced() {

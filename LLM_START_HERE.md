@@ -1,9 +1,9 @@
-<!-- doc-version: 0.36.0 -->
-# LLM Start Guide - Youtube2Text
+<!-- doc-version: 0.36.1 -->
+# LLM Start Guide - Media2Text
 
 ## Read This First (Mandatory)
 
-Welcome to Youtube2Text. Review the rules below and share this file with every LLM agent before contributing. The canonical, version-managed rules live in the DOCKIT-TEMPLATE blocks at the end of this file; do not edit them outside those blocks.
+Welcome to Media2Text. Review the rules below and share this file with every LLM agent before contributing. The technical runtime/repo remains `youtube2text`; see docs/llm/DECISIONS.md D-018 before changing names. The canonical, version-managed rules live in the DOCKIT-TEMPLATE blocks at the end of this file; do not edit them outside those blocks.
 
 Recommended reading order:
 0. `~/src/home-infra/docs/` (network, servers, services, conventions -- shared across all projects)
@@ -51,8 +51,8 @@ Recommended reading order:
 
 Source of truth: docs/llm/HANDOFF.md.
 - Last Updated: 2026-06-18
-- Working on: LLM-DocKit adoption completed (VERSION file + version-sync manifest + session validator + pre-commit hook). v0.36.0 product unchanged.
-- Status: v0.36.0 stable. CLI + API + Web UI + Docker all operational. 146/146 tests passing. Build + API contract checks passing. Security roadmap v8 P0/P1/P2 done.
+- Working on: Media2Text visible-brand overlay on the existing youtube2text runtime, plus naming/version guardrails.
+- Status: v0.36.1 stable in source. CLI + API + Web UI + Docker operational. 152/152 tests passing. Security roadmap v8 P0/P1/P2 done. Production NAS deployment remains documented separately in HANDOFF.
 
 Keep this section synchronized with the "Current Status" block in docs/llm/HANDOFF.md.
 
@@ -120,7 +120,7 @@ Every change must be documented. If you are unsure about a rule, ask the user be
 
 <!-- DOCKIT-TEMPLATE:START version-management -->
 ### Version Management
-- Every commit that changes code/config files MUST include a version bump. The pre-commit hook enforces this.
+- Every commit that changes served/product code, API, runtime config, deploy files, or validation tooling MUST include a version bump. Repo docs/README-only edits do not require a bump by themselves.
 - For version bumps, run `scripts/bump-version.sh <new_version>`; do not edit version strings manually.
 - The bump script reads `docs/version-sync-manifest.yml` to update all tracked files atomically.
 - Validate sync with `scripts/check-version-sync.sh` (also available as pre-commit hook).

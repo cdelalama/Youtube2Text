@@ -10,6 +10,7 @@ set -eu
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 PROJECT_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
 VALIDATOR="$PROJECT_ROOT/scripts/dockit-validate-session.sh"
+TODAY=$(date +%Y-%m-%d)
 
 TMP_ROOT=${TMPDIR:-/tmp}/dockit-validator-smoke.$$
 OUT="$TMP_ROOT/out.txt"
@@ -125,6 +126,24 @@ expect_pass "env + clean stale handoff/history skips" \
 
 expect_fail "no env + clean stale handoff/history fails normally" \
     "$VALIDATOR" --project "$REPO" --quiet --check handoff-date --check history-entry
+
+cat >"$REPO/docs/llm/HISTORY.md" <<EOF
+# History
+
+$TODAY - Smoke - Current entry. - Files: [docs/llm/HISTORY.md] - Version impact: no
+2000-01-01 - Smoke - Old entry. - Files: [docs/llm/HISTORY.md] - Version impact: no
+EOF
+expect_pass "history-entry accepts newest-first declared format" \
+    "$VALIDATOR" --project "$REPO" --quiet --check history-entry
+
+cat >"$REPO/docs/llm/HISTORY.md" <<EOF
+# History
+
+- $TODAY - Smoke - Obsolete leading dash. - Files: [docs/llm/HISTORY.md] - Version impact: no
+EOF
+expect_fail "history-entry rejects obsolete leading dash format" \
+    "$VALIDATOR" --project "$REPO" --quiet --check history-entry
+git -C "$REPO" checkout -q -- docs/llm/HISTORY.md
 
 printf '\nchange\n' >>"$REPO/docs/llm/HANDOFF.md"
 expect_fail "env + modified HANDOFF does not skip" \

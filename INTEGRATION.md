@@ -1,6 +1,8 @@
 # Integration Guide (API-first)
 
-This document is for integrating Youtube2Text into other systems (n8n, custom backends, cron, etc.).
+This document is for integrating Media2Text into other systems (n8n, custom
+backends, cron, etc.). The API runtime and compose service names remain
+`youtube2text`/`youtube2text-api` by design.
 It does not replace the CLI.
 
 ## URLs and Auth

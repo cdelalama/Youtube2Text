@@ -1,5 +1,5 @@
-<!-- doc-version: 0.36.0 -->
-# Youtube2Text Architecture (Service First, Web Later)
+<!-- doc-version: 0.36.1 -->
+# Media2Text Architecture (youtube2text Engine)
 
 > Version: 0.36.0 (synced with package.json)
 > Last Updated: 2026-02-18
@@ -8,7 +8,8 @@
 
 ## Overview
 
-Youtube2Text ships today as a standalone CLI pipeline. The roadmap evolves it into:
+Media2Text ships today as a standalone CLI pipeline backed by the
+`youtube2text` engine. The roadmap evolves it into:
 1. A core library that can run as CLI or as a service (Phase 0).
 2. A local-first web UI that reads existing outputs and can run jobs (Phase 1).
 3. A hosted single-tenant service for one admin workspace (Phase 2).
@@ -166,7 +167,7 @@ Screens:
 
 ### Phase 2 - Hosted single-tenant service (admin)
 
-Goal: deploy Youtube2Text for one admin workspace (no public signup) while keeping the CLI unchanged.
+Goal: deploy Media2Text for one admin workspace (no public signup) while keeping the CLI unchanged.
 
 Add:
 

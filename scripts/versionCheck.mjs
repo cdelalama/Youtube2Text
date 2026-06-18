@@ -23,21 +23,26 @@ async function readOpenApiVersion(path) {
 
 export async function collectVersionState(rootDir = process.cwd()) {
   const packagePath = resolve(rootDir, "package.json");
+  const packageLockPath = resolve(rootDir, "package-lock.json");
   const openapiPath = resolve(rootDir, "openapi.yaml");
   const handoffPath = resolve(rootDir, "docs/llm/HANDOFF.md");
   const contextPath = resolve(rootDir, "docs/PROJECT_CONTEXT.md");
 
   const pkg = await readJson(packagePath);
+  const lock = await readJson(packageLockPath);
   const openapiVersion = await readOpenApiVersion(openapiPath);
   const handoffRaw = await readFile(handoffPath, "utf8");
   const contextRaw = await readFile(contextPath, "utf8");
 
   return {
     packagePath,
+    packageLockPath,
     openapiPath,
     handoffPath,
     contextPath,
     packageVersion: pkg?.version,
+    packageLockVersion: lock?.version,
+    packageLockRootVersion: lock?.packages?.[""]?.version,
     openapiVersion,
     handoffVersion: extractFirstMatch(handoffRaw, /- Version:\s*([0-9]+\.[0-9]+\.[0-9]+)/),
     projectContextVersion: extractFirstMatch(contextRaw, /\bv([0-9]+\.[0-9]+\.[0-9]+)\s+stable\b/i),
@@ -48,6 +53,8 @@ export function validateVersionState(state) {
   const errors = [];
   const {
     packageVersion,
+    packageLockVersion,
+    packageLockRootVersion,
     openapiVersion,
     handoffVersion,
     projectContextVersion,
@@ -59,6 +66,12 @@ export function validateVersionState(state) {
   if (!SEMVER_RE.test(String(openapiVersion ?? ""))) {
     errors.push(`Invalid openapi.yaml info.version: ${String(openapiVersion)}`);
   }
+  if (!SEMVER_RE.test(String(packageLockVersion ?? ""))) {
+    errors.push(`Invalid package-lock.json version: ${String(packageLockVersion)}`);
+  }
+  if (!SEMVER_RE.test(String(packageLockRootVersion ?? ""))) {
+    errors.push(`Invalid package-lock.json root package version: ${String(packageLockRootVersion)}`);
+  }
   if (!SEMVER_RE.test(String(handoffVersion ?? ""))) {
     errors.push("Missing or invalid version in docs/llm/HANDOFF.md (Current Status).");
   }
@@ -69,6 +82,16 @@ export function validateVersionState(state) {
   if (packageVersion && openapiVersion && packageVersion !== openapiVersion) {
     errors.push(
       `Version mismatch: package.json=${packageVersion} openapi.yaml=${openapiVersion}`,
+    );
+  }
+  if (packageVersion && packageLockVersion && packageVersion !== packageLockVersion) {
+    errors.push(
+      `Version mismatch: package.json=${packageVersion} package-lock.json=${packageLockVersion}`,
+    );
+  }
+  if (packageVersion && packageLockRootVersion && packageVersion !== packageLockRootVersion) {
+    errors.push(
+      `Version mismatch: package.json=${packageVersion} package-lock.json root=${packageLockRootVersion}`,
     );
   }
   if (packageVersion && handoffVersion && packageVersion !== handoffVersion) {
@@ -88,6 +111,8 @@ export function validateVersionState(state) {
 export function formatVersionReport(state) {
   return [
     `[version-check] package.json: ${state.packageVersion}`,
+    `[version-check] package-lock.json: ${state.packageLockVersion}`,
+    `[version-check] package-lock.json root: ${state.packageLockRootVersion}`,
     `[version-check] openapi.yaml: ${state.openapiVersion}`,
     `[version-check] docs/llm/HANDOFF.md: ${state.handoffVersion}`,
     `[version-check] docs/PROJECT_CONTEXT.md: ${state.projectContextVersion}`,

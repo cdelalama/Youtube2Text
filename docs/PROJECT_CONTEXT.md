@@ -1,8 +1,15 @@
-<!-- doc-version: 0.36.0 -->
-# Project Context - Youtube2Text
+<!-- doc-version: 0.36.1 -->
+# Project Context - Media2Text
 
 ## Vision
-Build a modular local-first pipeline to turn YouTube channel audio into speaker-diarized transcripts, stored on disk in structured formats for later analysis and UI browsing.
+Build a modular local-first pipeline to turn YouTube/video sources and direct
+audio files into speaker-diarized transcripts, stored on disk in structured
+formats for later analysis, UI browsing, and downstream automation.
+
+Naming architecture:
+- Visible brand: Media2Text.
+- Technical runtime/repo/config contract: `youtube2text` and `Y2T_`.
+- This split is intentional; see `docs/llm/DECISIONS.md` D-018.
 
 ## Objectives
 1. Provide a CLI that accepts a public YouTube channel, playlist, or video URL with optional filters (date, max videos).
@@ -45,8 +52,8 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Storage | Persist outputs + idempotency | TBD | Layout: `output/<channel_title_slug>__<channel_id>/<basename>.*`. |
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
-## Current Status (2026-02-18)
-v0.36.0 stable. All planned phases (0-3.0) and security hardening (P0/P1/P2) complete. Pipeline Integration API added for external orchestration.
+## Current Status (2026-06-18)
+v0.36.1 stable in source. All planned phases (0-3.0) and security hardening (P0/P1/P2) complete. Pipeline Integration API added for external orchestration. Media2Text is now the visible product brand while the technical runtime remains `youtube2text`.
 
 Completed:
 - CLI supports channel/playlist/single-video URLs + direct audio input
@@ -58,7 +65,7 @@ Completed:
 - Structured JSONL events via `--json-events` (for a future service/UI)
 - Language auto-detection via yt-dlp metadata/captions (with manual override)
 - AssemblyAI automatic language detection fallback when yt-dlp has no language
-- 146 tests (node:test framework)
+- 152 tests (node:test framework)
 - yt-dlp error classification + smarter retries (no retries for access-denied)
 - HTTP API runner with OpenAPI spec (SSE events + artifacts listing)
 - API run/event persistence on disk (restart-safe by default)

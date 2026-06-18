@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.0 -->
+<!-- doc-version: 0.36.1 -->
 # LLM Work Handoff
 
 This file is the current operational snapshot. Keep it short (target: 1-2 screens).
@@ -9,27 +9,35 @@ All content should be ASCII-only to avoid Windows encoding issues.
 - Last Updated: 2026-06-18
 
 ## Open work
-- Reconcile the two version systems now both anchored at 0.36.0: the existing
-  `scripts/versionCheck.mjs` (`package.json` + `openapi.yaml` + docs) and the
-  newly adopted DocKit `scripts/check-version-sync.sh` (reads
-  `docs/version-sync-manifest.yml`). They agree today; decide whether one should
-  drive the other to prevent future drift.
-- Install the DocKit pre-commit hook locally: `scripts/pre-commit-hook.sh`
-  (`cp scripts/pre-commit-hook.sh .git/hooks/pre-commit && chmod +x` it).
 - Open investigation: yt-dlp EJS extraction failures on plan/run. The explicit
   js-runtime fix was reverted (commits 0c2789d..edec2fd); the underlying
   extraction failure in `src/youtube/enumerate.ts` is likely still unresolved.
 
 ## Current Status
-- Version: 0.36.0. Authoritative source: `package.json` + `openapi.yaml`
-  (checked by `scripts/versionCheck.mjs`). `VERSION` and the doc `<!-- doc-version -->`
-  markers mirror them; a single `scripts/bump-version.sh <ver>` updates all
-  10 tracked targets and `scripts/check-version-sync.sh` enforces no drift.
+- Version: 0.36.1. Visible brand: Media2Text. Technical runtime/repo/config
+  contract: `youtube2text` + `Y2T_` (see `docs/llm/DECISIONS.md` D-018).
+- Authoritative version sources: `package.json`, `package-lock.json`, and
+  `openapi.yaml` (checked by `scripts/versionCheck.mjs`). `VERSION`, CHANGELOG,
+  and doc `<!-- doc-version -->` markers mirror them; a single
+  `scripts/bump-version.sh <ver>` updates all 11 tracked targets and
+  `scripts/check-version-sync.sh` enforces no drift.
 - CLI: stable; primary workflow (must not break)
 - API: stable; OpenAPI at `openapi.yaml`; generated frontend types at `web/lib/apiTypes.gen.ts`
-- Web: Next.js admin UI (Runs/Library/Watchlist/Settings)
+- Web: Next.js admin UI branded as Media2Text (Runs/Library/Watchlist/Settings)
 - STT providers: AssemblyAI + Deepgram + OpenAI Whisper
-- Deployed: dev (dev-vm) + production (NAS)
+- Deployed production runtime remains the documented NAS v0.36.0 images until a
+  deployment is explicitly rolled.
+
+## Do Not Touch
+- Do not globally rename `youtube2text` to `media2text`.
+- Do not introduce `MEDIA2TEXT_` or `M2T_` environment variables.
+- Do not rename the root package from `youtube2text`.
+- Keep Docker image names, Doppler project/config names, compose/runtime paths,
+  and `y2t.lamanoriega.com` unchanged unless the owner approves a separate
+  versioned migration. See D-018.
+- Preserve the local HISTORY format enforcement in
+  `scripts/dockit-validate-session.sh` across DocKit sync work unless D-019 is
+  upstreamed or explicitly superseded.
 
 ## NAS Production Deployment (2026-02-21)
 - Images: `youtube2text-api:v0.36.0`, `youtube2text-web:v0.36.0` (transferred via `docker save | ssh | docker load`)
@@ -275,12 +283,15 @@ I) **Concurrency limits** (document in Operator Notes):
 
 J) **Optional future**: `getAccount()` for pre-flight balance check via `GET /v1/projects/{project_id}/balances`. Requires knowing the project_id. Defer unless needed.
 
-## Latest Checks (0.36.0)
+## Latest Checks (0.36.1)
 - API types: `npm run api:types:generate` OK
-- Tests: `npm test` 146/146 pass
+- Tests: `npm test` 152/152 pass
 - Build: `npm run build` + `npm --prefix web run build` OK
 - API contract: `npm run api:contract:check` OK
-- Version sync: `npm run version:check` OK
+- Version sync: `npm run version:check` + `scripts/check-version-sync.sh` OK
+- Naming contract: `npm run naming:check` OK
+- DocKit validator: `scripts/dockit-validate-session.sh --human` PASS 9/9
+- Validator smoke: `scripts/test-validator.sh` PASS 19/19
 
 ## Documentation Alignment Fixes (0.33.0)
 - Added `assemblyAiApiKeys` to `config.yaml.example`.

@@ -5,8 +5,8 @@ import { apiGetJson } from "../lib/api";
 import type { components } from "../lib/apiTypes.gen";
 
 export const metadata = {
-  title: "Youtube2Text Admin",
-  description: "Local-first admin UI for Youtube2Text",
+  title: "Media2Text Admin",
+  description: "Local-first admin UI for Media2Text",
 };
 
 type HealthResponse = components["schemas"]["HealthResponse"];
@@ -27,7 +27,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <body>
         <div className="container">
           <div className="nav">
-            <Link href="/"><strong>Youtube2Text</strong></Link>
+            <Link href="/"><strong>Media2Text</strong></Link>
             <Link href="/">Runs</Link>
             <Link href="/library">Library</Link>
             <Link href="/watchlist">Watchlist</Link>

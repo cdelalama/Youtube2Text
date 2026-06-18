@@ -307,3 +307,56 @@ Rationale:
 - Keeps the user-visible "library" immutable by default (transcripts are the product).
 - Keeps ops concerns (disk pressure) manageable without introducing a DB or cron subsystem yet.
 - Env-first config fits Docker deployments and avoids adding config-writing endpoints early.
+
+## D-018 - Name architecture: Media2Text brand, youtube2text runtime
+
+Decision:
+- The visible product brand is **Media2Text**.
+- The technical codename/runtime remains `youtube2text`.
+- The environment variable prefix remains `Y2T_`.
+- The root package name remains `youtube2text`.
+- This dual naming is intentional product architecture, not cleanup debt.
+
+Rationale:
+- The product now handles both YouTube/video sources and direct audio input.
+  `Media2Text` describes that visible user-facing scope better than
+  `Youtube2Text`.
+- `youtube2text` and `Y2T_` are deployed technical contracts. They appear in
+  Doppler, compose files, Docker image names, CLI/bin names, runtime paths,
+  scripts, docs, and operational muscle memory.
+- Renaming those internals would be a breaking operational migration with little
+  benefit for the current local-first/homelab product.
+
+Implications:
+- Allowed: change user-facing copy, README headline, UI title/header, OpenAPI
+  title/description, and GitHub description to use `Media2Text`.
+- Allowed: add an optional vanity hostname later as an alias to the same backend.
+- Not allowed without a new owner-approved decision and versioned migration:
+  global replacement of `youtube2text` with `media2text`, changing `Y2T_`
+  environment variables, changing root package name, renaming Docker images,
+  changing Doppler project/config contracts, changing compose/runtime paths, or
+  removing the existing `y2t.lamanoriega.com` hostname.
+- A guardrail must fail if new `MEDIA2TEXT_` or `M2T_` environment variable
+  prefixes are introduced, or if the root package name stops being
+  `youtube2text`.
+
+## D-019 - Preserve local DocKit HISTORY format enforcement
+
+Decision:
+- Keep the local `scripts/dockit-validate-session.sh` enforcement that requires
+  the first real `docs/llm/HISTORY.md` entry to use the declared
+  `YYYY-MM-DD - ...` no-dash format and newest-first order.
+- This local enforcement must either be preserved across future `dockit-sync`
+  work or upstreamed to LLM-DocKit before being removed locally.
+
+Rationale:
+- The repository's documented HISTORY format is intentionally stricter than the
+  obsolete leading-dash style.
+- The local validator now catches that drift directly, preventing a passive
+  documentation rule from being silently ignored by later LLM sessions.
+
+Implications:
+- Treat `scripts/dockit-validate-session.sh` as carrying a local downstream
+  patch until the behavior exists upstream in LLM-DocKit.
+- If DocKit tooling is synchronized again, verify that this check survives or
+  reapply it deliberately.
