@@ -25,8 +25,8 @@ All content should be ASCII-only to avoid Windows encoding issues.
 - API: stable; OpenAPI at `openapi.yaml`; generated frontend types at `web/lib/apiTypes.gen.ts`
 - Web: Next.js admin UI branded as Media2Text (Runs/Library/Watchlist/Settings)
 - STT providers: AssemblyAI + Deepgram + OpenAI Whisper
-- Deployed production runtime remains the documented NAS v0.36.0 images until a
-  deployment is explicitly rolled.
+- Deployed production runtime: NAS v0.36.1 images, verified live after
+  `docker save | ssh docker load` rollout.
 
 ## Do Not Touch
 - Do not globally rename `youtube2text` to `media2text`.
@@ -39,8 +39,8 @@ All content should be ASCII-only to avoid Windows encoding issues.
   `scripts/dockit-validate-session.sh` across DocKit sync work unless D-019 is
   upstreamed or explicitly superseded.
 
-## NAS Production Deployment (2026-02-21)
-- Images: `youtube2text-api:v0.36.0`, `youtube2text-web:v0.36.0` (transferred via `docker save | ssh | docker load`)
+## NAS Production Deployment (2026-06-18)
+- Images: `youtube2text-api:v0.36.1`, `youtube2text-web:v0.36.1` (transferred via `docker save | ssh | docker load`)
 - Secrets: Doppler service token (`prd` config) via `dopplerhq/cli` Docker image
 - Auth enforced (`Y2T_ALLOW_INSECURE_NO_API_KEY=false`)
 - Scheduler: OFF (`Y2T_SCHEDULER_ENABLED=false`) -- enable after e2e validation
@@ -292,6 +292,8 @@ J) **Optional future**: `getAccount()` for pre-flight balance check via `GET /v1
 - Naming contract: `npm run naming:check` OK
 - DocKit validator: `scripts/dockit-validate-session.sh --human` PASS 9/9
 - Validator smoke: `scripts/test-validator.sh` PASS 19/19
+- NAS deploy: `/health` reports 0.36.1, `/runs` returns 401, web returns 200
+  and renders Media2Text.
 
 ## Documentation Alignment Fixes (0.33.0)
 - Added `assemblyAiApiKeys` to `config.yaml.example`.
