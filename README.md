@@ -1,3 +1,4 @@
+<!-- doc-version: 0.36.0 -->
 # Youtube2Text
 
 Local-first, modular CLI service that:

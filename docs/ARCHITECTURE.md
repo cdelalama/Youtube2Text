@@ -1,3 +1,4 @@
+<!-- doc-version: 0.36.0 -->
 # Youtube2Text Architecture (Service First, Web Later)
 
 > Version: 0.36.0 (synced with package.json)

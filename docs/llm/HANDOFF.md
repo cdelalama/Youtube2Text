@@ -1,9 +1,24 @@
+<!-- doc-version: 0.36.0 -->
 # LLM Work Handoff
 
 This file is the current operational snapshot. Keep it short (target: 1-2 screens).
 Older long-form notes were moved to `docs/llm/HANDOFF_ARCHIVE.md`.
 
 All content should be ASCII-only to avoid Windows encoding issues.
+
+- Last Updated: 2026-06-18
+
+## Open work
+- Reconcile the two version systems now both anchored at 0.36.0: the existing
+  `scripts/versionCheck.mjs` (`package.json` + `openapi.yaml` + docs) and the
+  newly adopted DocKit `scripts/check-version-sync.sh` (reads
+  `docs/version-sync-manifest.yml`). They agree today; decide whether one should
+  drive the other to prevent future drift.
+- Install the DocKit pre-commit hook locally: `scripts/pre-commit-hook.sh`
+  (`cp scripts/pre-commit-hook.sh .git/hooks/pre-commit && chmod +x` it).
+- Open investigation: yt-dlp EJS extraction failures on plan/run. The explicit
+  js-runtime fix was reverted (commits 0c2789d..edec2fd); the underlying
+  extraction failure in `src/youtube/enumerate.ts` is likely still unresolved.
 
 ## Current Status
 - Version: 0.36.0 (versions must stay synced: `package.json` + `openapi.yaml`)

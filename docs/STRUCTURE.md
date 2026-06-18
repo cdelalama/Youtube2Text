@@ -5,7 +5,7 @@ This document describes the current repository layout for Youtube2Text.
 ## Top-Level Layout
 
 `
-<PROJECT_ROOT>/
+youtube2text/
 +- README.md
 +- LLM_START_HERE.md
 +- INTEGRATION.md
