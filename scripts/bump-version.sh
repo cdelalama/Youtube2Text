@@ -83,6 +83,35 @@ while read -r filepath markertype; do
                 FAILED=$((FAILED + 1))
             fi
             ;;
+        json-version)
+            # Replace top-level "version": "X.Y.Z" (package.json).
+            if grep -q '"version":' "$filepath"; then
+                TMPOUT=$(mktemp)
+                sed 's/"version": *"[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*"/"version": "'"$NEW_VERSION"'"/' \
+                    "$filepath" > "$TMPOUT"
+                mv "$TMPOUT" "$filepath"
+                printf "  %-40s OK (json-version)\n" "$filepath"
+                UPDATED=$((UPDATED + 1))
+            else
+                printf "  %-40s FAIL (no \"version\" field)\n" "$filepath"
+                FAILED=$((FAILED + 1))
+            fi
+            ;;
+        yaml-info-version)
+            # Replace indented "version: X.Y.Z" (openapi.yaml info.version).
+            # Semver-anchored so schema properties named "version:" are untouched.
+            if grep -qE '^[[:space:]]+version:[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+' "$filepath"; then
+                TMPOUT=$(mktemp)
+                sed 's/^\([[:space:]][[:space:]]*version:[[:space:]]*\)[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*/\1'"$NEW_VERSION"'/' \
+                    "$filepath" > "$TMPOUT"
+                mv "$TMPOUT" "$filepath"
+                printf "  %-40s OK (yaml-info-version)\n" "$filepath"
+                UPDATED=$((UPDATED + 1))
+            else
+                printf "  %-40s FAIL (no info.version)\n" "$filepath"
+                FAILED=$((FAILED + 1))
+            fi
+            ;;
         changelog)
             # Insert new section before the first existing ## [ line
             if grep -q "^## \[$NEW_VERSION\]" "$filepath"; then

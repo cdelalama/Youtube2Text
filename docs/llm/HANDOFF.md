@@ -21,7 +21,10 @@ All content should be ASCII-only to avoid Windows encoding issues.
   extraction failure in `src/youtube/enumerate.ts` is likely still unresolved.
 
 ## Current Status
-- Version: 0.36.0 (versions must stay synced: `package.json` + `openapi.yaml`)
+- Version: 0.36.0. Authoritative source: `package.json` + `openapi.yaml`
+  (checked by `scripts/versionCheck.mjs`). `VERSION` and the doc `<!-- doc-version -->`
+  markers mirror them; a single `scripts/bump-version.sh <ver>` updates all
+  10 tracked targets and `scripts/check-version-sync.sh` enforces no drift.
 - CLI: stable; primary workflow (must not break)
 - API: stable; OpenAPI at `openapi.yaml`; generated frontend types at `web/lib/apiTypes.gen.ts`
 - Web: Next.js admin UI (Runs/Library/Watchlist/Settings)

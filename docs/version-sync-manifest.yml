@@ -2,14 +2,23 @@
 # Read by scripts/bump-version.sh and scripts/check-version-sync.sh
 #
 # Marker types:
-#   version-file  -> plain X.Y.Z (first line of file)
-#   changelog     -> ## [X.Y.Z] section header
-#   html-comment  -> <!-- doc-version: X.Y.Z --> on first line of file
+#   version-file       -> plain X.Y.Z (first line of file)
+#   changelog          -> ## [X.Y.Z] section header
+#   html-comment       -> <!-- doc-version: X.Y.Z --> on first line of file
+#   json-version       -> top-level "version": "X.Y.Z" (e.g. package.json)
+#   yaml-info-version  -> indented "version: X.Y.Z" (e.g. openapi.yaml info.version)
 #
 # Downstream projects: add your own files below the template entries.
+#
+# NOTE: package.json + openapi.yaml are the product's authoritative version
+# source (also checked by scripts/versionCheck.mjs). They are listed here so a
+# single `scripts/bump-version.sh` run keeps VERSION and the docs in lockstep
+# with them, and `scripts/check-version-sync.sh` catches any drift.
 
 targets:
 - path: VERSION                    marker: version-file
+- path: package.json               marker: json-version
+- path: openapi.yaml               marker: yaml-info-version
 - path: CHANGELOG.md               marker: changelog
 - path: README.md                  marker: html-comment
 - path: LLM_START_HERE.md          marker: html-comment

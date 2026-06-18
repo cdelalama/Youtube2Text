@@ -84,6 +84,32 @@ while read -r filepath markertype; do
             fi
             CHECKED=$((CHECKED + 1))
             ;;
+        json-version)
+            # Top-level "version": "X.Y.Z" (package.json). Only the package's own
+            # key is literally named "version"; dependency entries key on name.
+            FOUND=$(grep '"version":' "$filepath" 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+            if [ -z "$FOUND" ]; then
+                echo "DRIFT: $filepath missing \"version\" field"
+                ERRORS=$((ERRORS + 1))
+            elif [ "$FOUND" != "$EXPECTED" ]; then
+                echo "DRIFT: $filepath has '$FOUND', expected '$EXPECTED'"
+                ERRORS=$((ERRORS + 1))
+            fi
+            CHECKED=$((CHECKED + 1))
+            ;;
+        yaml-info-version)
+            # Indented "version: X.Y.Z" (openapi.yaml info.version). Anchored to a
+            # semver value so schema properties named "version:" are not matched.
+            FOUND=$(grep -E '^[[:space:]]+version:[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+' "$filepath" 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+            if [ -z "$FOUND" ]; then
+                echo "DRIFT: $filepath missing info.version"
+                ERRORS=$((ERRORS + 1))
+            elif [ "$FOUND" != "$EXPECTED" ]; then
+                echo "DRIFT: $filepath has '$FOUND', expected '$EXPECTED'"
+                ERRORS=$((ERRORS + 1))
+            fi
+            CHECKED=$((CHECKED + 1))
+            ;;
         *)
             echo "WARN: unknown marker type '$markertype' for $filepath"
             ;;
