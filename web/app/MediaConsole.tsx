@@ -31,7 +31,7 @@ type Lang = "es" | "en";
 type Theme = "dark" | "light";
 type TranscriptFormat = "read" | "txt" | "md" | "jsonl" | "csv";
 
-const APP_VERSION = "0.36.6";
+const APP_VERSION = "0.36.7";
 
 type TranscriptJson = {
   text?: string;
@@ -1059,7 +1059,12 @@ function RunsTable({ runs, lang, onOpenRun }: { runs: RunRecord[]; lang: Lang; o
   }
   return (
     <div className="m2t-table">
-      <div className="m2t-tr head"><span>FUENTE</span><span>TIPO</span><span>CUÁNDO</span><span>ESTADO</span></div>
+      <div className="m2t-tr head">
+        <span>{t(lang, "FUENTE", "SOURCE")}</span>
+        <span>{t(lang, "TIPO", "TYPE")}</span>
+        <span>{t(lang, "CUÁNDO", "WHEN")}</span>
+        <span>{t(lang, "ESTADO", "STATUS")}</span>
+      </div>
       {runs.map((run) => (
         <button className="m2t-tr" key={run.runId} onClick={() => onOpenRun(run)}>
           <span><strong>{run.previewTitle ?? run.channelTitle ?? run.inputUrl ?? "Run"}</strong><small>{run.runId}</small></span>

@@ -5,6 +5,16 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.36.7] - 2026-06-19
+
+### Added
+
+### Changed
+
+### Fixed
+- Fixed the recent activity table headers on the `Status` screen so English
+  mode renders `SOURCE`, `TYPE`, `WHEN`, and `STATUS` instead of Spanish labels.
+
 ## [0.36.6] - 2026-06-19
 
 ### Added

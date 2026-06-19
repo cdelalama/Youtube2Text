@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.6 -->
+<!-- doc-version: 0.36.7 -->
 # LLM Work Handoff
 
 This file is the current operational snapshot. Keep it short (target: 1-2 screens).
@@ -10,7 +10,8 @@ All content should be ASCII-only to avoid Windows encoding issues.
 
 ## Open work
 - Current slice: Media2Text operator-console split between `Estado` and
-  `Nueva captura` is implemented, deployed, and verified as v0.36.6 on NAS.
+  `Nueva captura` is implemented and verified as v0.36.6 on NAS; v0.36.7 fixes
+  English-mode activity table headers in source and awaits rollout.
 - Next product planning: convert the visible `TODAVIA NO IMPLEMENTADO` /
   `PARCIAL` UI surfaces into a backend roadmap, especially speaker renaming,
   durable inbound/outbound webhooks, cost metrics, and Cortex-facing transcript
@@ -19,7 +20,7 @@ All content should be ASCII-only to avoid Windows encoding issues.
   if the y2t-vs-Cortex boundary changes.
 
 ## Current Status
-- Version: 0.36.6 in source and NAS runtime. Visible brand: Media2Text.
+- Version: 0.36.7 in source; NAS runtime remains 0.36.6 until rollout. Visible brand: Media2Text.
   Technical runtime/repo/config contract: `youtube2text` + `Y2T_` (see
   `docs/llm/DECISIONS.md` D-018).
 - GitHub: `cdelalama/Youtube2Text` is the canonical repo and is not a fork.
@@ -294,20 +295,14 @@ I) **Concurrency limits** (document in Operator Notes):
 
 J) **Optional future**: `getAccount()` for pre-flight balance check via `GET /v1/projects/{project_id}/balances`. Requires knowing the project_id. Defer unless needed.
 
-## Latest Checks (0.36.6 source)
-- API types: `npm run api:types:generate` OK
-- Tests: `npm test` 152/152 pass
-- Build: `npm run build` + `npm --prefix web run build` OK
-- API contract: `npm run api:contract:check` OK
-- Version sync: `npm run version:check` + `scripts/check-version-sync.sh` OK
-- Naming contract: `npm run naming:check` OK
-- DocKit validator: `scripts/dockit-validate-session.sh --human` PASS 9/9
-- Validator smoke: `scripts/test-validator.sh` PASS 32/32
-- NAS deploy: `/health` reports 0.36.6, `/runs` returns 401, web returns 200
-  and renders Media2Text with separate `Estado` and `Nueva captura` navigation.
-  NAS containers run `youtube2text-api:v0.36.6` and
-  `youtube2text-web:v0.36.6`; v0.36.5 images and timestamped compose backup are
-  retained for rollback.
+## Latest Checks (0.36.7 source)
+- Pending this session: validate the English-mode activity table i18n fix,
+  version sync, builds, tests, DocKit validator, and NAS rollout.
+- Last deployed NAS baseline: `/health` reports 0.36.6, `/runs` returns 401,
+  web returns 200 and renders Media2Text with separate `Estado` and
+  `Nueva captura` navigation. NAS containers run `youtube2text-api:v0.36.6`
+  and `youtube2text-web:v0.36.6`; v0.36.5 images and timestamped compose backup
+  are retained for rollback.
 
 ## Documentation Alignment Fixes (0.33.0)
 - Added `assemblyAiApiKeys` to `config.yaml.example`.
