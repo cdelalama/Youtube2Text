@@ -9,16 +9,14 @@ All content should be ASCII-only to avoid Windows encoding issues.
 - Last Updated: 2026-06-19
 
 ## Open work
-- Deploy gate: source is v0.36.3 after DocKit v4.9.6 guardrail adoption; NAS
-  production still runs v0.36.2 until the rollout verifies `/health=0.36.3`.
 - Open investigation: yt-dlp EJS extraction failures on plan/run. The explicit
   js-runtime fix was reverted (commits 0c2789d..edec2fd); the underlying
   extraction failure in `src/youtube/enumerate.ts` is likely still unresolved.
 
 ## Current Status
-- Version: 0.36.3 in source; NAS runtime still v0.36.2 pending deploy. Visible
-  brand: Media2Text. Technical runtime/repo/config contract: `youtube2text` +
-  `Y2T_` (see `docs/llm/DECISIONS.md` D-018).
+- Version: 0.36.3 in source and NAS runtime. Visible brand: Media2Text.
+  Technical runtime/repo/config contract: `youtube2text` + `Y2T_` (see
+  `docs/llm/DECISIONS.md` D-018).
 - GitHub: `cdelalama/Youtube2Text` is the canonical repo and is not a fork.
   The old `StartupEmbassy/Youtube2Text` repo is archived.
 - Authoritative version sources: `package.json`, `package-lock.json`, and
@@ -30,7 +28,7 @@ All content should be ASCII-only to avoid Windows encoding issues.
 - API: stable; OpenAPI at `openapi.yaml`; generated frontend types at `web/lib/apiTypes.gen.ts`
 - Web: Next.js admin UI branded as Media2Text (Runs/Library/Watchlist/Settings)
 - STT providers: AssemblyAI + Deepgram + OpenAI Whisper
-- Deployed production runtime: NAS v0.36.2 images, verified live after
+- Deployed production runtime: NAS v0.36.3 images, verified live after
   `docker save | ssh docker load` rollout.
 
 ## Do Not Touch
@@ -46,7 +44,7 @@ All content should be ASCII-only to avoid Windows encoding issues.
   LLM-DocKit v4.9.6 upstream behavior, not by relaxing this repository's format.
 
 ## NAS Production Deployment (2026-06-19)
-- Images: `youtube2text-api:v0.36.2`, `youtube2text-web:v0.36.2` (transferred via `docker save | ssh | docker load`; v0.36.1 images retained for rollback)
+- Images: `youtube2text-api:v0.36.3`, `youtube2text-web:v0.36.3` (transferred via `docker save | ssh | docker load`; v0.36.2 images retained for rollback)
 - Secrets: Doppler service token (`prd` config) via `dopplerhq/cli` Docker image
 - Auth enforced (`Y2T_ALLOW_INSECURE_NO_API_KEY=false`)
 - Scheduler: OFF (`Y2T_SCHEDULER_ENABLED=false`) -- enable after e2e validation
@@ -300,8 +298,8 @@ J) **Optional future**: `getAccount()` for pre-flight balance check via `GET /v1
 - Validator smoke: `scripts/test-validator.sh` PASS 32/32
 - D-019 adopter smoke: bump round-trip, drift detection, unknown marker failure,
   strict no-dash rejection, and read-only skip all passed against synced scripts.
-- NAS deploy: still pending for 0.36.3; current production `/health` reports
-  0.36.2 until the rollout gate.
+- NAS deploy: `/health` reports 0.36.3, `/runs` returns 401, web returns 200
+  and renders Media2Text.
 
 ## Documentation Alignment Fixes (0.33.0)
 - Added `assemblyAiApiKeys` to `config.yaml.example`.
