@@ -1,17 +1,26 @@
-import { apiGetJson } from "../lib/api";
-import type { RunsResponse, RunRecord } from "../lib/apiSchema";
-import { CreateRunForm } from "./CreateRunForm";
-import { RunsLive } from "./RunsLive";
+import { MediaConsole } from "./MediaConsole";
 
-export default async function Page({ searchParams }: { searchParams?: Record<string, string | string[] | undefined> }) {
-  const data = await apiGetJson<RunsResponse>("/runs");
-  const urlParam = searchParams?.url;
-  const initialUrl = typeof urlParam === "string" ? urlParam : Array.isArray(urlParam) ? urlParam[0] : undefined;
-  return (
-    <div>
-      <h1 className="title">Runs</h1>
-      <CreateRunForm initialUrl={initialUrl} />
-      <RunsLive initialRuns={data.runs as RunRecord[]} />
-    </div>
-  );
+const screens = [
+  "capture",
+  "library",
+  "libraryDetail",
+  "transcript",
+  "activity",
+  "cost",
+  "errors",
+  "sources",
+  "automations",
+  "apiOutput",
+  "settings",
+] as const;
+
+type Screen = (typeof screens)[number];
+
+function parseScreen(value?: string | string[]): Screen {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  return screens.includes(candidate as Screen) ? (candidate as Screen) : "capture";
+}
+
+export default function Page({ searchParams }: { searchParams?: { screen?: string | string[] } }) {
+  return <MediaConsole initialScreen={parseScreen(searchParams?.screen)} />;
 }

@@ -5,6 +5,33 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.36.5] - 2026-06-19
+
+### Added
+- Rebuilt the web admin as the Media2Text operator console, including the
+  capture, library, transcript, activity, cost, errors, sources, automations,
+  API/output, and settings surfaces from the supplied redesign.
+- Added direct web support for audio uploads through `POST /audio` followed by
+  `audioId` run creation.
+- Added visible roadmap state badges (`LIVE`, `PARCIAL`, `ESTIMADO`,
+  `TODAVIA NO IMPLEMENTADO`) so future capabilities are shown without
+  presenting them as live backend data.
+- Added speaker-map UI in transcript view: STT speaker labels are shown as real
+  data, while human speaker renaming is marked as not implemented.
+- Added project-level `PRODUCT.md` and `DESIGN.md` context for future UI work.
+
+### Changed
+- Replaced the older multi-page admin shell with a single Media2Text console
+  and redirected legacy web pages to the new shell.
+- The Next.js proxy now forwards binary/multipart bodies and returns a stable
+  JSON 502 when the API backend is unreachable.
+
+### Fixed
+- Avoided duplicated speaker labels such as `Speaker Speaker 0` when providers
+  already return speaker-prefixed values.
+- Added a `.gitignore` exception so the `web/app/api/audio` proxy route is not
+  hidden by the generated `audio/` output ignore rule.
+
 ## [0.36.4] - 2026-06-19
 
 ### Added

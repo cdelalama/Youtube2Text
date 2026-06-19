@@ -21,17 +21,26 @@ export async function proxyToApi(request: Request, path: string): Promise<Respon
   copyHeaderIfPresent(request.headers, headers, "accept");
   copyHeaderIfPresent(request.headers, headers, "last-event-id");
 
-  let body: string | undefined;
+  let body: ArrayBuffer | undefined;
   if (request.method !== "GET" && request.method !== "HEAD") {
-    body = await request.text();
+    body = await request.arrayBuffer();
   }
 
-  const res = await fetch(url, {
-    method: request.method,
-    headers,
-    body,
-    cache: "no-store",
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: request.method,
+      headers,
+      body,
+      cache: "no-store",
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return Response.json(
+      { error: "api_unreachable", message },
+      { status: 502 }
+    );
+  }
 
   const outHeaders = new Headers();
   copyHeaderIfPresent(res.headers, outHeaders, "content-type");
@@ -40,4 +49,3 @@ export async function proxyToApi(request: Request, path: string): Promise<Respon
 
   return new Response(res.body, { status: res.status, headers: outHeaders });
 }
-

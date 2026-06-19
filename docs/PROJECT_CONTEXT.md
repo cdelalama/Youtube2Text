@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.4 -->
+<!-- doc-version: 0.36.5 -->
 # Project Context - Media2Text
 
 ## Vision
@@ -53,11 +53,11 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
 ## Current Status (2026-06-19)
-v0.36.4 stable in source and deployed on NAS with the yt-dlp EJS Docker/NAS
-runtime fix. All planned phases (0-3.0) and security hardening (P0/P1/P2)
-complete. Pipeline Integration API added for external orchestration. Media2Text
-is now the visible product brand while the technical runtime remains
-`youtube2text`.
+v0.36.5 stable in source with the redesigned Media2Text operator console. NAS
+production is still v0.36.4 until the 0.36.5 rollout completes. All planned
+phases (0-3.0) and security hardening (P0/P1/P2) complete. Pipeline Integration
+API added for external orchestration. Media2Text is now the visible product
+brand while the technical runtime remains `youtube2text`.
 
 Completed:
 - CLI supports channel/playlist/single-video URLs + direct audio input
@@ -88,7 +88,8 @@ Completed:
 - Security Audit v8: All P0/P1/P2 items fixed (11 CRITICAL + 18 HIGH + 17 MEDIUM)
 - Feature Mining Phase A: Atomic file writes + provider timeouts
 - Feature Mining Phase B: Multi-key load balancer with failover
-- Next.js admin UI (Runs/Library/Watchlist/Settings)
+- Redesigned Next.js Media2Text operator console with visible roadmap badges,
+  direct audio upload, transcript format views, and speaker labels
 - DELETE endpoints for library channels and videos (web UI + API)
 - Graceful handling of deleted content in run detail pages
 

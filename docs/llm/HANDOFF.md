@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.4 -->
+<!-- doc-version: 0.36.5 -->
 # LLM Work Handoff
 
 This file is the current operational snapshot. Keep it short (target: 1-2 screens).
@@ -9,12 +9,18 @@ All content should be ASCII-only to avoid Windows encoding issues.
 - Last Updated: 2026-06-19
 
 ## Open work
-- Next product slice: choose between the redesigned UI work and feature mining
-  items from `docs/SCRIBERR_COMPARISON.md`. The yt-dlp EJS Docker/NAS runtime
-  fix is deployed in v0.36.4.
+- Current slice: Media2Text operator-console redesign is implemented in source
+  as v0.36.5 and requires NAS rollout before being called deployed.
+- Next product planning: convert the visible `TODAVIA NO IMPLEMENTADO` /
+  `PARCIAL` UI surfaces into a backend roadmap, especially speaker renaming,
+  durable inbound/outbound webhooks, cost metrics, and Cortex-facing transcript
+  feed decisions. Start from `web/app/MediaConsole.tsx`,
+  `docs/SCRIBERR_COMPARISON.md`, and a new decision in `docs/llm/DECISIONS.md`
+  if the y2t-vs-Cortex boundary changes.
 
 ## Current Status
-- Version: 0.36.4 in source and NAS runtime. Visible brand: Media2Text.
+- Version: 0.36.5 in source; NAS runtime remains 0.36.4 until the UI redesign
+  rollout completes. Visible brand: Media2Text.
   Technical runtime/repo/config contract: `youtube2text` + `Y2T_` (see
   `docs/llm/DECISIONS.md` D-018).
 - GitHub: `cdelalama/Youtube2Text` is the canonical repo and is not a fork.
@@ -26,7 +32,9 @@ All content should be ASCII-only to avoid Windows encoding issues.
   `scripts/check-version-sync.sh` enforces no drift.
 - CLI: stable; primary workflow (must not break)
 - API: stable; OpenAPI at `openapi.yaml`; generated frontend types at `web/lib/apiTypes.gen.ts`
-- Web: Next.js admin UI branded as Media2Text (Runs/Library/Watchlist/Settings)
+- Web: redesigned Next.js Media2Text operator console with capture, library,
+  transcript, activity, cost, errors, sources, automations, API/output, and
+  settings surfaces. Roadmap-only capabilities are marked with explicit badges.
 - STT providers: AssemblyAI + Deepgram + OpenAI Whisper
 - Deployed production runtime: NAS v0.36.4 images, verified live after
   `docker save | ssh docker load` rollout.

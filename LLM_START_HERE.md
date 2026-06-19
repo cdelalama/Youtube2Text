@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.4 -->
+<!-- doc-version: 0.36.5 -->
 # LLM Start Guide - Media2Text
 
 ## Read This First (Mandatory)

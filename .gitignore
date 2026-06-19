@@ -102,6 +102,8 @@ test-results/
 # Youtube2Text generated outputs
 output/
 audio/
+!web/app/api/audio/
+!web/app/api/audio/route.ts
 
 # Optional local config (non-secret defaults)
 config.yaml
