@@ -51,8 +51,8 @@ Recommended reading order:
 
 Source of truth: docs/llm/HANDOFF.md.
 - Last Updated: 2026-06-19
-- Working on: ready for next product slice after the yt-dlp EJS Docker/NAS fix.
-- Status: v0.36.4 stable in source and deployed on NAS. CLI + API + Web UI + Docker operational. 152/152 tests passing in the latest full release gate. Security roadmap v8 P0/P1/P2 done.
+- Working on: ready for the backend roadmap behind the redesigned Media2Text UI.
+- Status: v0.36.5 stable in source and deployed on NAS. CLI + API + redesigned Media2Text Web UI + Docker operational. 152/152 tests passing in the latest full release gate. Security roadmap v8 P0/P1/P2 done.
 
 Keep this section synchronized with the "Current Status" block in docs/llm/HANDOFF.md.
 
