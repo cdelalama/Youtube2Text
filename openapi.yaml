@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Media2Text API
-  version: 0.36.3
+  version: 0.36.4
   description: |
     Minimal local HTTP API for Media2Text, backed by the youtube2text engine.
     Notes:

@@ -7,6 +7,7 @@ export type YtDlpFailureReason =
   | "removed"
   | "geo_restricted"
   | "login_required"
+  | "missing_js_runtime"
   | "rate_limited"
   | "unknown";
 
@@ -49,6 +50,22 @@ export function parseYtDlpFailure(output: {
   const text = `${stderr}\n${stdout}`.toLowerCase();
 
   const hint = undefined;
+
+  if (
+    text.includes("no supported javascript runtime could be found") ||
+    text.includes("js challenge providers:") ||
+    text.includes("n challenge solving failed") ||
+    text.includes("yt-dlp-ejs")
+  ) {
+    return {
+      kind: "unavailable",
+      reason: "missing_js_runtime",
+      retryable: false,
+      summary: "yt-dlp: YouTube EJS runtime is not ready",
+      hint:
+        'Install yt-dlp with default extras (`python3 -m pip install -U "yt-dlp[default]"`) and enable a supported JavaScript runtime. The Docker API image configures this internally.',
+    };
+  }
 
   if (
     text.includes("members-only") ||

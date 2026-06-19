@@ -193,6 +193,13 @@ healthcheck:
 If the healthcheck fails, `depends_on: condition: service_healthy` will block the web
 container from starting.
 
+### yt-dlp EJS readiness
+
+The API image installs `yt-dlp[default]` so the matching `yt-dlp-ejs` challenge
+solver package is present, and it enables the bundled Node.js runtime for yt-dlp
+through `/etc/yt-dlp.conf`. Do not replace this with user-configurable yt-dlp
+flags; arbitrary yt-dlp args are intentionally not exposed through Settings/UI/API.
+
 ### Deploy a new version
 
 ```bash

@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.3 -->
+<!-- doc-version: 0.36.4 -->
 # LLM Work Handoff
 
 This file is the current operational snapshot. Keep it short (target: 1-2 screens).
@@ -9,12 +9,14 @@ All content should be ASCII-only to avoid Windows encoding issues.
 - Last Updated: 2026-06-19
 
 ## Open work
-- Open investigation: yt-dlp EJS extraction failures on plan/run. The explicit
-  js-runtime fix was reverted (commits 0c2789d..edec2fd); the underlying
-  extraction failure in `src/youtube/enumerate.ts` is likely still unresolved.
+- Gate pending: deploy v0.36.4 to NAS after validation. Source now contains the
+  Docker/NAS yt-dlp EJS runtime fix in `Dockerfile` (`yt-dlp[default]` + Node
+  runtime enabled) and docs in `docs/llm/HANDOFF.md`; live NAS remains v0.36.3
+  until rollout verifies `/health`, `/runs`, and web.
 
 ## Current Status
-- Version: 0.36.3 in source and NAS runtime. Visible brand: Media2Text.
+- Version: 0.36.4 in source; NAS runtime still v0.36.3 until the pending
+  rollout. Visible brand: Media2Text.
   Technical runtime/repo/config contract: `youtube2text` + `Y2T_` (see
   `docs/llm/DECISIONS.md` D-018).
 - GitHub: `cdelalama/Youtube2Text` is the canonical repo and is not a fork.
@@ -29,7 +31,7 @@ All content should be ASCII-only to avoid Windows encoding issues.
 - Web: Next.js admin UI branded as Media2Text (Runs/Library/Watchlist/Settings)
 - STT providers: AssemblyAI + Deepgram + OpenAI Whisper
 - Deployed production runtime: NAS v0.36.3 images, verified live after
-  `docker save | ssh docker load` rollout.
+  `docker save | ssh docker load` rollout; v0.36.4 deploy pending.
 
 ## Do Not Touch
 - Do not globally rename `youtube2text` to `media2text`.

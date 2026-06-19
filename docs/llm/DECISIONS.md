@@ -162,8 +162,12 @@ Rationale:
 Design choices:
 - Multi-stage Docker build:
   - Builder: install Node deps + build `dist/`.
-  - Runtime: install `ffmpeg` + `python3`/`pip` + `yt-dlp`, then run `node dist/api.js`.
+  - Runtime: install `ffmpeg` + `python3`/`pip` + `yt-dlp[default]`, then run `node dist/api.js`.
 - Install `yt-dlp` into a Python virtualenv inside the image (avoids Debian/PEP-668 "externally managed environment" errors without using `--break-system-packages`).
+- Use a Node.js runtime new enough for yt-dlp EJS and enable it through
+  `/etc/yt-dlp.conf` (`--js-runtimes node`) inside the image. This keeps EJS
+  support available for YouTube without exposing arbitrary yt-dlp flags to
+  Settings/UI/API.
 - Optional reproducibility: allow pinning `yt-dlp` via `--build-arg YT_DLP_VERSION=...`.
 - Bind mounts for persistence:
   - `./output` -> `/data/output` (includes `output/_runs/` for persisted runs/events)

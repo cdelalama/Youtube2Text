@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.3 -->
+<!-- doc-version: 0.36.4 -->
 # Media2Text
 
 Media2Text is the visible product name for the `youtube2text` engine: a
@@ -62,7 +62,10 @@ Later extensions read from `output/` only (e.g., React dashboard), keeping the p
 ### Production Note
 
 For local development, Media2Text relies on a system-installed `yt-dlp`.
-When deploying to a server or container, ensure `yt-dlp` is installed in that environment as well. For the HTTP API runner, a Docker image/docker-compose setup is included (see "Docker (API runner)" below).
+Install the PyPI default extra (`python3 -m pip install -U "yt-dlp[default]"`)
+and a supported JavaScript runtime for modern YouTube extraction. The managed
+Docker API image includes `yt-dlp[default]`, FFmpeg, and a supported Node.js
+runtime configured for yt-dlp EJS (see "Docker (API runner)" below).
 
 ### Troubleshooting yt-dlp on Windows
 
@@ -95,7 +98,12 @@ Deepgram supports speaker diarization.
 
 ### yt-dlp extractor warnings (public videos)
 
-If you see warnings about a missing JavaScript runtime (EJS), upgrade `yt-dlp` and install a supported JS runtime as documented by yt-dlp (this project does not expose arbitrary yt-dlp flags via Settings/UI/API for security reasons).
+If you see warnings about a missing JavaScript runtime (EJS), upgrade `yt-dlp`
+with the default extras (`python3 -m pip install -U "yt-dlp[default]"`) and
+install/enable a supported JavaScript runtime as documented by yt-dlp. This
+project does not expose arbitrary yt-dlp flags via Settings/UI/API for security
+reasons. The Docker API image configures this internally by installing
+`yt-dlp[default]` and enabling Node.js for yt-dlp.
 
 Note: Media2Text only targets public videos. If a channel contains members-only/private/age-restricted videos, yt-dlp will fail for those and Media2Text will record the failure and continue with the rest.
 

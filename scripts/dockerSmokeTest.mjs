@@ -114,11 +114,37 @@ async function cleanupContainer(containerName) {
   }
 }
 
+async function assertYtDlpEjsReady(containerName) {
+  const version = await runCapture("docker", ["exec", containerName, "yt-dlp", "--version"]);
+  if (!version.stdout.trim()) throw new Error("yt-dlp --version returned no output");
+
+  await runCapture("docker", [
+    "exec",
+    containerName,
+    "node",
+    "-e",
+    "const major=Number(process.versions.node.split('.')[0]); if (major < 22) { console.error(`Node ${process.versions.node} is too old for yt-dlp EJS`); process.exit(1); }",
+  ]);
+
+  await runCapture("docker", [
+    "exec",
+    containerName,
+    "python3",
+    "-c",
+    "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('yt_dlp_ejs') else 1)",
+  ]);
+
+  const config = await runCapture("docker", ["exec", containerName, "cat", "/etc/yt-dlp.conf"]);
+  if (!/^--js-runtimes\s+node\s*$/m.test(config.stdout)) {
+    throw new Error("/etc/yt-dlp.conf must enable node for yt-dlp EJS");
+  }
+}
+
 const imageTag = process.env.Y2T_DOCKER_IMAGE_TAG || "youtube2text-api:smoke";
 const containerName = process.env.Y2T_DOCKER_CONTAINER_NAME || "y2t-api-smoke";
 const hostPort = Number.parseInt(process.env.Y2T_DOCKER_PORT || "", 10) || (await findFreePort());
 const baseUrl = `http://127.0.0.1:${hostPort}`;
-const apiKey = process.env.Y2T_API_KEY || "smoke";
+const apiKey = process.env.Y2T_API_KEY || "smoke-local-api-key-32-bytes-minimum";
 
 let started = false;
 
@@ -169,6 +195,9 @@ try {
   if (!settingsBody || typeof settingsBody !== "object") throw new Error(`/settings returned invalid JSON`);
   if (!("settingsPath" in settingsBody)) throw new Error(`/settings missing settingsPath`);
   if (!("effective" in settingsBody)) throw new Error(`/settings missing effective`);
+
+  console.log(`\n[smoke] Checking yt-dlp EJS readiness ...`);
+  await assertYtDlpEjsReady(containerName);
 
   console.log(`\n[smoke] OK`);
 } finally {

@@ -5,6 +5,29 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.36.4] - 2026-06-19
+
+### Added
+- Docker smoke now verifies yt-dlp EJS readiness: `yt-dlp` is executable,
+  Node.js is new enough for EJS, `yt_dlp_ejs` is installed, and
+  `/etc/yt-dlp.conf` enables the Node runtime.
+
+### Changed
+- The API Docker image now builds on Node.js 24 and installs
+  `yt-dlp[default]` so the matching `yt-dlp-ejs` challenge solver package is
+  bundled for modern YouTube extraction.
+- Docker configures yt-dlp internally with `--js-runtimes node` instead of
+  reintroducing user-configurable yt-dlp flags.
+- `docs/SCRIBERR_COMPARISON.md` is now tracked as a feature-mining reference
+  and refreshed for the Media2Text/youtube2text naming split.
+
+### Fixed
+- Fixed the remaining yt-dlp EJS setup gap for the managed Docker/NAS runtime:
+  plan/run paths now execute in an image with EJS components and a supported
+  JavaScript runtime available.
+- EJS setup failures are classified as non-retryable dependency errors with an
+  actionable installation hint instead of generic retryable unknown failures.
+
 ## [0.36.3] - 2026-06-19
 
 ### Added

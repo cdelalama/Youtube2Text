@@ -1,4 +1,4 @@
-FROM node:20-bookworm-slim AS build
+FROM node:24-bookworm-slim AS build
 
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -8,7 +8,7 @@ COPY tsconfig.json ./
 COPY src ./src
 RUN npm run build
 
-FROM node:20-bookworm-slim AS runtime
+FROM node:24-bookworm-slim AS runtime
 
 ARG YT_DLP_VERSION=
 
@@ -16,7 +16,11 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends ffmpeg python3 python3-venv ca-certificates \
   && python3 -m venv /opt/yt-dlp \
   && /opt/yt-dlp/bin/pip install --no-cache-dir --upgrade pip \
-  && if [ -n "$YT_DLP_VERSION" ]; then /opt/yt-dlp/bin/pip install --no-cache-dir "yt-dlp==$YT_DLP_VERSION"; else /opt/yt-dlp/bin/pip install --no-cache-dir yt-dlp; fi \
+  && if [ -n "$YT_DLP_VERSION" ]; then /opt/yt-dlp/bin/pip install --no-cache-dir "yt-dlp[default]==$YT_DLP_VERSION"; else /opt/yt-dlp/bin/pip install --no-cache-dir "yt-dlp[default]"; fi \
+  && printf '%s\n' '--js-runtimes node' > /etc/yt-dlp.conf \
+  && node -e "const major=Number(process.versions.node.split('.')[0]); if (major < 22) process.exit(1)" \
+  && /opt/yt-dlp/bin/python -c "import yt_dlp_ejs" \
+  && /opt/yt-dlp/bin/yt-dlp --version \
   && rm -rf /var/lib/apt/lists/*
 
 ENV PATH="/opt/yt-dlp/bin:${PATH}"

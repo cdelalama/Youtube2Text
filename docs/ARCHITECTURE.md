@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.3 -->
+<!-- doc-version: 0.36.4 -->
 # Media2Text Architecture (youtube2text Engine)
 
 > Version: 0.36.0 (synced with package.json)
@@ -127,7 +127,10 @@ Completed:
 4. Language auto-detection (metadata/captions) + unit tests.
 5. yt-dlp reliability hardening (public videos only)
    - Do not expose arbitrary yt-dlp flags via Settings/UI/API (security).
-   - If yt-dlp reports missing JS runtime warnings (EJS), upgrade yt-dlp and install a supported JS runtime (per yt-dlp docs).
+   - If yt-dlp reports missing JS runtime warnings (EJS), upgrade yt-dlp with
+     its default extras and install a supported JS runtime (per yt-dlp docs).
+     The Docker API image bakes this in with `yt-dlp[default]` plus Node.js
+     enabled through `/etc/yt-dlp.conf`.
 6. Minimal HTTP API runner (service shell around core)
    - `POST /runs` to start a run
    - `GET /runs/:id/events` (SSE) to stream JSON events
@@ -136,7 +139,7 @@ Completed:
    - Persist under `output/_runs/<runId>/` by default
    - Reload on startup; use `Last-Event-ID` for SSE reconnect
 8. Dockerize once the API exists
-   - Image bundles Node + yt-dlp + ffmpeg
+   - Image bundles Node + yt-dlp default extras + ffmpeg
    - Volumes for `output/` and `audio/`
 
 Remaining:

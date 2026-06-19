@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.3 -->
+<!-- doc-version: 0.36.4 -->
 # LLM Start Guide - Media2Text
 
 ## Read This First (Mandatory)
@@ -51,8 +51,8 @@ Recommended reading order:
 
 Source of truth: docs/llm/HANDOFF.md.
 - Last Updated: 2026-06-19
-- Working on: upstreaming DocKit guardrails and the remaining yt-dlp EJS investigation.
-- Status: v0.36.3 stable in source and deployed on NAS. CLI + API + Web UI + Docker operational. 152/152 tests passing in the latest full release gate. Security roadmap v8 P0/P1/P2 done.
+- Working on: yt-dlp EJS Docker/NAS runtime fix and rollout.
+- Status: v0.36.4 in source; NAS runtime remains v0.36.3 until the pending rollout completes. CLI + API + Web UI + Docker operational. 152/152 tests passing in the latest full release gate. Security roadmap v8 P0/P1/P2 done.
 
 Keep this section synchronized with the "Current Status" block in docs/llm/HANDOFF.md.
 
