@@ -173,6 +173,10 @@ compose). Secrets are managed via Doppler service tokens fetched at startup usin
 Key design decisions:
 - Healthcheck uses `node` (not `wget`/`curl`) since `node:20-slim` does not include them
 - `start.sh` uses `umask 077` + `trap` to protect ephemeral secrets files
+- On NAS, never run Compose directly for this service. Always use `/bin/sh
+  start.sh`, which fetches Doppler secrets and invokes Compose with
+  `--env-file .env.doppler`. A raw `docker-compose up -d` starts the API with
+  blank secrets and can leave it unhealthy.
 - `NEXT_PUBLIC_Y2T_API_BASE_URL` is the browser-reachable API URL for SSE streaming
 - Scheduler is OFF by default in production; enable after e2e validation
 - `Y2T_CORS_ORIGINS` must match the web UI origin
@@ -212,7 +216,9 @@ docker build -t youtube2text-web:v<VERSION> -f web/Dockerfile web/
 docker save youtube2text-api:v<VERSION> | ssh <SERVER> 'docker load'
 docker save youtube2text-web:v<VERSION> | ssh <SERVER> 'docker load'
 
-# 3. Update docker-compose.yml image tags, copy to server, restart
+# 3. Update docker-compose.yml image tags, copy to server, restart through
+#    the server start script. Do not run Compose directly on NAS; start.sh
+#    materializes Doppler secrets before invoking Compose.
 
 # 4. Verify
 curl -s http://<SERVER>:8787/health

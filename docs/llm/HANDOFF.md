@@ -54,6 +54,9 @@ All content should be ASCII-only to avoid Windows encoding issues.
 ## NAS Production Deployment (2026-06-19)
 - Images: `youtube2text-api:v0.36.7`, `youtube2text-web:v0.36.7` (transferred via `docker save | ssh | docker load`; v0.36.6 images retained for rollback)
 - Secrets: Doppler service token (`prd` config) via `dopplerhq/cli` Docker image
+- Deployment guardrail: on NAS, do not run Compose directly for this service.
+  Use `/bin/sh start.sh` so Doppler secrets are fetched into `.env.doppler`
+  before Compose starts containers.
 - Auth enforced (`Y2T_ALLOW_INSECURE_NO_API_KEY=false`)
 - Scheduler: OFF (`Y2T_SCHEDULER_ENABLED=false`) -- enable after e2e validation
 - Security: `Y2T_HEALTH_DEEP_PUBLIC=false`, `Y2T_HEALTH_INCLUDE_PATHS=false`, CORS restricted
