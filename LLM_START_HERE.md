@@ -52,7 +52,7 @@ Recommended reading order:
 Source of truth: docs/llm/HANDOFF.md.
 - Last Updated: 2026-06-19
 - Working on: ready for the backend roadmap behind the redesigned Media2Text UI.
-- Status: v0.36.7 stable in source with the Status activity table i18n fix; NAS rollout pending from v0.36.6. CLI + API + redesigned Media2Text Web UI + Docker operational. 152/152 tests passing in the latest full release gate. Security roadmap v8 P0/P1/P2 done.
+- Status: v0.36.7 stable in source and deployed on NAS with the Status activity table i18n fix. CLI + API + redesigned Media2Text Web UI + Docker operational. 152/152 tests passing in the latest full release gate. Security roadmap v8 P0/P1/P2 done.
 
 Keep this section synchronized with the "Current Status" block in docs/llm/HANDOFF.md.
 
