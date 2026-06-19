@@ -53,11 +53,11 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
 ## Current Status (2026-06-19)
-v0.36.4 stable in source with the yt-dlp EJS Docker/NAS runtime fix pending
-rollout; the live NAS runtime remains v0.36.3 until deployment completes. All planned
-phases (0-3.0) and security hardening (P0/P1/P2) complete. Pipeline Integration
-API added for external orchestration. Media2Text is now the visible product
-brand while the technical runtime remains `youtube2text`.
+v0.36.4 stable in source and deployed on NAS with the yt-dlp EJS Docker/NAS
+runtime fix. All planned phases (0-3.0) and security hardening (P0/P1/P2)
+complete. Pipeline Integration API added for external orchestration. Media2Text
+is now the visible product brand while the technical runtime remains
+`youtube2text`.
 
 Completed:
 - CLI supports channel/playlist/single-video URLs + direct audio input
