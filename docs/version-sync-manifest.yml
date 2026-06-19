@@ -18,9 +18,6 @@
 
 targets:
 - path: VERSION                    marker: version-file
-- path: package.json               marker: json-version
-- path: package-lock.json          marker: package-lock-version
-- path: openapi.yaml               marker: yaml-info-version
 - path: CHANGELOG.md               marker: changelog
 - path: README.md                  marker: html-comment
 - path: LLM_START_HERE.md          marker: html-comment
@@ -28,3 +25,7 @@ targets:
 - path: docs/ARCHITECTURE.md       marker: html-comment
 - path: docs/VERSIONING_RULES.md   marker: html-comment
 - path: docs/llm/HANDOFF.md        marker: html-comment
+# --- Project-specific entries (preserved by dockit-sync) ---
+- path: package.json               marker: json-version
+- path: package-lock.json          marker: package-lock-version
+- path: openapi.yaml               marker: yaml-info-version

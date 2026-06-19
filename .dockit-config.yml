@@ -1,0 +1,13 @@
+adoption_mode: full
+
+# youtube2text has project-specific version-impact wording in LLM_START_HERE.md.
+# Keep that section local while allowing Trace Protocol and the rest of the
+# DocKit onboarding payload to sync normally.
+exclude_sections:
+  LLM_START_HERE.md:
+    - version-management
+
+# Chat-side Trace remains default-on through SessionStart. Durable Trace Anchor
+# validation is intentionally not enabled until this repo adopts a Trace Anchor.
+trace_protocol:
+  local_timezone: Europe/Madrid

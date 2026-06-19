@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.1 -->
+<!-- doc-version: 0.36.2 -->
 # Project Context - Media2Text
 
 ## Vision
@@ -52,8 +52,8 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Storage | Persist outputs + idempotency | TBD | Layout: `output/<channel_title_slug>__<channel_id>/<basename>.*`. |
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
-## Current Status (2026-06-18)
-v0.36.1 stable in source. All planned phases (0-3.0) and security hardening (P0/P1/P2) complete. Pipeline Integration API added for external orchestration. Media2Text is now the visible product brand while the technical runtime remains `youtube2text`.
+## Current Status (2026-06-19)
+v0.36.2 stable in source. All planned phases (0-3.0) and security hardening (P0/P1/P2) complete. Pipeline Integration API added for external orchestration. Media2Text is now the visible product brand while the technical runtime remains `youtube2text`.
 
 Completed:
 - CLI supports channel/playlist/single-video URLs + direct audio input

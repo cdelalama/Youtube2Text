@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.1 -->
+<!-- doc-version: 0.36.2 -->
 # LLM Work Handoff
 
 This file is the current operational snapshot. Keep it short (target: 1-2 screens).
@@ -6,15 +6,27 @@ Older long-form notes were moved to `docs/llm/HANDOFF_ARCHIVE.md`.
 
 All content should be ASCII-only to avoid Windows encoding issues.
 
-- Last Updated: 2026-06-18
+- Last Updated: 2026-06-19
 
 ## Open work
+- DocKit durable follow-up: a 2026-06-19 `dockit-sync` clobbered local governance
+  customizations and was reconciled before commit. Preserve the project-specific
+  version handlers in `scripts/check-version-sync.sh` and `scripts/bump-version.sh`,
+  the D-019 HISTORY no-dash/newest-first enforcement in
+  `scripts/dockit-validate-session.sh`, and the naming guard in
+  `scripts/pre-commit-hook.sh` across future syncs. Durable fix: upstream these
+  handlers/enforcements to LLM-DocKit or add file-level sync exclusions if DocKit
+  supports them.
+- GitHub transfer to cdelalama blocked by fork-network (repo is a fork of
+  cdelalama/LLM-DocKit). LLM-DocKit is already a GitHub template, but that does
+  not retroactively detach this repo. Path: Option B fresh non-fork repo for this
+  one (gated on owner OK for archive/delete of old).
 - Open investigation: yt-dlp EJS extraction failures on plan/run. The explicit
   js-runtime fix was reverted (commits 0c2789d..edec2fd); the underlying
   extraction failure in `src/youtube/enumerate.ts` is likely still unresolved.
 
 ## Current Status
-- Version: 0.36.1. Visible brand: Media2Text. Technical runtime/repo/config
+- Version: 0.36.2. Visible brand: Media2Text. Technical runtime/repo/config
   contract: `youtube2text` + `Y2T_` (see `docs/llm/DECISIONS.md` D-018).
 - Authoritative version sources: `package.json`, `package-lock.json`, and
   `openapi.yaml` (checked by `scripts/versionCheck.mjs`). `VERSION`, CHANGELOG,

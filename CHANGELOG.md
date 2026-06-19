@@ -5,6 +5,24 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.36.2] - 2026-06-19
+
+### Added
+- `.dockit-config.yml` to preserve local DocKit section ownership and set the
+  Trace timezone for future sessions.
+
+### Changed
+- Trace onboarding now requires second-level timestamp precision and explicit
+  stale-Trace re-verification.
+- Version-sync manifest keeps project-specific package/OpenAPI targets in a
+  preserved section after DocKit sync.
+
+### Fixed
+- Reconciled a DocKit sync regression before commit: package/OpenAPI/lockfile
+  version markers are checked again, D-019 HISTORY format enforcement remains
+  active, and `scripts/check-version-sync.sh` is back to 11 targets with no
+  unknown-marker false-green.
+
 ## [0.36.1] - 2026-06-18
 
 ### Added
