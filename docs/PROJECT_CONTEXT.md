@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.5 -->
+<!-- doc-version: 0.36.6 -->
 # Project Context - Media2Text
 
 ## Vision
@@ -53,11 +53,11 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
 ## Current Status (2026-06-19)
-v0.36.5 stable in source and deployed on NAS with the redesigned Media2Text
-operator console. All planned phases (0-3.0) and security hardening (P0/P1/P2)
-complete. Pipeline Integration API added for external orchestration. Media2Text
-is now the visible product brand while the technical runtime remains
-`youtube2text`.
+v0.36.6 stable in source with the Media2Text operator console splitting
+`Estado` and `Nueva captura`; NAS production remains v0.36.5 until rollout. All
+planned phases (0-3.0) and security hardening (P0/P1/P2) complete. Pipeline
+Integration API added for external orchestration. Media2Text is now the visible
+product brand while the technical runtime remains `youtube2text`.
 
 Completed:
 - CLI supports channel/playlist/single-video URLs + direct audio input

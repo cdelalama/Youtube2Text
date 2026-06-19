@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.5 -->
+<!-- doc-version: 0.36.6 -->
 # LLM Work Handoff
 
 This file is the current operational snapshot. Keep it short (target: 1-2 screens).
@@ -9,8 +9,9 @@ All content should be ASCII-only to avoid Windows encoding issues.
 - Last Updated: 2026-06-19
 
 ## Open work
-- Current slice: Media2Text operator-console redesign is implemented, deployed,
-  and verified as v0.36.5 on NAS.
+- Current slice: Media2Text operator-console split between `Estado` and
+  `Nueva captura` is implemented in source as v0.36.6 and requires NAS rollout
+  before being called deployed.
 - Next product planning: convert the visible `TODAVIA NO IMPLEMENTADO` /
   `PARCIAL` UI surfaces into a backend roadmap, especially speaker renaming,
   durable inbound/outbound webhooks, cost metrics, and Cortex-facing transcript
@@ -19,7 +20,8 @@ All content should be ASCII-only to avoid Windows encoding issues.
   if the y2t-vs-Cortex boundary changes.
 
 ## Current Status
-- Version: 0.36.5 in source and NAS runtime. Visible brand: Media2Text.
+- Version: 0.36.6 in source; NAS runtime remains 0.36.5 until the UI split
+  rollout completes. Visible brand: Media2Text.
   Technical runtime/repo/config contract: `youtube2text` + `Y2T_` (see
   `docs/llm/DECISIONS.md` D-018).
 - GitHub: `cdelalama/Youtube2Text` is the canonical repo and is not a fork.
@@ -31,7 +33,7 @@ All content should be ASCII-only to avoid Windows encoding issues.
   `scripts/check-version-sync.sh` enforces no drift.
 - CLI: stable; primary workflow (must not break)
 - API: stable; OpenAPI at `openapi.yaml`; generated frontend types at `web/lib/apiTypes.gen.ts`
-- Web: redesigned Next.js Media2Text operator console with capture, library,
+- Web: redesigned Next.js Media2Text operator console with status, capture, library,
   transcript, activity, cost, errors, sources, automations, API/output, and
   settings surfaces. Roadmap-only capabilities are marked with explicit badges.
 - STT providers: AssemblyAI + Deepgram + OpenAI Whisper
@@ -294,7 +296,7 @@ I) **Concurrency limits** (document in Operator Notes):
 
 J) **Optional future**: `getAccount()` for pre-flight balance check via `GET /v1/projects/{project_id}/balances`. Requires knowing the project_id. Defer unless needed.
 
-## Latest Checks (0.36.5 source)
+## Latest Checks (0.36.6 source)
 - API types: `npm run api:types:generate` OK
 - Tests: `npm test` 152/152 pass
 - Build: `npm run build` + `npm --prefix web run build` OK

@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.5 -->
+<!-- doc-version: 0.36.6 -->
 # LLM Start Guide - Media2Text
 
 ## Read This First (Mandatory)
@@ -52,7 +52,7 @@ Recommended reading order:
 Source of truth: docs/llm/HANDOFF.md.
 - Last Updated: 2026-06-19
 - Working on: ready for the backend roadmap behind the redesigned Media2Text UI.
-- Status: v0.36.5 stable in source and deployed on NAS. CLI + API + redesigned Media2Text Web UI + Docker operational. 152/152 tests passing in the latest full release gate. Security roadmap v8 P0/P1/P2 done.
+- Status: v0.36.6 stable in source with the Estado/Nueva captura UI split; NAS production remains v0.36.5 until rollout. CLI + API + redesigned Media2Text Web UI + Docker operational. 152/152 tests passing in the latest full release gate. Security roadmap v8 P0/P1/P2 done.
 
 Keep this section synchronized with the "Current Status" block in docs/llm/HANDOFF.md.
 

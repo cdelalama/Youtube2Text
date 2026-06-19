@@ -13,6 +13,7 @@ type ProviderCapability = components["schemas"]["ProviderCapability"];
 type RunPlan = components["schemas"]["RunPlan"];
 
 type Screen =
+  | "status"
   | "capture"
   | "library"
   | "libraryDetail"
@@ -30,7 +31,7 @@ type Lang = "es" | "en";
 type Theme = "dark" | "light";
 type TranscriptFormat = "read" | "txt" | "md" | "jsonl" | "csv";
 
-const APP_VERSION = "0.36.5";
+const APP_VERSION = "0.36.6";
 
 type TranscriptJson = {
   text?: string;
@@ -56,6 +57,7 @@ type MetricsSnapshot = {
 };
 
 const navItems: Array<{ id: Screen; es: string; en: string; badge?: string; icon: IconName }> = [
+  { id: "status", es: "Estado", en: "Status", icon: "pulse" },
   { id: "capture", es: "Nueva captura", en: "New capture", icon: "plus" },
   { id: "library", es: "Biblioteca", en: "Library", icon: "library" },
   { id: "sources", es: "Fuentes conectadas", en: "Connected sources", badge: "roadmap", icon: "sources" },
@@ -66,6 +68,7 @@ const navItems: Array<{ id: Screen; es: string; en: string; badge?: string; icon
 ];
 
 const breadcrumbs: Record<Screen, { es: string; en: string }> = {
+  status: { es: "estado", en: "status" },
   capture: { es: "captura/nueva", en: "capture/new" },
   library: { es: "biblioteca", en: "library" },
   libraryDetail: { es: "biblioteca/fuente", en: "library/source" },
@@ -79,9 +82,10 @@ const breadcrumbs: Record<Screen, { es: string; en: string }> = {
   settings: { es: "ajustes", en: "settings" },
 };
 
-type IconName = "plus" | "library" | "sources" | "activity" | "clock" | "code" | "settings" | "play" | "audio";
+type IconName = "pulse" | "plus" | "library" | "sources" | "activity" | "clock" | "code" | "settings" | "play" | "audio";
 
 const screenIds: Screen[] = [
+  "status",
   "capture",
   "library",
   "libraryDetail",
@@ -201,6 +205,7 @@ function speakerLabel(value: string | number | undefined, fallback: number): str
 }
 
 function Icon({ name }: { name: IconName }) {
+  if (name === "pulse") return <svg viewBox="0 0 16 16"><path d="M1 8h3l2-4 2 8 2-4h4" /></svg>;
   if (name === "plus") return <svg viewBox="0 0 16 16"><path d="M8 3v10M3 8h10" /></svg>;
   if (name === "library") return <svg viewBox="0 0 16 16"><path d="M4 2.5v11M7.5 2.5v11M11 3l2.4 10" /></svg>;
   if (name === "sources") return <svg viewBox="0 0 16 16"><path d="M8 2v7M5 6l3 3 3-3M3 13h10" /></svg>;
@@ -263,7 +268,7 @@ function usePersistentState<T extends string>(key: string, fallback: T): [T, (va
   return [value, update];
 }
 
-export function MediaConsole({ initialScreen = "capture" }: { initialScreen?: Screen }) {
+export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Screen }) {
   const [lang, setLang] = usePersistentState<Lang>("m2t.lang", "es");
   const [theme, setTheme] = usePersistentState<Theme>("m2t.theme", "dark");
   const [screen, setScreen] = useState<Screen>(initialScreen);
@@ -598,6 +603,7 @@ export function MediaConsole({ initialScreen = "capture" }: { initialScreen?: Sc
           </div>
         </header>
         <main className="m2t-content">
+          {screen === "status" ? renderStatus() : null}
           {screen === "capture" ? renderCapture() : null}
           {screen === "library" ? renderLibrary() : null}
           {screen === "libraryDetail" ? renderLibraryDetail() : null}
@@ -613,12 +619,12 @@ export function MediaConsole({ initialScreen = "capture" }: { initialScreen?: Sc
       </div>
 
       <nav className="m2t-mobile-tabs">
-        {(["capture", "library", "sources", "settings"] as Screen[]).map((id) => {
+        {(["status", "capture", "library", "sources", "settings"] as Screen[]).map((id) => {
           const item = navItems.find((n) => n.id === id)!;
           return (
             <button key={id} data-active={screen === id} onClick={() => go(id)}>
               <Icon name={item.icon} />
-              <span>{t(lang, item.es.replace("Nueva captura", "Estado"), item.en.replace("New capture", "Status"))}</span>
+              <span>{t(lang, item.es, item.en)}</span>
             </button>
           );
         })}
@@ -628,10 +634,10 @@ export function MediaConsole({ initialScreen = "capture" }: { initialScreen?: Sc
     </div>
   );
 
-  function renderCapture() {
+  function renderStatus() {
     return (
       <section className="m2t-page">
-        <PageIntro title={t(lang, "Estado y captura", "Status & capture")} text={t(lang, "Media2Text es un servicio de ingesta headless. Esta consola sirve para configurarlo y vigilarlo; el trabajo ocurre solo.", "Media2Text is a headless ingest service. This console configures and monitors it; the work runs on its own.")} />
+        <PageIntro title={t(lang, "Estado", "Status")} text={t(lang, "Media2Text es un servicio de ingesta headless. Esta consola sirve para configurarlo y vigilarlo; el trabajo ocurre solo.", "Media2Text is a headless ingest service. This console configures and monitors it; the work runs on its own.")} />
         <button className="m2t-system-banner" onClick={() => go("activity")}>
           <span className="m2t-live"><span />{scheduler?.running ? t(lang, "CRON ACTIVO", "CRON RUNNING") : t(lang, "CRON PARADO", "CRON STOPPED")}</span>
           <span>{t(lang, "próxima sync", "next sync")} <strong>{scheduler?.nextTickAt ? formatDate(scheduler.nextTickAt) : "-"}</strong></span>
@@ -643,11 +649,26 @@ export function MediaConsole({ initialScreen = "capture" }: { initialScreen?: Sc
         <div className="m2t-metrics">
           <Metric label={t(lang, "PROCESADOS", "PROCESSED")} value={String(videoStats.succeeded || doneRuns)} text={t(lang, "ítems transcritos en total", "items transcribed in total")} />
           <Metric label={t(lang, "TASA DE ÉXITO", "SUCCESS RATE")} value={successRate === undefined ? "-" : `${successRate}%`} accent text={`${videoStats.succeeded} ÷ ${videoStats.attempts || 0}`} />
-          <Metric label={t(lang, "COSTE (MES)", "COST (MONTH)")} value="~$38,40" text={t(lang, "estimado, no facturación real", "estimate, not real billing")} onClick={() => go("cost")} state="ESTIMADO" />
+          <Metric label={t(lang, "COSTE (MES)", "COST (MONTH)")} value="—" text={t(lang, "pendiente de /metrics/cost", "waiting for /metrics/cost")} onClick={() => go("cost")} state="ESTIMADO" />
           <Metric label={t(lang, "FALLIDOS", "FAILED")} value={String(videoStats.failed || failedRuns)} danger text={t(lang, "ver y reintentar", "view and retry")} onClick={() => go("errors")} />
         </div>
         <div className="m2t-honesty"><span>ƒ</span>{t(lang, "Runs y biblioteca vienen del motor. Coste y backlog son visibles como roadmap hasta que exista /metrics/cost y cola persistida.", "Runs and library come from the engine. Cost and backlog are roadmap-visible until /metrics/cost and persisted queue exist.")}</div>
 
+        <SectionHeader title={t(lang, "Actividad", "Activity")} right={<span className="m2t-live"><span />LIVE</span>} />
+        <RunsTable runs={runs.slice(0, 5)} lang={lang} onOpenRun={(run) => {
+          if (run.channelDirName) {
+            const channel = channels.find((c) => c.channelDirName === run.channelDirName);
+            if (channel) openChannel(channel);
+          }
+        }} />
+        <div className="m2t-next"><span>NEXT</span>{t(lang, "El texto guardado alimenta tus servicios de IA: resúmenes, búsqueda semántica y Q&A sobre todo el corpus.", "Saved text feeds AI services: summaries, semantic search and Q&A across the corpus.")}</div>
+      </section>
+    );
+  }
+
+  function renderCapture() {
+    return (
+      <section className="m2t-page">
         <div className="m2t-composer">
           <div className="m2t-tabs">
             <button data-active={captureTab === "link"} onClick={() => setCaptureTab("link")}>{t(lang, "PEGAR ENLACE", "PASTE LINK")}</button>
@@ -668,6 +689,7 @@ export function MediaConsole({ initialScreen = "capture" }: { initialScreen?: Sc
           )}
           <div className="m2t-composer-actions">
             <Toggle checked={force} onClick={() => setForce(!force)} label={t(lang, "Re-transcribir todo", "Re-transcribe everything")} />
+            <span>{t(lang, "Solo nuevos", "New only")}</span>
             <input className="m2t-small-input" value={maxNewVideos} onChange={(e) => setMaxNewVideos(e.target.value)} aria-label="max new videos" />
             <span>{t(lang, "Idioma", "Language")} <strong>auto</strong></span>
             <button className="m2t-link-button" onClick={() => void previewPlan()} disabled={busy === "plan" || captureTab !== "link"}>{busy === "plan" ? t(lang, "Calculando", "Planning") : t(lang, "Previsualizar plan →", "Preview plan →")}</button>
@@ -682,15 +704,6 @@ export function MediaConsole({ initialScreen = "capture" }: { initialScreen?: Sc
             </div>
           ) : null}
         </div>
-
-        <SectionHeader title={t(lang, "Actividad", "Activity")} right={<span className="m2t-live"><span />LIVE</span>} />
-        <RunsTable runs={runs.slice(0, 5)} lang={lang} onOpenRun={(run) => {
-          if (run.channelDirName) {
-            const channel = channels.find((c) => c.channelDirName === run.channelDirName);
-            if (channel) openChannel(channel);
-          }
-        }} />
-        <div className="m2t-next"><span>NEXT</span>{t(lang, "El texto guardado alimenta tus servicios de IA: resúmenes, búsqueda semántica y Q&A sobre todo el corpus.", "Saved text feeds AI services: summaries, semantic search and Q&A across the corpus.")}</div>
       </section>
     );
   }
@@ -854,14 +867,14 @@ export function MediaConsole({ initialScreen = "capture" }: { initialScreen?: Sc
       <section className="m2t-page">
         <PageIntro title={t(lang, "Coste estimado", "Estimated cost")} text={t(lang, "Estimación visual hasta implementar /metrics/cost con minutos y tarifas por proveedor.", "Visual estimate until /metrics/cost ships with minutes and provider rates.")} badge={<FeatureBadge state="ESTIMADO" />} />
         <div className="m2t-metrics">
-          <Metric label={t(lang, "TOTAL · MES", "TOTAL · MONTH")} value="~$38,40" text="/metrics/cost TODO" state="ESTIMADO" />
-          <Metric label={t(lang, "MINUTOS", "MINUTES")} value="~12.250" text={t(lang, "estimado", "estimate")} state="ESTIMADO" />
-          <Metric label={t(lang, "COSTE/HORA", "COST/HOUR")} value="~$0,19" text={t(lang, "tarifa configurable pendiente", "configurable rate pending")} state="ESTIMADO" />
-          <Metric label={t(lang, "PROYECCIÓN MES", "MONTH PROJECTION")} value="~$52,10" text={t(lang, "no autoritativo", "not authoritative")} state="ESTIMADO" />
+          <Metric label={t(lang, "TOTAL · MES", "TOTAL · MONTH")} value="—" text="/metrics/cost TODO" state="ESTIMADO" />
+          <Metric label={t(lang, "MINUTOS", "MINUTES")} value="—" text={t(lang, "pendiente de cálculo", "calculation pending")} state="ESTIMADO" />
+          <Metric label={t(lang, "COSTE/HORA", "COST/HOUR")} value="—" text={t(lang, "tarifa configurable pendiente", "configurable rate pending")} state="ESTIMADO" />
+          <Metric label={t(lang, "PROYECCIÓN MES", "MONTH PROJECTION")} value="—" text={t(lang, "no autoritativo", "not authoritative")} state="ESTIMADO" />
         </div>
         <div className="m2t-two-col">
-          <RoadmapPanel title={t(lang, "Por proveedor", "By provider")} lines={["AssemblyAI ~46%", "Deepgram ~33%", "Whisper ~21%"]} state="ESTIMADO" />
-          <RoadmapPanel title={t(lang, "Presupuesto", "Budget")} lines={[t(lang, "$38,40 de $50,00 · 77%", "$38.40 of $50.00 · 77%"), t(lang, "Avisar al 80%", "Warn at 80%"), t(lang, "Pausar al 100%", "Pause at 100%")]} state="TODAVIA NO IMPLEMENTADO" />
+          <RoadmapPanel title={t(lang, "Por proveedor", "By provider")} lines={["AssemblyAI —", "Deepgram —", "Whisper —"]} state="ESTIMADO" />
+          <RoadmapPanel title={t(lang, "Presupuesto", "Budget")} lines={[t(lang, "Sin presupuesto activo", "No active budget"), t(lang, "Avisar al 80%", "Warn at 80%"), t(lang, "Pausar al 100%", "Pause at 100%")]} state="TODAVIA NO IMPLEMENTADO" />
         </div>
       </section>
     );

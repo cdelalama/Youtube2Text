@@ -5,6 +5,23 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.36.6] - 2026-06-19
+
+### Added
+- Added a dedicated `Estado` / `Status` screen and navigation item before
+  `Nueva captura` / `New capture` across desktop, mobile, and foldable layouts.
+
+### Changed
+- Split the previous combined status-and-capture surface: `Estado` now contains
+  the system banner, metrics, honesty note, recent activity table, and NEXT
+  banner, while `Nueva captura` contains only the link/audio composer.
+- The mobile tab bar now exposes both `Estado` and `Nueva captura` as separate
+  destinations.
+- Cost surfaces keep the `ESTIMADO` label but no longer show hardcoded fake
+  currency/minute values before `/metrics/cost` exists.
+
+### Fixed
+
 ## [0.36.5] - 2026-06-19
 
 ### Added

@@ -275,6 +275,11 @@ a {
   line-height: 1.45;
 }
 
+.m2t-side-card .m2t-badge {
+  max-width: 100%;
+  white-space: normal;
+}
+
 .m2t-card-row {
   display: flex;
   align-items: center;
@@ -1544,10 +1549,15 @@ button.m2t-tr {
 
   .m2t-input-line {
     min-height: 48px;
+    flex-wrap: wrap;
+    padding-top: 10px;
+    padding-bottom: 10px;
   }
 
   .m2t-detected {
-    display: none;
+    flex-basis: calc(100% - 20px);
+    margin-left: 20px;
+    width: max-content;
   }
 
   .m2t-tr,
@@ -1611,7 +1621,7 @@ button.m2t-tr {
     bottom: 0;
     z-index: 20;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     background: var(--panel2);
     border-top: 1px solid var(--border);
   }
@@ -1626,7 +1636,7 @@ button.m2t-tr {
     align-items: center;
     justify-content: center;
     gap: 4px;
-    font-size: 10px;
+    font-size: 9.5px;
     cursor: pointer;
   }
 
