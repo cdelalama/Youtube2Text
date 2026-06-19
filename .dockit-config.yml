@@ -1,4 +1,5 @@
 adoption_mode: full
+history_format: no-dash
 
 # youtube2text has project-specific version-impact wording in LLM_START_HERE.md.
 # Keep that section local while allowing Trace Protocol and the rest of the

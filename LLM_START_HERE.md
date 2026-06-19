@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.2 -->
+<!-- doc-version: 0.36.3 -->
 # LLM Start Guide - Media2Text
 
 ## Read This First (Mandatory)
@@ -52,7 +52,7 @@ Recommended reading order:
 Source of truth: docs/llm/HANDOFF.md.
 - Last Updated: 2026-06-19
 - Working on: upstreaming DocKit guardrails and the remaining yt-dlp EJS investigation.
-- Status: v0.36.2 stable in source and deployed on NAS. CLI + API + Web UI + Docker operational. 152/152 tests passing in the latest full release gate. Security roadmap v8 P0/P1/P2 done.
+- Status: v0.36.3 stable in source after DocKit v4.9.6 guardrail adoption; NAS runtime is still v0.36.2 until the deploy gate. CLI + API + Web UI + Docker operational. 152/152 tests passing in the latest full release gate. Security roadmap v8 P0/P1/P2 done.
 
 Keep this section synchronized with the "Current Status" block in docs/llm/HANDOFF.md.
 
@@ -92,7 +92,7 @@ Every change must be documented. If you are unsure about a rule, ask the user be
 ### Documentation Update Rules
 - Update docs/llm/HANDOFF.md every time you make a change.
 - Append an entry to docs/llm/HISTORY.md in every session.
-- HISTORY format: YYYY-MM-DD - <LLM_NAME> - <Brief summary> - Files: [list] - Version impact: [yes/no + details]
+- HISTORY format defaults to `any`: either `- YYYY-MM-DD - <LLM_NAME> - ...` or `YYYY-MM-DD - <LLM_NAME> - ...` is accepted. Set top-level `history_format: dash` or `history_format: no-dash` in `.dockit-config.yml` when a project wants strict enforcement.
 - Put long-form rationale in docs/llm/DECISIONS.md and link to it from HANDOFF.
 - Prefer ASCII-only in docs/llm/* to avoid Windows encoding issues.
 <!-- DOCKIT-TEMPLATE:END doc-update-rules -->

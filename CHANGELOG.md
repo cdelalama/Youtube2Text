@@ -5,6 +5,23 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.36.3] - 2026-06-19
+
+### Added
+- `.dockit-config.yml` now sets `history_format: no-dash` so the upstream
+  DocKit validator preserves this repository's strict HISTORY contract.
+
+### Changed
+- Adopted LLM-DocKit v4.9.6 guardrails for configurable HISTORY validation and
+  structured JSON/YAML/package-lock version marker handling.
+
+### Fixed
+- Superseded the local D-019 DocKit validator fork with upstream behavior:
+  unknown marker types now fail, package-lock versions are checked structurally,
+  and strict no-dash HISTORY enforcement is configured rather than patched.
+- Retained the project-specific pre-commit naming guard required by D-018 after
+  the upstream DocKit hook sync.
+
 ## [0.36.2] - 2026-06-19
 
 ### Added

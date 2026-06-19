@@ -340,23 +340,30 @@ Implications:
   prefixes are introduced, or if the root package name stops being
   `youtube2text`.
 
-## D-019 - Preserve local DocKit HISTORY format enforcement
+## D-019 - HISTORY format enforcement via upstream DocKit
 
 Decision:
-- Keep the local `scripts/dockit-validate-session.sh` enforcement that requires
-  the first real `docs/llm/HISTORY.md` entry to use the declared
-  `YYYY-MM-DD - ...` no-dash format and newest-first order.
-- This local enforcement must either be preserved across future `dockit-sync`
-  work or upstreamed to LLM-DocKit before being removed locally.
+- Keep this repository on strict no-dash HISTORY entries by setting
+  `history_format: no-dash` in `.dockit-config.yml`.
+- The former local `scripts/dockit-validate-session.sh` fork is superseded by
+  LLM-DocKit v4.9.6, which supports configurable `any`, `dash`, and `no-dash`
+  HISTORY validation plus newest-first enforcement.
 
 Rationale:
 - The repository's documented HISTORY format is intentionally stricter than the
   obsolete leading-dash style.
-- The local validator now catches that drift directly, preventing a passive
+- The validator must catch that drift directly, preventing a passive
   documentation rule from being silently ignored by later LLM sessions.
+- Upstreaming the behavior avoids repeatedly reapplying a local script fork after
+  `dockit-sync`, while still preserving this repository's stricter contract.
 
 Implications:
-- Treat `scripts/dockit-validate-session.sh` as carrying a local downstream
-  patch until the behavior exists upstream in LLM-DocKit.
-- If DocKit tooling is synchronized again, verify that this check survives or
-  reapply it deliberately.
+- Do not remove `history_format: no-dash` unless the owner explicitly changes
+  the repository's HISTORY contract.
+- Future `dockit-sync` runs should take upstream validator/version-sync scripts
+  without reintroducing a local fork, as long as the strict no-dash behavior and
+  version marker checks still validate.
+- Superseded evidence (2026-06-19): adopter smoke verified upstream scripts
+  perform 11-target bump round-trip, detect version drift and unknown markers,
+  reject dash-formatted HISTORY under `history_format: no-dash`, and preserve
+  the `DOCKIT_ALLOW_READ_ONLY_SKIP=1` zero-diff skip.

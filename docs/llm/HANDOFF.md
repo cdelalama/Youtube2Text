@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.2 -->
+<!-- doc-version: 0.36.3 -->
 # LLM Work Handoff
 
 This file is the current operational snapshot. Keep it short (target: 1-2 screens).
@@ -9,21 +9,16 @@ All content should be ASCII-only to avoid Windows encoding issues.
 - Last Updated: 2026-06-19
 
 ## Open work
-- DocKit durable follow-up: a 2026-06-19 `dockit-sync` clobbered local governance
-  customizations and was reconciled before commit. Preserve the project-specific
-  version handlers in `scripts/check-version-sync.sh` and `scripts/bump-version.sh`,
-  the D-019 HISTORY no-dash/newest-first enforcement in
-  `scripts/dockit-validate-session.sh`, and the naming guard in
-  `scripts/pre-commit-hook.sh` across future syncs. Durable fix: upstream these
-  handlers/enforcements to LLM-DocKit or add file-level sync exclusions if DocKit
-  supports them.
+- Deploy gate: source is v0.36.3 after DocKit v4.9.6 guardrail adoption; NAS
+  production still runs v0.36.2 until the rollout verifies `/health=0.36.3`.
 - Open investigation: yt-dlp EJS extraction failures on plan/run. The explicit
   js-runtime fix was reverted (commits 0c2789d..edec2fd); the underlying
   extraction failure in `src/youtube/enumerate.ts` is likely still unresolved.
 
 ## Current Status
-- Version: 0.36.2. Visible brand: Media2Text. Technical runtime/repo/config
-  contract: `youtube2text` + `Y2T_` (see `docs/llm/DECISIONS.md` D-018).
+- Version: 0.36.3 in source; NAS runtime still v0.36.2 pending deploy. Visible
+  brand: Media2Text. Technical runtime/repo/config contract: `youtube2text` +
+  `Y2T_` (see `docs/llm/DECISIONS.md` D-018).
 - GitHub: `cdelalama/Youtube2Text` is the canonical repo and is not a fork.
   The old `StartupEmbassy/Youtube2Text` repo is archived.
 - Authoritative version sources: `package.json`, `package-lock.json`, and
@@ -42,12 +37,13 @@ All content should be ASCII-only to avoid Windows encoding issues.
 - Do not globally rename `youtube2text` to `media2text`.
 - Do not introduce `MEDIA2TEXT_` or `M2T_` environment variables.
 - Do not rename the root package from `youtube2text`.
+- Keep `scripts/pre-commit-hook.sh` running `scripts/check-naming-contract.mjs`;
+  this is project-specific D-018 enforcement, not upstream DocKit behavior.
 - Keep Docker image names, Doppler project/config names, compose/runtime paths,
   and `y2t.lamanoriega.com` unchanged unless the owner approves a separate
   versioned migration. See D-018.
-- Preserve the local HISTORY format enforcement in
-  `scripts/dockit-validate-session.sh` across DocKit sync work unless D-019 is
-  upstreamed or explicitly superseded.
+- Keep `.dockit-config.yml` `history_format: no-dash`; D-019 is superseded by
+  LLM-DocKit v4.9.6 upstream behavior, not by relaxing this repository's format.
 
 ## NAS Production Deployment (2026-06-19)
 - Images: `youtube2text-api:v0.36.2`, `youtube2text-web:v0.36.2` (transferred via `docker save | ssh | docker load`; v0.36.1 images retained for rollback)
@@ -293,7 +289,7 @@ I) **Concurrency limits** (document in Operator Notes):
 
 J) **Optional future**: `getAccount()` for pre-flight balance check via `GET /v1/projects/{project_id}/balances`. Requires knowing the project_id. Defer unless needed.
 
-## Latest Checks (0.36.2)
+## Latest Checks (0.36.3 source)
 - API types: `npm run api:types:generate` OK
 - Tests: `npm test` 152/152 pass
 - Build: `npm run build` + `npm --prefix web run build` OK
@@ -301,9 +297,11 @@ J) **Optional future**: `getAccount()` for pre-flight balance check via `GET /v1
 - Version sync: `npm run version:check` + `scripts/check-version-sync.sh` OK
 - Naming contract: `npm run naming:check` OK
 - DocKit validator: `scripts/dockit-validate-session.sh --human` PASS 9/9
-- Validator smoke: `scripts/test-validator.sh` PASS 19/19
-- NAS deploy: `/health` reports 0.36.2, `/runs` returns 401, web returns 200
-  and renders Media2Text.
+- Validator smoke: `scripts/test-validator.sh` PASS 32/32
+- D-019 adopter smoke: bump round-trip, drift detection, unknown marker failure,
+  strict no-dash rejection, and read-only skip all passed against synced scripts.
+- NAS deploy: still pending for 0.36.3; current production `/health` reports
+  0.36.2 until the rollout gate.
 
 ## Documentation Alignment Fixes (0.33.0)
 - Added `assemblyAiApiKeys` to `config.yaml.example`.
