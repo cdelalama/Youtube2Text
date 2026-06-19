@@ -17,10 +17,6 @@ All content should be ASCII-only to avoid Windows encoding issues.
   `scripts/pre-commit-hook.sh` across future syncs. Durable fix: upstream these
   handlers/enforcements to LLM-DocKit or add file-level sync exclusions if DocKit
   supports them.
-- GitHub transfer to cdelalama blocked by fork-network (repo is a fork of
-  cdelalama/LLM-DocKit). LLM-DocKit is already a GitHub template, but that does
-  not retroactively detach this repo. Path: Option B fresh non-fork repo for this
-  one (gated on owner OK for archive/delete of old).
 - Open investigation: yt-dlp EJS extraction failures on plan/run. The explicit
   js-runtime fix was reverted (commits 0c2789d..edec2fd); the underlying
   extraction failure in `src/youtube/enumerate.ts` is likely still unresolved.
@@ -28,6 +24,8 @@ All content should be ASCII-only to avoid Windows encoding issues.
 ## Current Status
 - Version: 0.36.2. Visible brand: Media2Text. Technical runtime/repo/config
   contract: `youtube2text` + `Y2T_` (see `docs/llm/DECISIONS.md` D-018).
+- GitHub: `cdelalama/Youtube2Text` is the canonical repo and is not a fork.
+  The old `StartupEmbassy/Youtube2Text` repo is archived.
 - Authoritative version sources: `package.json`, `package-lock.json`, and
   `openapi.yaml` (checked by `scripts/versionCheck.mjs`). `VERSION`, CHANGELOG,
   and doc `<!-- doc-version -->` markers mirror them; a single
