@@ -37,7 +37,7 @@ All content should be ASCII-only to avoid Windows encoding issues.
 - API: stable; OpenAPI at `openapi.yaml`; generated frontend types at `web/lib/apiTypes.gen.ts`
 - Web: Next.js admin UI branded as Media2Text (Runs/Library/Watchlist/Settings)
 - STT providers: AssemblyAI + Deepgram + OpenAI Whisper
-- Deployed production runtime: NAS v0.36.1 images, verified live after
+- Deployed production runtime: NAS v0.36.2 images, verified live after
   `docker save | ssh docker load` rollout.
 
 ## Do Not Touch
@@ -51,8 +51,8 @@ All content should be ASCII-only to avoid Windows encoding issues.
   `scripts/dockit-validate-session.sh` across DocKit sync work unless D-019 is
   upstreamed or explicitly superseded.
 
-## NAS Production Deployment (2026-06-18)
-- Images: `youtube2text-api:v0.36.1`, `youtube2text-web:v0.36.1` (transferred via `docker save | ssh | docker load`)
+## NAS Production Deployment (2026-06-19)
+- Images: `youtube2text-api:v0.36.2`, `youtube2text-web:v0.36.2` (transferred via `docker save | ssh | docker load`; v0.36.1 images retained for rollback)
 - Secrets: Doppler service token (`prd` config) via `dopplerhq/cli` Docker image
 - Auth enforced (`Y2T_ALLOW_INSECURE_NO_API_KEY=false`)
 - Scheduler: OFF (`Y2T_SCHEDULER_ENABLED=false`) -- enable after e2e validation
@@ -295,7 +295,7 @@ I) **Concurrency limits** (document in Operator Notes):
 
 J) **Optional future**: `getAccount()` for pre-flight balance check via `GET /v1/projects/{project_id}/balances`. Requires knowing the project_id. Defer unless needed.
 
-## Latest Checks (0.36.1)
+## Latest Checks (0.36.2)
 - API types: `npm run api:types:generate` OK
 - Tests: `npm test` 152/152 pass
 - Build: `npm run build` + `npm --prefix web run build` OK
@@ -304,7 +304,7 @@ J) **Optional future**: `getAccount()` for pre-flight balance check via `GET /v1
 - Naming contract: `npm run naming:check` OK
 - DocKit validator: `scripts/dockit-validate-session.sh --human` PASS 9/9
 - Validator smoke: `scripts/test-validator.sh` PASS 19/19
-- NAS deploy: `/health` reports 0.36.1, `/runs` returns 401, web returns 200
+- NAS deploy: `/health` reports 0.36.2, `/runs` returns 401, web returns 200
   and renders Media2Text.
 
 ## Documentation Alignment Fixes (0.33.0)
