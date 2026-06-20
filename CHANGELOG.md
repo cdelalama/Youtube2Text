@@ -5,6 +5,27 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.36.9] - 2026-06-20
+
+### Added
+
+- `docs/integrations/CODEX.md` documents the LLM-DocKit Codex CLI
+  SessionStart integration for this repository.
+- `scripts/dockit-install-codex-hook.sh` and `scripts/dockit-trace-status.sh`
+  are now available from the synced DocKit substrate.
+
+### Changed
+
+- Synced LLM-DocKit tooling to template v4.12.1, including validator,
+  test-validator, hook, and manifest updates.
+- Bumped source/package/OpenAPI version markers to 0.36.9 for the tooling
+  sync. No Media2Text runtime behavior changed in this patch.
+
+### Fixed
+
+- Adopted the upstream DocKit sync fix that normalizes copied template
+  `doc-version` markers to the downstream project version before validation.
+
 ## [0.36.8] - 2026-06-20
 
 ### Added

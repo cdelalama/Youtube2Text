@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.8 -->
+<!-- doc-version: 0.36.9 -->
 # Versioning Rules
 
 ## Scope

@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.8 -->
+<!-- doc-version: 0.36.9 -->
 # Project Context - Media2Text
 
 ## Vision
@@ -53,9 +53,10 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
 ## Current Status (2026-06-20)
-v0.36.8 stable in source and deployed on NAS with the Media2Text operator console splitting
-`Estado` and `Nueva captura`, English-mode activity table headers fixed on the
-`Status` screen, and explicit scheduler auto-start OFF copy when
+v0.36.9 stable in source with LLM-DocKit v4.12.1 tooling synced; NAS runtime
+remains v0.36.8 with the Media2Text operator console splitting `Estado` and
+`Nueva captura`, English-mode activity table headers fixed on the `Status`
+screen, and explicit scheduler auto-start OFF copy when
 `Y2T_SCHEDULER_ENABLED=false`. All planned phases (0-3.0) and
 security hardening (P0/P1/P2) complete. Pipeline Integration API added for
 external orchestration. Media2Text is now the visible product brand while the

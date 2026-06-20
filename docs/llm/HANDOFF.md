@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.8 -->
+<!-- doc-version: 0.36.9 -->
 # LLM Work Handoff
 
 This file is the current operational snapshot. Keep it short (target: 1-2 screens).
@@ -9,10 +9,14 @@ All content should be ASCII-only to avoid Windows encoding issues.
 - Last Updated: 2026-06-20
 
 ## Open work
-- Current slice: Media2Text operator-console scheduler state clarification is
-  implemented and deployed: Status and Automations now distinguish live
-  watchlist/scheduler capability from production auto-start being OFF via
-  `Y2T_SCHEDULER_ENABLED=false`.
+- Current slice: DocKit v4.12.1 sync closed as source patch 0.36.9. This was
+  governance/tooling only: validator/test hooks, Codex integration docs, and
+  trace-status helper updated. No runtime, NAS, Docker, API, or UI behavior
+  changed in 0.36.9.
+- Product state: Media2Text operator-console scheduler state clarification is
+  implemented and deployed in NAS runtime 0.36.8: Status and Automations now
+  distinguish live watchlist/scheduler capability from production auto-start
+  being OFF via `Y2T_SCHEDULER_ENABLED=false`.
 - Next product planning: convert the visible `TODAVIA NO IMPLEMENTADO` /
   `PARCIAL` UI surfaces into a backend roadmap, especially speaker renaming,
   durable inbound/outbound webhooks, cost metrics, and Cortex-facing transcript
@@ -21,7 +25,7 @@ All content should be ASCII-only to avoid Windows encoding issues.
   if the y2t-vs-Cortex boundary changes.
 
 ## Current Status
-- Version: 0.36.8 in source and NAS runtime. Visible brand: Media2Text.
+- Version: 0.36.9 in source; NAS runtime remains 0.36.8. Visible brand: Media2Text.
   Technical runtime/repo/config contract: `youtube2text` + `Y2T_` (see
   `docs/llm/DECISIONS.md` D-018).
 - GitHub: `cdelalama/Youtube2Text` is the canonical repo and is not a fork.

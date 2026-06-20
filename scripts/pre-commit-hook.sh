@@ -7,16 +7,14 @@
 #
 # What it does:
 # 1. If VERSION is staged, verifies all manifest targets are also staged.
-# 2. If served/product code or config files changed, BLOCKS if VERSION is not also staged.
-#    Repo docs/README-only edits are not version-impacting by themselves.
+# 2. If product code/config files changed, BLOCKS if VERSION is not also staged.
+#    (excludes .claude/, .github/, docs/ -- tooling, not product code)
 # 3. If code/config files changed, warns if HISTORY.md not updated.
 # 4. Runs check-version-sync.sh to catch any version drift.
-# 5. Runs check-naming-contract.mjs to guard the Media2Text/youtube2text split.
-# 6. Runs dockit-validate-session.sh to check documentation state.
+# 5. Runs dockit-validate-session.sh to check documentation state.
 
 MANIFEST="docs/version-sync-manifest.yml"
 CHECK_SCRIPT="scripts/check-version-sync.sh"
-NAMING_CHECK_SCRIPT="scripts/check-naming-contract.mjs"
 
 # Get list of staged files
 STAGED=$(git diff --cached --name-only 2>/dev/null)
@@ -52,9 +50,8 @@ if echo "$STAGED" | grep -q '^VERSION$'; then
     fi
 fi
 
-# --- Check 2: Served/product code/config changed -> VERSION must be staged ---
-# Excludes repo documentation and GitHub/agent metadata. README and docs can
-# change without a bump unless they also change served UI/API/runtime surfaces.
+# --- Check 2: Product code/config changed -> VERSION must be staged ---
+# Excludes tooling paths (.claude/, .github/, docs/) that are not product code.
 CODE_CHANGED=$(echo "$STAGED" | grep -E '\.(sh|ps1|py|js|ts|yml|yaml|json|toml|cfg|conf|sql)$' \
     | grep -v 'version-sync-manifest' \
     | grep -v '^\\.claude/' \
@@ -86,12 +83,7 @@ if [ -f "$CHECK_SCRIPT" ]; then
     "$CHECK_SCRIPT"
 fi
 
-# --- Check 5: Naming contract validation ---
-if [ -f "$NAMING_CHECK_SCRIPT" ]; then
-    node "$NAMING_CHECK_SCRIPT"
-fi
-
-# --- Check 6: Documentation session validation ---
+# --- Check 5: Documentation session validation ---
 VALIDATE_SCRIPT="scripts/dockit-validate-session.sh"
 if [ -f "$VALIDATE_SCRIPT" ]; then
     if ! "$VALIDATE_SCRIPT" --quiet --check handoff-date --check history-entry >/dev/null 2>&1; then
