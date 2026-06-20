@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.7 -->
+<!-- doc-version: 0.36.8 -->
 # LLM Work Handoff
 
 This file is the current operational snapshot. Keep it short (target: 1-2 screens).
@@ -6,12 +6,13 @@ Older long-form notes were moved to `docs/llm/HANDOFF_ARCHIVE.md`.
 
 All content should be ASCII-only to avoid Windows encoding issues.
 
-- Last Updated: 2026-06-19
+- Last Updated: 2026-06-20
 
 ## Open work
-- Current slice: Media2Text operator-console split between `Estado` and
-  `Nueva captura` is implemented and verified on NAS; v0.36.7 fixes
-  English-mode activity table headers on the `Status` screen.
+- Current slice: Media2Text operator-console scheduler state clarification is
+  implemented in source: Status and Automations now distinguish live
+  watchlist/scheduler capability from production auto-start being OFF via
+  `Y2T_SCHEDULER_ENABLED=false`. NAS rollout is pending from v0.36.7.
 - Next product planning: convert the visible `TODAVIA NO IMPLEMENTADO` /
   `PARCIAL` UI surfaces into a backend roadmap, especially speaker renaming,
   durable inbound/outbound webhooks, cost metrics, and Cortex-facing transcript
@@ -20,7 +21,7 @@ All content should be ASCII-only to avoid Windows encoding issues.
   if the y2t-vs-Cortex boundary changes.
 
 ## Current Status
-- Version: 0.36.7 in source and NAS runtime. Visible brand: Media2Text.
+- Version: 0.36.8 in source; NAS runtime remains 0.36.7 until rollout. Visible brand: Media2Text.
   Technical runtime/repo/config contract: `youtube2text` + `Y2T_` (see
   `docs/llm/DECISIONS.md` D-018).
 - GitHub: `cdelalama/Youtube2Text` is the canonical repo and is not a fork.
@@ -298,22 +299,16 @@ I) **Concurrency limits** (document in Operator Notes):
 
 J) **Optional future**: `getAccount()` for pre-flight balance check via `GET /v1/projects/{project_id}/balances`. Requires knowing the project_id. Defer unless needed.
 
-## Latest Checks (0.36.7 source)
-- Tests: `npm test` 152/152 pass
+## Latest Checks (0.36.8 source)
+- Tests: `npm test` 152/152 pass (rerun isolated after one parallel-load
+  deep-health timeout returned 408).
 - Build: `npm run build` + `npm --prefix web run build` OK
 - API contract: `npm run api:contract:check` OK
 - Version sync: `npm run version:check` + `scripts/check-version-sync.sh` OK
 - Naming contract: `npm run naming:check` OK
 - DocKit validator: `scripts/dockit-validate-session.sh --human` PASS 9/9
 - Validator smoke: `scripts/test-validator.sh` PASS 32/32
-- NAS deploy: `/health` reports 0.36.7, `/runs` returns 401, web returns 200,
-  and Chromium DOM verification with `m2t.lang=en` shows `SOURCE`, `TYPE`,
-  `WHEN`, `STATUS` with no Spanish table headers. NAS containers run
-  `youtube2text-api:v0.36.7` and `youtube2text-web:v0.36.7`; v0.36.6 images and
-  timestamped compose backups are retained for rollback. Note: direct
-  `docker-compose up -d` without `.env.doppler` made the first 0.36.7 API
-  recreate unhealthy; rollback to 0.36.6 verified clean, then retry via
-  `/bin/sh start.sh` succeeded.
+- NAS rollout pending from 0.36.7.
 
 ## Documentation Alignment Fixes (0.33.0)
 - Added `assemblyAiApiKeys` to `config.yaml.example`.

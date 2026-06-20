@@ -5,6 +5,18 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.36.8] - 2026-06-20
+
+### Added
+- Added explicit scheduler auto-start state in the operator console: when NAS
+  reports `Y2T_SCHEDULER_ENABLED=false`, Status and Automations show that
+  watchlist/scheduler capabilities exist but periodic production auto-start is
+  disarmed.
+
+### Changed
+
+### Fixed
+
 ## [0.36.7] - 2026-06-19
 
 ### Added

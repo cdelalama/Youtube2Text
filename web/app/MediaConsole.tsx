@@ -31,7 +31,7 @@ type Lang = "es" | "en";
 type Theme = "dark" | "light";
 type TranscriptFormat = "read" | "txt" | "md" | "jsonl" | "csv";
 
-const APP_VERSION = "0.36.7";
+const APP_VERSION = "0.36.8";
 
 type TranscriptJson = {
   text?: string;
@@ -635,16 +635,30 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
   );
 
   function renderStatus() {
+    const autoStartOff = scheduler?.enabled === false && !scheduler.running;
+    const schedulerLabel = scheduler?.running
+      ? t(lang, "CRON ACTIVO", "CRON RUNNING")
+      : autoStartOff
+        ? t(lang, "AUTO DESARMADO", "AUTO OFF")
+        : t(lang, "CRON PARADO", "CRON STOPPED");
+
     return (
       <section className="m2t-page">
         <PageIntro title={t(lang, "Estado", "Status")} text={t(lang, "Media2Text es un servicio de ingesta headless. Esta consola sirve para configurarlo y vigilarlo; el trabajo ocurre solo.", "Media2Text is a headless ingest service. This console configures and monitors it; the work runs on its own.")} />
         <button className="m2t-system-banner" onClick={() => go("activity")}>
-          <span className="m2t-live"><span />{scheduler?.running ? t(lang, "CRON ACTIVO", "CRON RUNNING") : t(lang, "CRON PARADO", "CRON STOPPED")}</span>
-          <span>{t(lang, "próxima sync", "next sync")} <strong>{scheduler?.nextTickAt ? formatDate(scheduler.nextTickAt) : "-"}</strong></span>
+          <span className={`m2t-live ${autoStartOff ? "warn" : ""}`}><span />{schedulerLabel}</span>
+          <span>{t(lang, "próxima sync", "next sync")} <strong>{autoStartOff ? t(lang, "manual", "manual") : scheduler?.nextTickAt ? formatDate(scheduler.nextTickAt) : "-"}</strong></span>
           <span>runs <strong>{totalRuns}</strong></span>
           <span>{t(lang, "activos", "active")} <strong>{runningRuns}</strong></span>
           <em>{t(lang, "ver actividad", "view activity")} →</em>
         </button>
+        {autoStartOff ? (
+          <div className="m2t-ops-note">
+            <span>OPS</span>
+            <p>{t(lang, "Watchlist y trigger manual están disponibles. El autoarranque periódico en NAS está desarmado por Y2T_SCHEDULER_ENABLED=false hasta completar un e2e controlado.", "Watchlist and manual trigger are available. NAS periodic auto-start is disarmed by Y2T_SCHEDULER_ENABLED=false until a controlled e2e run is completed.")}</p>
+            <FeatureBadge state="PARCIAL" />
+          </div>
+        ) : null}
 
         <div className="m2t-metrics">
           <Metric label={t(lang, "PROCESADOS", "PROCESSED")} value={String(videoStats.succeeded || doneRuns)} text={t(lang, "ítems transcritos en total", "items transcribed in total")} />
@@ -842,12 +856,19 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
   }
 
   function renderActivity() {
+    const autoStartOff = scheduler?.enabled === false && !scheduler.running;
+    const schedulerValue = scheduler?.running
+      ? t(lang, "Activo", "Running")
+      : autoStartOff
+        ? t(lang, "Auto OFF", "Auto OFF")
+        : t(lang, "Parado", "Stopped");
+
     return (
       <section className="m2t-page">
         <PageIntro title={t(lang, "Actividad", "Activity")} text={t(lang, "Salud del motor, scheduler y últimas ejecuciones.", "Engine health, scheduler, and recent runs.")} />
         <div className="m2t-health-grid">
           <HealthTile label="MOTOR" value={t(lang, "Operativo", "Operational")} state="LIVE" />
-          <HealthTile label="CRON" value={scheduler?.running ? t(lang, "Activo", "Running") : t(lang, "Parado", "Stopped")} state="LIVE" />
+          <HealthTile label="CRON" value={schedulerValue} state={autoStartOff ? "PARCIAL" : "LIVE"} />
           <HealthTile label={t(lang, "ÚLTIMAS 24 H", "LAST 24 H")} value={`+${runs.filter((r) => Date.now() - Date.parse(r.createdAt) < 86400000).length}`} state="LIVE" />
           <HealthTile label={t(lang, "ALERTAS", "ALERTS")} value={String(failedRuns)} state="PARCIAL" />
         </div>
@@ -919,9 +940,23 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
   }
 
   function renderAutomations() {
+    const autoStartOff = scheduler?.enabled === false && !scheduler.running;
     return (
       <section className="m2t-page">
-        <PageIntro title={t(lang, "Automatizaciones", "Automations")} text={t(lang, "Reglas basadas en watchlist y scheduler actuales.", "Rules backed by current watchlist and scheduler.")} badge={<FeatureBadge state="LIVE" />} />
+        <PageIntro
+          title={t(lang, "Automatizaciones", "Automations")}
+          text={autoStartOff
+            ? t(lang, "Watchlist y scheduler existen. En NAS, el autoarranque periódico está OFF hasta una prueba e2e controlada.", "Watchlist and scheduler exist. On NAS, periodic auto-start is OFF until a controlled e2e run.")
+            : t(lang, "Reglas basadas en watchlist y scheduler actuales.", "Rules backed by current watchlist and scheduler.")}
+          badge={<FeatureBadge state={autoStartOff ? "PARCIAL" : "LIVE"} />}
+        />
+        {autoStartOff ? (
+          <div className="m2t-ops-note">
+            <span>OPS</span>
+            <p>{t(lang, "Añadir reglas no activa trabajo autónomo por sí solo. Para automatizar producción hay que armar Y2T_SCHEDULER_ENABLED=true después de verificar un canal limitado, idempotencia y coste.", "Adding rules does not enable autonomous production work by itself. To automate production, arm Y2T_SCHEDULER_ENABLED=true after verifying a limited channel, idempotency, and cost.")}</p>
+            <FeatureBadge state="PARCIAL" />
+          </div>
+        ) : null}
         <div className="m2t-composer compact">
           <div className="m2t-input-line"><span>&gt;</span><input value={watchDraftUrl} onChange={(e) => setWatchDraftUrl(e.target.value)} placeholder="https://www.youtube.com/@channel" /></div>
           <button className="m2t-button" onClick={() => void addWatchRule(watchDraftUrl)}>+ {t(lang, "Nueva regla", "New rule")}</button>
