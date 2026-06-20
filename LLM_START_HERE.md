@@ -52,7 +52,7 @@ Recommended reading order:
 Source of truth: docs/llm/HANDOFF.md.
 - Last Updated: 2026-06-20
 - Working on: clarifying scheduler auto-start state in the redesigned Media2Text UI.
-- Status: v0.36.8 stable in source with explicit scheduler auto-start OFF copy; NAS rollout pending from v0.36.7. CLI + API + redesigned Media2Text Web UI + Docker operational. 152/152 tests passing in the latest full release gate. Security roadmap v8 P0/P1/P2 done.
+- Status: v0.36.8 stable in source and deployed on NAS with explicit scheduler auto-start OFF copy. CLI + API + redesigned Media2Text Web UI + Docker operational. 152/152 tests passing in the latest full release gate. Security roadmap v8 P0/P1/P2 done.
 
 Keep this section synchronized with the "Current Status" block in docs/llm/HANDOFF.md.
 

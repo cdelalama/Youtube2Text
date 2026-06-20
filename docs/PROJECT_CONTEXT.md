@@ -53,10 +53,10 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
 ## Current Status (2026-06-20)
-v0.36.8 stable in source with the Media2Text operator console splitting
+v0.36.8 stable in source and deployed on NAS with the Media2Text operator console splitting
 `Estado` and `Nueva captura`, English-mode activity table headers fixed on the
 `Status` screen, and explicit scheduler auto-start OFF copy when
-`Y2T_SCHEDULER_ENABLED=false`. NAS rollout is pending from v0.36.7. All planned phases (0-3.0) and
+`Y2T_SCHEDULER_ENABLED=false`. All planned phases (0-3.0) and
 security hardening (P0/P1/P2) complete. Pipeline Integration API added for
 external orchestration. Media2Text is now the visible product brand while the
 technical runtime remains `youtube2text`.

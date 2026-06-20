@@ -10,9 +10,9 @@ All content should be ASCII-only to avoid Windows encoding issues.
 
 ## Open work
 - Current slice: Media2Text operator-console scheduler state clarification is
-  implemented in source: Status and Automations now distinguish live
+  implemented and deployed: Status and Automations now distinguish live
   watchlist/scheduler capability from production auto-start being OFF via
-  `Y2T_SCHEDULER_ENABLED=false`. NAS rollout is pending from v0.36.7.
+  `Y2T_SCHEDULER_ENABLED=false`.
 - Next product planning: convert the visible `TODAVIA NO IMPLEMENTADO` /
   `PARCIAL` UI surfaces into a backend roadmap, especially speaker renaming,
   durable inbound/outbound webhooks, cost metrics, and Cortex-facing transcript
@@ -21,7 +21,7 @@ All content should be ASCII-only to avoid Windows encoding issues.
   if the y2t-vs-Cortex boundary changes.
 
 ## Current Status
-- Version: 0.36.8 in source; NAS runtime remains 0.36.7 until rollout. Visible brand: Media2Text.
+- Version: 0.36.8 in source and NAS runtime. Visible brand: Media2Text.
   Technical runtime/repo/config contract: `youtube2text` + `Y2T_` (see
   `docs/llm/DECISIONS.md` D-018).
 - GitHub: `cdelalama/Youtube2Text` is the canonical repo and is not a fork.
@@ -37,7 +37,7 @@ All content should be ASCII-only to avoid Windows encoding issues.
   transcript, activity, cost, errors, sources, automations, API/output, and
   settings surfaces. Roadmap-only capabilities are marked with explicit badges.
 - STT providers: AssemblyAI + Deepgram + OpenAI Whisper
-- Deployed production runtime: NAS v0.36.7 images, verified live after
+- Deployed production runtime: NAS v0.36.8 images, verified live after
   `docker save | ssh docker load` rollout.
 
 ## Do Not Touch
@@ -52,8 +52,8 @@ All content should be ASCII-only to avoid Windows encoding issues.
 - Keep `.dockit-config.yml` `history_format: no-dash`; D-019 is superseded by
   LLM-DocKit v4.9.6 upstream behavior, not by relaxing this repository's format.
 
-## NAS Production Deployment (2026-06-19)
-- Images: `youtube2text-api:v0.36.7`, `youtube2text-web:v0.36.7` (transferred via `docker save | ssh | docker load`; v0.36.6 images retained for rollback)
+## NAS Production Deployment (2026-06-20)
+- Images: `youtube2text-api:v0.36.8`, `youtube2text-web:v0.36.8` (transferred via `docker save | ssh | docker load`; v0.36.7 images retained for rollback)
 - Secrets: Doppler service token (`prd` config) via `dopplerhq/cli` Docker image
 - Deployment guardrail: on NAS, do not run Compose directly for this service.
   Use `/bin/sh start.sh` so Doppler secrets are fetched into `.env.doppler`
@@ -299,7 +299,7 @@ I) **Concurrency limits** (document in Operator Notes):
 
 J) **Optional future**: `getAccount()` for pre-flight balance check via `GET /v1/projects/{project_id}/balances`. Requires knowing the project_id. Defer unless needed.
 
-## Latest Checks (0.36.8 source)
+## Latest Checks (0.36.8 deployed)
 - Tests: `npm test` 152/152 pass (rerun isolated after one parallel-load
   deep-health timeout returned 408).
 - Build: `npm run build` + `npm --prefix web run build` OK
@@ -308,7 +308,7 @@ J) **Optional future**: `getAccount()` for pre-flight balance check via `GET /v1
 - Naming contract: `npm run naming:check` OK
 - DocKit validator: `scripts/dockit-validate-session.sh --human` PASS 9/9
 - Validator smoke: `scripts/test-validator.sh` PASS 32/32
-- NAS rollout pending from 0.36.7.
+- NAS live: `/health` reports 0.36.8, `/runs` returns 401 unauthenticated, web returns 200, and the served web chunk contains the explicit `AUTO OFF` / `Y2T_SCHEDULER_ENABLED=false` scheduler copy.
 
 ## Documentation Alignment Fixes (0.33.0)
 - Added `assemblyAiApiKeys` to `config.yaml.example`.
