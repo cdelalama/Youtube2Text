@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.9 -->
+<!-- doc-version: 0.36.10 -->
 # LLM Start Guide - Media2Text
 
 ## Read This First (Mandatory)
@@ -50,9 +50,9 @@ Recommended reading order:
 ## Current Focus (Snapshot)
 
 Source of truth: docs/llm/HANDOFF.md.
-- Last Updated: 2026-06-20
-- Working on: clarifying scheduler auto-start state in the redesigned Media2Text UI.
-- Status: v0.36.8 stable in source and deployed on NAS with explicit scheduler auto-start OFF copy. CLI + API + redesigned Media2Text Web UI + Docker operational. 152/152 tests passing in the latest full release gate. Security roadmap v8 P0/P1/P2 done.
+- Last Updated: 2026-06-22
+- Working on: syncing LLM-DocKit v4.12.3 tooling into youtube2text.
+- Status: v0.36.10 stable in source with LLM-DocKit v4.12.3 tooling synced; NAS runtime remains v0.36.8. CLI + API + redesigned Media2Text Web UI + Docker operational. 152/152 tests passing in the latest full release gate. Security roadmap v8 P0/P1/P2 done.
 
 Keep this section synchronized with the "Current Status" block in docs/llm/HANDOFF.md.
 
@@ -161,16 +161,24 @@ When handing off to another LLM:
 <!-- DOCKIT-TEMPLATE:START trace-protocol -->
 ## Trace Protocol
 
-For execution or audit work, begin each substantive execution report or audit
-verdict with a compact `Trace` header, then write the normal explanation in
-prose. The header is for orientation; it does not replace the message.
+Every substantive assistant turn in a DocKit-governed session must begin with
+a compact `Trace` header, then continue with the normal explanation in prose.
+This includes execution, audit, design opinions, recommendations,
+brainstorming, clarifying questions, status reports, and go/no-go calls.
+
+A turn is substantive if the operator might need to find it when returning to
+a multi-window workflow: it contains a decision, opinion, recommendation,
+status, audit, action, or clarifying question. Non-substantive turns such as a
+pure acknowledgement under 50 characters do not require Trace, but emitting
+Trace is always safe. The header is for orientation; it does not replace the
+message.
 
 Required chat header fields:
-- `Role`: `executor` or `auditor`
+- `Role`: `executor`, `auditor`, or `advisor`
 - `Sent`: `YYYY-MM-DD HH:MM:SS <local-tz> (HH:MM:SS UTC)`. The order and
   precision are mandatory: local time first, UTC second in parentheses, seconds
   included on both sides.
-- `Subject`: current task, or commit hash/title being implemented or audited
+- `Subject`: current task, question, recommendation, or commit hash/title being implemented or audited
 - `Resulting state`: what this message leaves true after it is sent
 - `Repo state`: local branch vs origin and worktree status verified now
 - `Validation`: checks run and result
@@ -229,7 +237,7 @@ half is enforced by `scripts/dockit-validate-session.sh --check trace-protocol`:
   `Current target:` or `Current audit target:`.
 - `docs/llm/HISTORY.md` entries dated on or after `trace_protocol.since` that
   reference backtick-quoted commit hashes must end with an inline footer:
-  `Trace: role=executor|auditor; commits=hash1,hash2; state=...; validation=...; next=...`
+  `Trace: role=executor|auditor|advisor; commits=hash1,hash2; state=...; validation=...; next=...`
 
 Projects can set the local timezone used in `Sent` with:
 
@@ -238,7 +246,7 @@ trace_protocol:
   local_timezone: Europe/Madrid
 ```
 
-Projects that do not use executor/auditor windows can disable the chat-side
+Projects that do not use Trace-oriented LLM windows can disable the chat-side
 convention with:
 
 ```yaml

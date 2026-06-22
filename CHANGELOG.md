@@ -5,6 +5,18 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.36.10] - 2026-06-22
+
+### Changed
+
+- Synced LLM-DocKit tooling to template v4.12.3. Trace governance now treats
+  `advisor` as a first-class role alongside `executor` and `auditor`, and the
+  bootstrap message clarifies session-start vs stale-read re-verification
+  behavior.
+- Bumped source/package/OpenAPI version markers to 0.36.10 for the tooling
+  sync. No Media2Text runtime, API, Docker, or served UI behavior changed in
+  this patch; NAS production remains on runtime 0.36.8.
+
 ## [0.36.9] - 2026-06-20
 
 ### Added

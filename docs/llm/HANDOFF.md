@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.9 -->
+<!-- doc-version: 0.36.10 -->
 # LLM Work Handoff
 
 This file is the current operational snapshot. Keep it short (target: 1-2 screens).
@@ -6,13 +6,13 @@ Older long-form notes were moved to `docs/llm/HANDOFF_ARCHIVE.md`.
 
 All content should be ASCII-only to avoid Windows encoding issues.
 
-- Last Updated: 2026-06-20
+- Last Updated: 2026-06-22
 
 ## Open work
-- Current slice: DocKit v4.12.1 sync closed as source patch 0.36.9. This was
-  governance/tooling only: validator/test hooks, Codex integration docs, and
-  trace-status helper updated. No runtime, NAS, Docker, API, or UI behavior
-  changed in 0.36.9.
+- Current slice: DocKit v4.12.3 sync closed as source patch 0.36.10. This was
+  governance/tooling only: Trace role scope, validator/test hooks, bootstrap
+  onboarding text, and trace-status helper updates. No runtime, NAS, Docker,
+  API, or UI behavior changed in 0.36.10.
 - Product state: Media2Text operator-console scheduler state clarification is
   implemented and deployed in NAS runtime 0.36.8: Status and Automations now
   distinguish live watchlist/scheduler capability from production auto-start
@@ -25,7 +25,7 @@ All content should be ASCII-only to avoid Windows encoding issues.
   if the y2t-vs-Cortex boundary changes.
 
 ## Current Status
-- Version: 0.36.9 in source; NAS runtime remains 0.36.8. Visible brand: Media2Text.
+- Version: 0.36.10 in source; NAS runtime remains 0.36.8. Visible brand: Media2Text.
   Technical runtime/repo/config contract: `youtube2text` + `Y2T_` (see
   `docs/llm/DECISIONS.md` D-018).
 - GitHub: `cdelalama/Youtube2Text` is the canonical repo and is not a fork.
@@ -303,15 +303,16 @@ I) **Concurrency limits** (document in Operator Notes):
 
 J) **Optional future**: `getAccount()` for pre-flight balance check via `GET /v1/projects/{project_id}/balances`. Requires knowing the project_id. Defer unless needed.
 
-## Latest Checks (0.36.8 deployed)
-- Tests: `npm test` 152/152 pass (rerun isolated after one parallel-load
-  deep-health timeout returned 408).
-- Build: `npm run build` + `npm --prefix web run build` OK
+## Latest Checks (0.36.10 source)
+- Tests: `npm test` 152/152 pass
+- Build: not rerun for 0.36.10 (governance/tooling-only sync; no runtime,
+  API handler, Docker, or served UI behavior changed)
 - API contract: `npm run api:contract:check` OK
 - Version sync: `npm run version:check` + `scripts/check-version-sync.sh` OK
 - Naming contract: `npm run naming:check` OK
-- DocKit validator: `scripts/dockit-validate-session.sh --human` PASS 9/9
-- Validator smoke: `scripts/test-validator.sh` PASS 32/32
+- DocKit validator: `scripts/dockit-validate-session.sh --human` PASS 10/10
+- Validator smoke: `scripts/test-validator.sh` PASS 46/46
+- LLM-DocKit sync-check: `youtube2text` CURRENT at v4.12.3
 - NAS live: `/health` reports 0.36.8, `/runs` returns 401 unauthenticated, web returns 200, and the served web chunk contains the explicit `AUTO OFF` / `Y2T_SCHEDULER_ENABLED=false` scheduler copy.
 
 ## Documentation Alignment Fixes (0.33.0)

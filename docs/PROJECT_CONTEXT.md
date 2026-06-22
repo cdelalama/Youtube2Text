@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.9 -->
+<!-- doc-version: 0.36.10 -->
 # Project Context - Media2Text
 
 ## Vision
@@ -52,8 +52,8 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Storage | Persist outputs + idempotency | TBD | Layout: `output/<channel_title_slug>__<channel_id>/<basename>.*`. |
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
-## Current Status (2026-06-20)
-v0.36.9 stable in source with LLM-DocKit v4.12.1 tooling synced; NAS runtime
+## Current Status (2026-06-22)
+v0.36.10 stable in source with LLM-DocKit v4.12.3 tooling synced; NAS runtime
 remains v0.36.8 with the Media2Text operator console splitting `Estado` and
 `Nueva captura`, English-mode activity table headers fixed on the `Status`
 screen, and explicit scheduler auto-start OFF copy when

@@ -253,7 +253,7 @@ init_sync_versioned_doc_repo() {
 
     printf '0.1.0\n' >"$_repo/VERSION"
     cat >"$_repo/LLM_START_HERE.md" <<'EOF'
-<!-- doc-version: 0.36.8 -->
+<!-- doc-version: 0.36.9 -->
 # Versioned adopter start guide
 
 <!-- DOCKIT-TEMPLATE:START footer -->
@@ -509,6 +509,32 @@ EOF
 expect_pass "trace-protocol accepts no-dash HISTORY footer" \
     "$VALIDATOR" --project "$TRACE_REPO" --quiet --check trace-protocol
 
+cat >"$TRACE_REPO/docs/llm/HANDOFF.md" <<EOF
+# Handoff
+
+## Trace Anchor
+
+- Role: advisor
+- Current target: \`$TRACE_HASH\` $TRACE_SUBJECT
+- Commit time: $TRACE_TIME
+- State verified: local main, no origin remote in smoke repo
+- Validation: smoke=pass
+- Next gate: operator
+
+## Open work -- next concrete step
+
+Touch \`scripts/foo.sh\`.
+EOF
+
+cat >"$TRACE_REPO/docs/llm/HISTORY.md" <<EOF
+# History
+
+- 2000-01-02 - Smoke - Advised on \`$TRACE_HASH\`. - Files: [scripts/foo.sh] - Version impact: no - Trace: role=advisor; commits=$TRACE_HASH; state=local-main-no-origin; validation=smoke-pass; next=operator
+EOF
+
+expect_pass "trace-protocol accepts advisor role" \
+    "$VALIDATOR" --project "$TRACE_REPO" --quiet --check trace-protocol
+
 TRACE_TIME_MINUTES=$(git -C "$TRACE_REPO" show -s --format=%cd --date=format:'%Y-%m-%d %H:%M UTC' HEAD)
 cat >"$TRACE_REPO/docs/llm/HANDOFF.md" <<EOF
 # Handoff
@@ -567,6 +593,9 @@ init_repo "$TRACE_STATUS_REPO"
 TRACE_STATUS_HASH=$(git -C "$TRACE_STATUS_REPO" rev-parse --short=7 HEAD)
 expect_pass "trace-status emits current HEAD and clean repo state" \
     sh -c "'$TRACE_STATUS' --project '$TRACE_STATUS_REPO' --role executor --subject smoke --validation smoke-pass --next operator >'$OUT' && grep -q 'HEAD=$TRACE_STATUS_HASH' '$OUT' && grep -q 'Repo state: .*clean' '$OUT'"
+
+expect_pass "trace-status accepts advisor role" \
+    sh -c "'$TRACE_STATUS' --project '$TRACE_STATUS_REPO' --role advisor --subject smoke --validation smoke-pass --next operator >'$OUT' && grep -q 'Role: advisor' '$OUT'"
 
 cat >"$TRACE_REPO/docs/llm/HISTORY.md" <<EOF
 # History
@@ -745,7 +774,7 @@ else
     init_sync_versioned_doc_repo "$SYNC_VERSIONED_REPO"
     if "$SYNC_TOOL" --init-state --project "$SYNC_VERSIONED_REPO" >"$OUT" 2>&1 \
         && "$SYNC_TOOL" --apply --project "$SYNC_VERSIONED_REPO" >"$OUT" 2>&1 \
-        && grep -q '<!-- doc-version: 0.36.8 -->' "$SYNC_VERSIONED_REPO/docs/integrations/CODEX.md" \
+        && grep -q '<!-- doc-version: 0.36.9 -->' "$SYNC_VERSIONED_REPO/docs/integrations/CODEX.md" \
         && sh -c "cd '$SYNC_VERSIONED_REPO' && scripts/check-version-sync.sh" >"$OUT" 2>&1; then
         note_pass "dockit-sync normalizes copied doc-version markers to project version"
     else
