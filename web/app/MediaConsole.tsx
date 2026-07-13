@@ -11,6 +11,7 @@ type SchedulerStatus = components["schemas"]["SchedulerStatus"];
 type SettingsGetResponse = components["schemas"]["SettingsGetResponse"];
 type ProviderCapability = components["schemas"]["ProviderCapability"];
 type RunPlan = components["schemas"]["RunPlan"];
+type HealthResponse = components["schemas"]["HealthResponse"];
 
 type Screen =
   | "status"
@@ -30,8 +31,6 @@ type FeatureState = "LIVE" | "PARCIAL" | "ESTIMADO" | "TODAVIA NO IMPLEMENTADO";
 type Lang = "es" | "en";
 type Theme = "dark" | "light";
 type TranscriptFormat = "read" | "txt" | "md" | "jsonl" | "csv";
-
-const APP_VERSION = "0.36.8";
 
 type TranscriptJson = {
   text?: string;
@@ -279,6 +278,7 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
   const [scheduler, setScheduler] = useState<SchedulerStatus | undefined>();
   const [settings, setSettings] = useState<SettingsGetResponse | undefined>();
   const [providers, setProviders] = useState<ProviderCapability[]>([]);
+  const [health, setHealth] = useState<HealthResponse | undefined>();
   const [metrics, setMetrics] = useState<MetricsSnapshot>({ runs: {} });
   const [selectedChannel, setSelectedChannel] = useState<ChannelInfo | undefined>();
   const [selectedVideo, setSelectedVideo] = useState<VideoInfo | undefined>();
@@ -298,7 +298,8 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
   const [watchDraftUrl, setWatchDraftUrl] = useState("");
   const fileRef = useRef<HTMLInputElement | null>(null);
 
-  const apiVersion = metrics.version;
+  const apiVersion = health?.version ?? metrics.version;
+  const displayVersion = apiVersion ?? "unknown";
   const totalRuns = runs.length;
   const doneRuns = runs.filter((r) => r.status === "done").length;
   const failedRuns = runs.filter((r) => r.status === "error").length;
@@ -322,13 +323,14 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
   }
 
   async function refreshAll() {
-    const [runsRes, channelsRes, watchlistRes, schedulerRes, settingsRes, providersRes] = await Promise.all([
+    const [runsRes, channelsRes, watchlistRes, schedulerRes, settingsRes, providersRes, healthRes] = await Promise.all([
       maybeJson<{ runs: RunRecord[] }>("/api/runs"),
       maybeJson<{ channels: ChannelInfo[] }>("/api/library/channels"),
       maybeJson<{ entries: WatchlistEntry[] }>("/api/watchlist"),
       maybeJson<{ status: SchedulerStatus }>("/api/scheduler/status"),
       maybeJson<SettingsGetResponse>("/api/settings"),
       maybeJson<{ providers: ProviderCapability[] }>("/api/providers"),
+      maybeJson<HealthResponse>("/api/health"),
     ]);
     setRuns(runsRes?.runs ?? []);
     setChannels(channelsRes?.channels ?? []);
@@ -336,6 +338,7 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
     setScheduler(schedulerRes?.status);
     setSettings(settingsRes);
     setProviders(providersRes?.providers ?? []);
+    setHealth(healthRes);
     setSettingsDraft({
       sttProvider: settingsRes?.effective?.sttProvider ?? "assemblyai",
       languageDetection: settingsRes?.effective?.languageDetection ?? "auto",
@@ -558,7 +561,7 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
           <div className="m2t-logo"><span /><span /><span /></div>
           <div>
             <div className="m2t-brand-title">Media2Text</div>
-            <div className="m2t-brand-sub">app v{APP_VERSION}</div>
+            <div className="m2t-brand-sub">app v{displayVersion}</div>
           </div>
         </div>
         <div className="m2t-menu-label">MENU</div>
@@ -587,7 +590,7 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
             <button data-active={theme === "light"} onClick={() => setTheme("light")}>LIGHT</button>
           </div>
           <div className="m2t-engine"><span />{t(lang, "Motor conectado", "Engine connected")}</div>
-          <div className="m2t-engine-sub">engine y2t v{apiVersion ?? APP_VERSION} · :8787</div>
+          <div className="m2t-engine-sub">engine y2t v{displayVersion} · :8787</div>
         </div>
       </aside>
 

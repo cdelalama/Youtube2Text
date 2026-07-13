@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { planFromListing } from "../src/pipeline/plan.js";
+import { planFromListing, selectCandidateVideos } from "../src/pipeline/plan.js";
 import { isBeforeDate } from "../src/utils/date.js";
 
 test("planFromListing counts processed vs remaining (force=false)", async () => {
@@ -311,4 +311,56 @@ test("planFromListing with videoIds ignores IDs not in catalog", async () => {
 
   assert.equal(plan.totalVideos, 1, "only matching IDs");
   assert.deepEqual(plan.videos.map((v) => v.id), ["a"]);
+});
+
+test("selectCandidateVideos applies the same date window used by planFromListing", async () => {
+  const listing = {
+    channelId: "C1",
+    channelTitle: "Channel",
+    videos: [
+      { id: "a", title: "A", url: "u1", uploadDate: "20230601" },
+      { id: "b", title: "B", url: "u2", uploadDate: "20240301" },
+      { id: "c", title: "C", url: "u3", uploadDate: "20240901" },
+      { id: "d", title: "D", url: "u4", uploadDate: "20250101" },
+    ],
+  };
+  const config = {
+    assemblyAiApiKey: "test",
+    outputDir: "output",
+    audioDir: "audio",
+    filenameStyle: "title_id",
+    audioFormat: "mp3",
+    languageDetection: "auto",
+    languageCode: "en_us",
+    concurrency: 1,
+    csvEnabled: false,
+    assemblyAiCreditsCheck: "none",
+    assemblyAiMinBalanceMinutes: 60,
+    commentsEnabled: false,
+    pollIntervalMs: 5000,
+    maxPollMinutes: 60,
+    downloadRetries: 0,
+    transcriptionRetries: 0,
+    ytDlpExtraArgs: [],
+    afterDate: "2024-01-01",
+    beforeDate: "2024-12-31",
+  } as const;
+
+  const selection = await selectCandidateVideos(
+    listing,
+    config,
+    { force: false },
+    { buildProcessedVideoIdSet: async () => new Set(["b"]) }
+  );
+  const plan = await planFromListing(
+    "https://example.com/channel",
+    listing,
+    config,
+    { force: false },
+    { buildProcessedVideoIdSet: async () => new Set(["b"]) }
+  );
+
+  assert.deepEqual(selection.candidates.map((v) => v.video.id), ["b", "c"]);
+  assert.deepEqual(selection.selectedCandidates.map((v) => v.video.id), ["c"]);
+  assert.deepEqual(plan.selectedVideos.map((v) => v.id), ["c"]);
 });

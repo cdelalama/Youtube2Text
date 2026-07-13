@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.10 -->
+<!-- doc-version: 0.36.11 -->
 # LLM Start Guide - Media2Text
 
 ## Read This First (Mandatory)
@@ -50,9 +50,9 @@ Recommended reading order:
 ## Current Focus (Snapshot)
 
 Source of truth: docs/llm/HANDOFF.md.
-- Last Updated: 2026-06-22
-- Working on: syncing LLM-DocKit v4.12.3 tooling into youtube2text.
-- Status: v0.36.10 stable in source with LLM-DocKit v4.12.3 tooling synced; NAS runtime remains v0.36.8. CLI + API + redesigned Media2Text Web UI + Docker operational. 152/152 tests passing in the latest full release gate. Security roadmap v8 P0/P1/P2 done.
+- Last Updated: 2026-07-04
+- Working on: source patch 0.36.11 for Pipeline Integration API execution parity and restart truth.
+- Status: v0.36.11 stable in source with shared plan/run candidate selection, `beforeDate` execution parity, interrupted-run startup reconciliation, and live API-derived console version display. NAS runtime remains v0.36.8. CLI + API + redesigned Media2Text Web UI + Docker operational. Security roadmap v8 P0/P1/P2 done.
 
 Keep this section synchronized with the "Current Status" block in docs/llm/HANDOFF.md.
 

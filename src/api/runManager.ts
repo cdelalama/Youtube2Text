@@ -113,7 +113,8 @@ export class RunManager {
     await ensureDir(this.persistence.rootDir);
     const persisted = await loadPersistedRuns(this.persistence);
     for (const record of persisted) {
-      this.runs.set(record.runId, record);
+      const reconciled = this.reconcilePersistedRun(record, new Date().toISOString());
+      this.runs.set(reconciled.runId, reconciled);
       const buffer = new EventBuffer<PipelineEvent>(
         this.options.maxBufferedEventsPerRun,
         this.options.maxEventBytes
@@ -131,6 +132,9 @@ export class RunManager {
       buffer.setNextId(maxId + 1);
       this.buffers.set(record.runId, buffer);
       this.listeners.set(record.runId, new Set());
+      if (reconciled !== record) {
+        await writeRunRecord(this.persistence, reconciled);
+      }
     }
   }
 
@@ -485,6 +489,19 @@ export class RunManager {
   private persistEvent(runId: string, id: number, event: PipelineEvent) {
     if (!this.persistence) return;
     this.enqueuePersist(() => appendEvent(this.persistence!, runId, { id, event }));
+  }
+
+  private reconcilePersistedRun(record: RunRecord, now: string): RunRecord {
+    if (record.status !== "queued" && record.status !== "running") return record;
+
+    return {
+      ...record,
+      status: "error",
+      finishedAt: record.finishedAt ?? now,
+      error:
+        record.error ??
+        `interrupted: server restarted while run was ${record.status}`,
+    };
   }
 
   private async tryEnrichPreviewFromArtifacts(run: RunRecord): Promise<void> {

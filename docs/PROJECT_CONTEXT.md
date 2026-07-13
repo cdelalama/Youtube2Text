@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.10 -->
+<!-- doc-version: 0.36.11 -->
 # Project Context - Media2Text
 
 ## Vision
@@ -52,12 +52,15 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Storage | Persist outputs + idempotency | TBD | Layout: `output/<channel_title_slug>__<channel_id>/<basename>.*`. |
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
-## Current Status (2026-06-22)
-v0.36.10 stable in source with LLM-DocKit v4.12.3 tooling synced; NAS runtime
-remains v0.36.8 with the Media2Text operator console splitting `Estado` and
-`Nueva captura`, English-mode activity table headers fixed on the `Status`
-screen, and explicit scheduler auto-start OFF copy when
-`Y2T_SCHEDULER_ENABLED=false`. All planned phases (0-3.0) and
+## Current Status (2026-07-04)
+v0.36.11 stable in source with Pipeline Integration API execution parity fixed:
+plan preview and pipeline runs share candidate selection, `beforeDate` is
+honored during execution, persisted active runs are reconciled as interrupted on
+startup, and the Media2Text console derives its visible version from live API
+health/metrics instead of a hardcoded string. NAS runtime remains v0.36.8 with
+the Media2Text operator console splitting `Estado` and `Nueva captura`,
+English-mode activity table headers fixed on the `Status` screen, and explicit
+scheduler auto-start OFF copy when `Y2T_SCHEDULER_ENABLED=false`. All planned phases (0-3.0) and
 security hardening (P0/P1/P2) complete. Pipeline Integration API added for
 external orchestration. Media2Text is now the visible product brand while the
 technical runtime remains `youtube2text`.

@@ -25,9 +25,7 @@ import {
   saveVideoMetaJson,
   saveChannelMetaJson,
 } from "../storage/index.js";
-import { buildProcessedVideoIdSet } from "../storage/processedIndex.js";
 import { logErrorRecord } from "../storage/errors.js";
-import { isAfterDate } from "../utils/date.js";
 import { logInfo, logWarn, logStep } from "../utils/logger.js";
 import { AppConfig } from "../config/schema.js";
 import { validateYtDlpInstalled } from "../utils/deps.js";
@@ -38,7 +36,8 @@ import { splitAudioByLimit } from "../utils/audio.js";
 import { mergeChunkTranscripts } from "../transcription/merge.js";
 import { promises as fs } from "node:fs";
 import { dirname, basename as pathBasename, extname } from "node:path";
-import { makeChannelDirName, makeVideoBaseName } from "../storage/naming.js";
+import { makeChannelDirName } from "../storage/naming.js";
+import { selectCandidateVideos } from "./plan.js";
 
 type AssemblyAiAccountResponse = Record<string, unknown> & {
   credit_balance?: number;
@@ -204,13 +203,6 @@ export async function runPipeline(
           maxAgeHours: config.catalogMaxAgeHours,
         }
       );
-  const videoIdSet = config.videoIds ? new Set(config.videoIds) : undefined;
-  const candidateVideos = videoIdSet
-    ? listing.videos.filter((v) => videoIdSet.has(v.id))
-    : listing.videos.filter((v) =>
-        isAfterDate(v.uploadDate, config.afterDate)
-      );
-
   const audioExt = audioInput
     ? (() => {
         const raw = extname(audioInput.audioPath);
@@ -222,53 +214,15 @@ export async function runPipeline(
     channelDirNameOverride ??
     makeChannelDirName(listing.channelId, listing.channelTitle);
 
-  const candidateJobs = candidateVideos.map((video) => ({
+  const selection = await selectCandidateVideos(listing, config, { force: options.force });
+  const candidateTotal = selection.totalVideos;
+  const candidateAlreadyProcessed = selection.alreadyProcessed;
+  const candidateUnprocessed = selection.unprocessed;
+  const selectedCandidates = selection.selectedCandidates;
+
+  const videoJobs = selectedCandidates.map(({ video, basename }, index) => ({
     video,
-    paths: getOutputPaths(
-      listing.channelId,
-      listing.channelTitle,
-      video.id,
-      video.title,
-      {
-        outputDir: config.outputDir,
-        audioDir: config.audioDir,
-        audioFormat: config.audioFormat,
-      },
-      {
-        filenameStyle: config.filenameStyle,
-        channelDirName: channelDirNameOverride,
-        audioExt,
-      }
-    ),
-  }));
-
-  const candidateTotal = candidateJobs.length;
-  let candidateAlreadyProcessed = 0;
-  let candidateUnprocessed = candidateTotal;
-  let candidateProcessedFlags: boolean[] = [];
-
-  const skipProcessedCheck = Boolean(videoIdSet);
-  if (!options.force && !skipProcessedCheck) {
-    const processedSet = await buildProcessedVideoIdSet(config.outputDir, listing.channelId);
-    candidateProcessedFlags = candidateJobs.map((j) => processedSet.has(j.video.id));
-    candidateAlreadyProcessed = candidateProcessedFlags.filter(Boolean).length;
-    candidateUnprocessed = candidateTotal - candidateAlreadyProcessed;
-  } else {
-    candidateProcessedFlags = new Array(candidateTotal).fill(false);
-    candidateAlreadyProcessed = 0;
-    candidateUnprocessed = candidateTotal;
-  }
-
-  const maxNewVideos = config.maxNewVideos;
-  const selectedVideos = options.force || skipProcessedCheck
-    ? candidateVideos.slice(0, maxNewVideos ?? candidateVideos.length)
-    : candidateVideos
-        .filter((_, idx) => !candidateProcessedFlags[idx])
-        .slice(0, maxNewVideos ?? candidateVideos.length);
-
-  const videoJobs = selectedVideos.map((video, index) => ({
-    video,
-    basename: makeVideoBaseName(video.id, video.title, config.filenameStyle),
+    basename,
     index: index + 1,
     paths: getOutputPaths(
       listing.channelId,
@@ -290,12 +244,9 @@ export async function runPipeline(
 
   const totalVideos = videoJobs.length;
   let completedVideos = 0;
-  const alreadyProcessedByIndex: boolean[] = [];
   let succeeded = 0;
   let failed = 0;
   let skipped = 0;
-
-  alreadyProcessedByIndex.push(...new Array(videoJobs.length).fill(false));
 
   logStep(
     "progress",
@@ -331,7 +282,7 @@ export async function runPipeline(
         channelThumbnailUrl = safeChannelThumbnailUrl(channelMeta);
 
         if (!channelThumbnailUrl) {
-          const firstVideoUrl = selectedVideos[0]?.url;
+          const firstVideoUrl = selectedCandidates[0]?.video.url;
           if (firstVideoUrl) {
             const videoMeta = await fetchVideoMetadata(
               firstVideoUrl,
@@ -386,11 +337,8 @@ export async function runPipeline(
           let stageForError: PipelineStage = "download";
           let hintForError: string | undefined;
           const markSkip = (reason: string) => {
-            const wasAlreadyProcessed = alreadyProcessedByIndex[index - 1] === true;
-            if (!wasAlreadyProcessed) {
-              completedVideos += 1;
-              skipped += 1;
-            }
+            completedVideos += 1;
+            skipped += 1;
             const remaining = totalVideos - completedVideos;
             logStep(
               "skip",
@@ -460,26 +408,6 @@ export async function runPipeline(
           };
 
           try {
-            if (!options.force && alreadyProcessedByIndex[index - 1]) {
-              const remaining = totalVideos - completedVideos;
-              logStep(
-                "skip",
-                `Video ${index}/${totalVideos} already processed: ${video.id} (${completedVideos}/${totalVideos} completed)`
-              );
-              emitter?.emit({
-                type: "video:skip",
-                videoId: video.id,
-                basename: videoBasename,
-                reason: "already_processed",
-                index,
-                total: totalVideos,
-                completed: completedVideos,
-                remaining,
-                timestamp: nowIso(),
-              });
-              return;
-            }
-
             emitter?.emit({
               type: "video:start",
               videoId: video.id,

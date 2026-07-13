@@ -5,6 +5,26 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.36.11] - 2026-07-04
+
+### Added
+- Added a Next.js `/api/health` proxy so the Media2Text console can display
+  the live engine version reported by the API.
+
+### Changed
+- Shared the video candidate selection logic between plan preview and pipeline
+  execution. Runs still re-select from the current catalog when they start, but
+  now use the same date/video-id/processed filtering as `/runs/plan`.
+- The operator console now displays the live `/health` or `/metrics` version
+  instead of a hardcoded app version.
+
+### Fixed
+- Fixed `beforeDate` run execution parity: `POST /runs` no longer processes
+  videos outside the upper date bound that `POST /runs/plan` excludes.
+- Persisted `queued` or `running` API runs are now marked `error` with an
+  `interrupted` reason on server startup, preventing zombie active runs after a
+  crash, SIGKILL, or OOM restart.
+
 ## [0.36.10] - 2026-06-22
 
 ### Changed

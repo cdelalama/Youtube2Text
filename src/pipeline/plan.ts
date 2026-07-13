@@ -1,10 +1,8 @@
-import { enumerateVideos } from "../youtube/enumerate.js";
-import type { YoutubeListing } from "../youtube/types.js";
+import type { YoutubeListing, YoutubeVideo } from "../youtube/types.js";
 import type { AppConfig } from "../config/schema.js";
 import { isAfterDate, isBeforeDate } from "../utils/date.js";
 import { validateYtDlpInstalled } from "../utils/deps.js";
 import { makeVideoBaseName } from "../storage/naming.js";
-import { getOutputPaths } from "../storage/index.js";
 import { buildProcessedVideoIdSet } from "../storage/processedIndex.js";
 import { getListingWithCatalogCache } from "../youtube/catalogCache.js";
 
@@ -38,13 +36,27 @@ export type RunPlan = {
 
 type BuildProcessedSetFn = (outputDir: string, channelId: string) => Promise<Set<string>>;
 
-export async function planFromListing(
-  inputUrl: string,
+export type CandidateVideo = {
+  video: YoutubeVideo;
+  basename: string;
+  processed: boolean;
+};
+
+export type CandidateVideoSelection = {
+  candidates: CandidateVideo[];
+  selectedCandidates: CandidateVideo[];
+  totalVideos: number;
+  alreadyProcessed: number;
+  unprocessed: number;
+  filters: RunPlan["filters"];
+};
+
+export async function selectCandidateVideos(
   listing: YoutubeListing,
   config: AppConfig,
   options: { force: boolean },
   deps?: { buildProcessedVideoIdSet?: BuildProcessedSetFn }
-): Promise<RunPlan> {
+): Promise<CandidateVideoSelection> {
   const videoIdSet = config.videoIds ? new Set(config.videoIds) : undefined;
 
   // When videoIds is provided, filter to only those IDs (ignoring date filters).
@@ -54,23 +66,6 @@ export async function planFromListing(
     : listing.videos.filter((v) =>
         isAfterDate(v.uploadDate, config.afterDate) && isBeforeDate(v.uploadDate, config.beforeDate)
       );
-
-  const planned = filteredVideos.map((video) => {
-    const basename = makeVideoBaseName(video.id, video.title, config.filenameStyle);
-    const paths = getOutputPaths(
-      listing.channelId,
-      listing.channelTitle,
-      video.id,
-      video.title,
-      {
-        outputDir: config.outputDir,
-        audioDir: config.audioDir,
-        audioFormat: config.audioFormat,
-      },
-      { filenameStyle: config.filenameStyle }
-    );
-    return { video, basename, jsonPath: paths.jsonPath };
-  });
 
   // When videoIds is provided, Cortex is the source of truth for what's processed.
   // Skip processedIndex entirely — all matched videos are considered unprocessed.
@@ -84,42 +79,70 @@ export async function planFromListing(
       ? new Set<string>()
       : await buildFn(config.outputDir, listing.channelId);
 
-  const videos: PlannedVideo[] = planned.map((p) => ({
-    id: p.video.id,
-    title: p.video.title,
-    url: p.video.url,
-    uploadDate: p.video.uploadDate,
-    basename: p.basename,
-    processed: options.force || skipProcessedCheck ? false : processedSet.has(p.video.id),
+  const candidates: CandidateVideo[] = filteredVideos.map((video) => ({
+    video,
+    basename: makeVideoBaseName(video.id, video.title, config.filenameStyle),
+    processed: options.force || skipProcessedCheck ? false : processedSet.has(video.id),
   }));
 
-  const alreadyProcessed = videos.filter((v) => v.processed).length;
-  const totalVideos = videos.length;
+  const alreadyProcessed = candidates.filter((v) => v.processed).length;
+  const totalVideos = candidates.length;
   const unprocessed = totalVideos - alreadyProcessed;
 
   const maxNewVideos = config.maxNewVideos;
-  const selectedVideos =
+  const selectedCandidates =
     options.force || skipProcessedCheck
-      ? videos.slice(0, maxNewVideos ?? videos.length).map((v) => ({ ...v, processed: false }))
-      : videos
+      ? candidates.slice(0, maxNewVideos ?? candidates.length).map((v) => ({ ...v, processed: false }))
+      : candidates
           .filter((v) => !v.processed)
-          .slice(0, maxNewVideos ?? videos.length);
+          .slice(0, maxNewVideos ?? candidates.length);
 
   return {
-    inputUrl,
-    force: options.force,
-    channelId: listing.channelId,
-    channelTitle: listing.channelTitle,
+    candidates,
+    selectedCandidates,
     totalVideos,
     alreadyProcessed,
     unprocessed,
-    toProcess: selectedVideos.length,
     filters: {
       afterDate: videoIdSet ? undefined : config.afterDate,
       beforeDate: videoIdSet ? undefined : config.beforeDate,
       maxNewVideos: config.maxNewVideos,
       videoIds: config.videoIds,
     },
+  };
+}
+
+export async function planFromListing(
+  inputUrl: string,
+  listing: YoutubeListing,
+  config: AppConfig,
+  options: { force: boolean },
+  deps?: { buildProcessedVideoIdSet?: BuildProcessedSetFn }
+): Promise<RunPlan> {
+  const selection = await selectCandidateVideos(listing, config, options, deps);
+
+  const toPlannedVideo = (candidate: CandidateVideo): PlannedVideo => ({
+    id: candidate.video.id,
+    title: candidate.video.title,
+    url: candidate.video.url,
+    uploadDate: candidate.video.uploadDate,
+    basename: candidate.basename,
+    processed: candidate.processed,
+  });
+
+  const videos = selection.candidates.map(toPlannedVideo);
+  const selectedVideos = selection.selectedCandidates.map(toPlannedVideo);
+
+  return {
+    inputUrl,
+    force: options.force,
+    channelId: listing.channelId,
+    channelTitle: listing.channelTitle,
+    totalVideos: selection.totalVideos,
+    alreadyProcessed: selection.alreadyProcessed,
+    unprocessed: selection.unprocessed,
+    toProcess: selectedVideos.length,
+    filters: selection.filters,
     videos,
     selectedVideos,
   };

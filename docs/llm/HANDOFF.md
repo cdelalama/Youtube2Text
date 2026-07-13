@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.10 -->
+<!-- doc-version: 0.36.11 -->
 # LLM Work Handoff
 
 This file is the current operational snapshot. Keep it short (target: 1-2 screens).
@@ -6,13 +6,42 @@ Older long-form notes were moved to `docs/llm/HANDOFF_ARCHIVE.md`.
 
 All content should be ASCII-only to avoid Windows encoding issues.
 
-- Last Updated: 2026-06-22
+- Last Updated: 2026-07-13
 
 ## Open work
-- Current slice: DocKit v4.12.3 sync closed as source patch 0.36.10. This was
-  governance/tooling only: Trace role scope, validator/test hooks, bootstrap
-  onboarding text, and trace-status helper updates. No runtime, NAS, Docker,
-  API, or UI behavior changed in 0.36.10.
+- Session 2026-07-13: revised cross-repo roadmap accepted (advisory). New
+  operator requirement (guaranteed notification per finished job + restart
+  survival per ForgeOS R-X3) supersedes the 2026-07-10 pull-only advice:
+  durable webhook outbox as primary path with pull reconciliation as safety
+  net, bounded SQLite in Media2Text for NEW job semantics only (jobs, leases,
+  idempotency, outbox; no migration of existing JSON stores). Condition: that
+  requirement must be written into the boundary decision in DECISIONS.md
+  before implementation starts. Two bugs confirmed in code this session,
+  fix before freezing contract v1: (1) factory.ts passes providerTimeoutMs
+  as the maxAudioBytesOverride positional arg of OpenAiWhisperProvider
+  (~117KB audio cap for openai_whisper); (2) GET /runs/{id}/artifacts returns
+  channel-scoped videos, not run-scoped (runManager.listArtifacts). Roadmap
+  gaps flagged: registry/deploy automation missing from step 4; contract v1
+  must resolve /v1 path versioning and subsume POST /audio + POST /runs
+  (audioId) instead of adding a third admission path; Cortex runtime host +
+  Doppler project-limit prerequisite undecided.
+- Session 2026-07-10: full architecture review (4 parallel analyses: core, API/web,
+  ecosystem fit, ops/governance) plus independent audit of the 0.36.11 patch
+  (APPROVED; all checks reproduced green). The patch is still UNCOMMITTED in the
+  worktree awaiting operator commit/push authorization. Advisory revisions from
+  the re-analysis: prefer pull-based reconciliation (catalog + runs + artifacts)
+  over building a durable webhook outbox (webhooks stay best-effort hints);
+  reduce local state after the y2t-vs-Cortex boundary decision instead of
+  adopting SQLite; consider decoupling DocKit sync version from product version;
+  decide which roadmap-badged console screens survive the boundary decision
+  before refactoring MediaConsole. The y2t-vs-Cortex boundary decision itself
+  is not yet written in DECISIONS.md (next free decision ID).
+- Current slice: source patch 0.36.11 fixes Pipeline Integration API execution
+  parity and restart truth. Plan preview and pipeline runs now share the same
+  candidate selection logic, including `beforeDate`; persisted `queued` or
+  `running` API runs are marked `error: interrupted` on startup; the operator
+  console derives its displayed version from live `/health` or `/metrics`
+  instead of a hardcoded string. NAS runtime remains 0.36.8 until rollout.
 - Product state: Media2Text operator-console scheduler state clarification is
   implemented and deployed in NAS runtime 0.36.8: Status and Automations now
   distinguish live watchlist/scheduler capability from production auto-start
@@ -25,7 +54,7 @@ All content should be ASCII-only to avoid Windows encoding issues.
   if the y2t-vs-Cortex boundary changes.
 
 ## Current Status
-- Version: 0.36.10 in source; NAS runtime remains 0.36.8. Visible brand: Media2Text.
+- Version: 0.36.11 in source; NAS runtime remains 0.36.8. Visible brand: Media2Text.
   Technical runtime/repo/config contract: `youtube2text` + `Y2T_` (see
   `docs/llm/DECISIONS.md` D-018).
 - GitHub: `cdelalama/Youtube2Text` is the canonical repo and is not a fork.
@@ -303,15 +332,16 @@ I) **Concurrency limits** (document in Operator Notes):
 
 J) **Optional future**: `getAccount()` for pre-flight balance check via `GET /v1/projects/{project_id}/balances`. Requires knowing the project_id. Defer unless needed.
 
-## Latest Checks (0.36.10 source)
-- Tests: `npm test` 152/152 pass
-- Build: not rerun for 0.36.10 (governance/tooling-only sync; no runtime,
-  API handler, Docker, or served UI behavior changed)
-- API contract: `npm run api:contract:check` OK
-- Version sync: `npm run version:check` + `scripts/check-version-sync.sh` OK
-- Naming contract: `npm run naming:check` OK
-- DocKit validator: `scripts/dockit-validate-session.sh --human` PASS 10/10
-- Validator smoke: `scripts/test-validator.sh` PASS 46/46
+## Latest Checks (0.36.11 source)
+- Targeted tests: `node --test --import tsx tests/apiPlan.test.ts
+  tests/apiPersistence.test.ts` PASS 11/11 before version bump.
+- Tests: `npm test` PASS 154/154.
+- Build: `npm run build` OK; `npm --prefix web run build` OK.
+- API contract: `npm run api:contract:check` OK.
+- Version sync: `npm run version:check` + `scripts/check-version-sync.sh` OK.
+- Naming contract: `npm run naming:check` OK.
+- DocKit validator: `scripts/dockit-validate-session.sh --human` PASS 10/10.
+- Whitespace: `git diff --check` OK.
 - LLM-DocKit sync-check: `youtube2text` CURRENT at v4.12.3
 - NAS live: `/health` reports 0.36.8, `/runs` returns 401 unauthenticated, web returns 200, and the served web chunk contains the explicit `AUTO OFF` / `Y2T_SCHEDULER_ENABLED=false` scheduler copy.
 
