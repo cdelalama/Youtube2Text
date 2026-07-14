@@ -49,18 +49,29 @@ test("Scheduler trigger creates runs only when plan.toProcess > 0 and respects m
 
   const res = await scheduler.triggerOnce();
   assert.equal(res.runsCreated, 1);
-  assert.equal(res.checked, 2);
+  assert.equal(res.checked, 1);
 
   const after = await store.list();
   const a = after.find((x) => x.id === e1.id)!;
   const b = after.find((x) => x.id === e2.id)!;
   assert.ok(a.lastCheckedAt);
-  assert.ok(b.lastCheckedAt);
-  assert.ok(a.lastRunId || b.lastRunId);
-  assert.ok(!(a.lastRunId && b.lastRunId));
+  assert.equal(b.lastCheckedAt, undefined);
+  assert.ok(a.lastRunId);
+  assert.equal(b.lastRunId, undefined);
 
   const runs = manager.listRuns();
   assert.equal(runs.length, 1);
+  runs[0]!.status = "done";
+
+  const second = await scheduler.triggerOnce();
+  assert.equal(second.runsCreated, 1);
+  assert.equal(second.checked, 1);
+
+  const finalEntries = await store.list();
+  const finalB = finalEntries.find((x) => x.id === e2.id)!;
+  assert.ok(finalB.lastCheckedAt);
+  assert.ok(finalB.lastRunId);
+  assert.equal(manager.listRuns().length, 2);
 });
 
 test("Scheduler trigger does not create run when plan.toProcess == 0", async () => {

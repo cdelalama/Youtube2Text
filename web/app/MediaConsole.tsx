@@ -554,6 +554,11 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
   const firstVideo = videos[0];
   const selectedTitle = selectedVideo?.title ?? selectedVideo?.meta?.title ?? transcript?.title ?? t(lang, "Transcripción", "Transcript");
 
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.assign("/login");
+  }
+
   return (
     <div className={`m2t-root ${theme === "light" ? "theme-light" : ""}`}>
       <aside className="m2t-sidebar">
@@ -603,6 +608,9 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
               <button data-active={lang === "es"} onClick={() => setLang("es")}>ES</button>
               <button data-active={lang === "en"} onClick={() => setLang("en")}>EN</button>
             </div>
+            <button className="m2t-logout" onClick={() => void logout()}>
+              {t(lang, "Salir", "Sign out")}
+            </button>
           </div>
         </header>
         <main className="m2t-content">

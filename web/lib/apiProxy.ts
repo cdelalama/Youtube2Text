@@ -1,4 +1,5 @@
 import { apiBaseUrlServer } from "./api";
+import { getWebAuthState, isSameOriginRequest } from "./webAuth";
 
 function apiKeyHeader(): Record<string, string> {
   const key = process.env.Y2T_API_KEY;
@@ -12,6 +13,17 @@ function copyHeaderIfPresent(from: Headers, to: Headers, name: string) {
 }
 
 export async function proxyToApi(request: Request, path: string): Promise<Response> {
+  const authState = await getWebAuthState(request);
+  if (authState !== "authenticated") {
+    return Response.json(
+      { error: authState === "misconfigured" ? "web_auth_not_configured" : "unauthorized" },
+      { status: authState === "misconfigured" ? 503 : 401 }
+    );
+  }
+  if (request.method !== "GET" && request.method !== "HEAD" && !isSameOriginRequest(request)) {
+    return Response.json({ error: "invalid_origin" }, { status: 403 });
+  }
+
   const url = `${apiBaseUrlServer()}${path}`;
 
   const headers = new Headers();

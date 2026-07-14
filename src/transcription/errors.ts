@@ -5,6 +5,18 @@ export class InsufficientCreditsError extends Error {
   }
 }
 
+export class ProviderHttpError extends Error {
+  name = "ProviderHttpError";
+
+  constructor(
+    public provider: string,
+    public status: number,
+    message: string
+  ) {
+    super(`${provider} error ${status}: ${message}`);
+  }
+}
+
 export function sanitizeProviderErrorText(
   text: string,
   secrets: string[] = [],

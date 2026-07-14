@@ -1,9 +1,9 @@
-<!-- doc-version: 0.36.11 -->
+<!-- doc-version: 0.36.12 -->
 # Media2Text Architecture (youtube2text Engine)
 
-> Version: 0.36.0 (synced with package.json)
-> Last Updated: 2026-02-18
-> Status: Design / Roadmap
+> Version: 0.36.12 (synced with package.json)
+> Last Updated: 2026-07-14
+> Status: Implemented baseline plus gated cross-project roadmap
 > Authors: Claude + GPT-5.2 (viewpoints preserved)
 
 ## Overview
@@ -153,6 +153,9 @@ Goal: browse outputs + run jobs locally as an admin.
 
 Implementation note (Phase 1):
 - UI stack: Next.js admin UI in `web/` consuming the existing API runner (SSE for events).
+- The hosted operator console uses a signed server-side session boundary. The
+  browser never receives `Y2T_API_KEY`; the Next.js BFF verifies the session
+  before injecting that credential into private API calls (v0.36.12).
 
 Phase 1 sequencing (do in order):
 1. UI scaffold + API library endpoints (DONE)
@@ -240,6 +243,10 @@ Phase 2.8 - Security hardening for hosted use (DONE):
 5) Tests + docs
    - Unit tests for auth-required mode, clamp behavior, and rate limiting.
    - Update README + OpenAPI error responses for 401/429 where relevant.
+6) Application authentication at the web/BFF boundary (DONE in v0.36.12)
+   - Signed `HttpOnly`, `SameSite=Strict` sessions and login throttling.
+   - Fail closed before backend API-key injection.
+   - Same-origin validation for state-changing BFF requests.
 
 Phase 2.9 - STT provider capability refactor (DONE in v0.28.1):
 1) Move provider capabilities onto `TranscriptionProvider.getCapabilities()`.

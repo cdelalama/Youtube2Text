@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.11 -->
+<!-- doc-version: 0.36.12 -->
 # Media2Text
 
 Media2Text is the visible product name for the `youtube2text` engine: a
@@ -275,6 +275,15 @@ Auth (required for server/Docker):
   - For local development only, you can set `Y2T_ALLOW_INSECURE_NO_API_KEY=true` **and** `Y2T_ALLOW_INSECURE_NO_API_KEY_CONFIRM=I_UNDERSTAND` to start the API server without auth.
 - Example:
   - `curl -H "X-API-Key: $Y2T_API_KEY" http://127.0.0.1:8787/runs`
+
+Operator console auth (required for the web container):
+- `Y2T_WEB_AUTH_SECRET`: random signing secret with at least 32 characters.
+- `Y2T_WEB_AUTH_PASSPHRASE`: operator passphrase with at least 12 characters.
+- `Y2T_WEB_AUTH_SESSION_HOURS`: signed-session lifetime, default `12` (range 1-168).
+- The browser receives only an `HttpOnly`, `SameSite=Strict` session cookie.
+  The web BFF verifies it before injecting the private backend `Y2T_API_KEY`.
+- Missing or invalid web-auth configuration fails closed: pages redirect to
+  login and API proxy routes return `503` without contacting the backend.
 
 Rate limiting (write endpoints):
 - In-memory rate limit for `POST/PATCH/DELETE` (per API key or IP).

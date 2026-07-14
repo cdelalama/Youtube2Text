@@ -1,5 +1,9 @@
 import { readFile } from "node:fs/promises";
-import { InsufficientCreditsError, sanitizeProviderErrorText } from "../errors.js";
+import {
+  InsufficientCreditsError,
+  ProviderHttpError,
+  sanitizeProviderErrorText,
+} from "../errors.js";
 import { fetchWithTimeout, isAbortError } from "../../utils/fetch.js";
 
 const API_BASE = "https://api.assemblyai.com/v2";
@@ -46,7 +50,7 @@ export async function requestJson<T>(
       );
     }
     const safe = sanitizeProviderErrorText(text, [apiKey]);
-    throw new Error(`AssemblyAI error ${response.status}: ${safe}`);
+    throw new ProviderHttpError("AssemblyAI", response.status, safe);
   }
   return (await response.json()) as T;
 }
@@ -78,7 +82,7 @@ export async function uploadFile(
       );
     }
     const safe = sanitizeProviderErrorText(text, [apiKey]);
-    throw new Error(`Upload failed ${response.status}: ${safe}`);
+    throw new ProviderHttpError("AssemblyAI upload", response.status, safe);
   }
   return (await response.json()) as { upload_url: string };
 }

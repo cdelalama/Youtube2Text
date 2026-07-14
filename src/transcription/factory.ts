@@ -89,6 +89,7 @@ export function createTranscriptionProvider(config: AppConfig): TranscriptionPro
       return new OpenAiWhisperProvider(
         config.openaiApiKey,
         config.openaiWhisperModel,
+        undefined,
         config.providerTimeoutMs
       );
     default:

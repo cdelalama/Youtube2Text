@@ -110,6 +110,13 @@ Owner: this repository.
 Gate: negative auth tests, cost-cap tests, provider tests, full repository gates,
 and one scripted deployment with rollback evidence.
 
+Progress (2026-07-14): source release `0.36.12` completes the correctness and
+application-authentication subset: OpenAI provider wiring, run-scoped
+artifacts, AssemblyAI fail-closed/retry behavior, scheduler fairness, and web
+BFF authentication. Provider-boundary cost controls, credential rotation, CI,
+registry deployment automation, and dependency monitoring remain in this
+stage; the scheduler stays disabled until the complete gate passes.
+
 ### Stage 3 - Media Contracts v1
 
 Owner: this repository.

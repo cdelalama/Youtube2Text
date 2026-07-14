@@ -5,6 +5,36 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.36.12] - 2026-07-14
+
+### Added
+- Added application authentication for the Next.js operator console using a
+  signed, `HttpOnly`, `SameSite=Strict` session cookie, login throttling, and
+  same-origin checks for state-changing BFF requests.
+- Added `Y2T_WEB_AUTH_SECRET`, `Y2T_WEB_AUTH_PASSPHRASE`, and
+  `Y2T_WEB_AUTH_SESSION_HOURS` deployment settings.
+
+### Changed
+- **Breaking correction:** `GET /runs/{runId}/artifacts` now returns only
+  artifacts produced by that run. It no longer leaks every artifact currently
+  stored for the run's channel.
+- AssemblyAI retries are split into upload, create, and polling phases. A
+  potentially billable create request is not repeated, while polling can retry
+  without uploading or creating the transcription again.
+- Scheduler entries skipped because run capacity is full remain immediately
+  eligible for the next scheduler pass instead of being deferred for a full
+  interval.
+
+### Fixed
+- Fixed OpenAI Whisper construction so `providerTimeoutMs` is no longer
+  interpreted as the audio-size limit, which previously reduced the effective
+  limit to roughly 117 KB with the default timeout.
+- Fixed AssemblyAI `creditsCheck=abort` so low, unavailable, unsupported, or
+  failed balance checks abort the run instead of being caught and downgraded to
+  a warning.
+- Fixed the web BFF trust boundary: unauthenticated requests are rejected
+  before the server injects the private backend `Y2T_API_KEY`.
+
 ## [0.36.11] - 2026-07-04
 
 ### Added

@@ -186,6 +186,9 @@ export class RunManager {
       record.previewVideoId = only.id;
       record.previewTitle = only.title;
       record.stats = { succeeded: 0, failed: 0, skipped: 1, total: 1 };
+      record.videoResults = [
+        { videoId: only.id, basename: only.basename, status: "skipped" },
+      ];
     }
 
     this.persistRun(record);
@@ -282,7 +285,14 @@ export class RunManager {
       audioDir: this.baseConfig.audioDir,
       audioFormat: this.baseConfig.audioFormat,
     });
-    const videos = await adapter.listVideos(run.channelDirName);
+    const runVideoIds = new Set(run.videoResults?.map((result) => result.videoId) ?? []);
+    const runBasenames = new Set(run.videoResults?.map((result) => result.basename) ?? []);
+    if (runVideoIds.size === 0 && run.previewVideoId) {
+      runVideoIds.add(run.previewVideoId);
+    }
+    const videos = (await adapter.listVideos(run.channelDirName)).filter(
+      (video) => runVideoIds.has(video.videoId) || runBasenames.has(video.basename)
+    );
     return {
       channelDirName: run.channelDirName,
       channelId: run.channelId,

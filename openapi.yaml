@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Media2Text API
-  version: 0.36.11
+  version: 0.36.12
   description: |
     Minimal local HTTP API for Media2Text, backed by the youtube2text engine.
     Notes:
@@ -714,7 +714,7 @@ paths:
   /runs/{runId}/artifacts:
     get:
       operationId: getRunArtifacts
-      summary: Get artifacts for a run (channel videos listing)
+      summary: Get artifacts produced by a run
       parameters:
         - $ref: "#/components/parameters/RunId"
       responses:

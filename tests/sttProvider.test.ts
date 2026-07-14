@@ -61,6 +61,16 @@ test("provider name matches configured sttProvider", () => {
   assert.equal(whisperProvider.name, "openai_whisper");
 });
 
+test("OpenAI provider timeout does not override the 25MB audio limit", () => {
+  const config = configSchema.parse({
+    sttProvider: "openai_whisper",
+    openaiApiKey: "test",
+    providerTimeoutMs: 120000,
+  });
+  const provider = createTranscriptionProvider(config);
+  assert.equal(provider.getCapabilities().maxAudioBytes, 25 * 1024 * 1024);
+});
+
 test("sttProvider=assemblyai accepts multi-key config", () => {
   const config = configSchema.parse({
     sttProvider: "assemblyai",

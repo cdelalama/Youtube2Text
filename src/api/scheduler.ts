@@ -133,9 +133,9 @@ export class Scheduler {
 
       for (const entry of entries) {
         if (!shouldCheckEntry(entry, nowMs, this.cfg.intervalMinutes)) continue;
-        checked += 1;
 
         if (!isRunnableWatchlistUrl(entry.channelUrl)) {
+          checked += 1;
           entry.lastCheckedAt = nowIso();
           await this.store.upsert(entry);
           continue;
@@ -146,11 +146,10 @@ export class Scheduler {
           .listRuns()
           .filter((r) => r.status === "queued" || r.status === "running").length;
         if (active >= this.cfg.maxConcurrentRuns) {
-          entry.lastCheckedAt = nowIso();
-          await this.store.upsert(entry);
-          continue;
+          break;
         }
 
+        checked += 1;
         let plan: RunPlan;
         try {
           plan = await this.planFn(entry.channelUrl);

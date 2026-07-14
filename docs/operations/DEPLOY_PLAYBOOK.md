@@ -24,10 +24,14 @@ It does not replace the CLI: the CLI remains fully operational and can be run se
 - `ASSEMBLYAI_API_KEY` (required when `sttProvider=assemblyai`)
 - `DEEPGRAM_API_KEY` (required when `sttProvider=deepgram`)
 - `OPENAI_API_KEY` or `Y2T_OPENAI_API_KEY` (required when `sttProvider=openai_whisper`)
+- `Y2T_API_KEY` (private API credential; at least 32 characters)
+- `Y2T_WEB_AUTH_SECRET` (random web-session signing secret; at least 32 characters)
+- `Y2T_WEB_AUTH_PASSPHRASE` (operator console passphrase; at least 12 characters)
 
 ## Strongly recommended (servers)
 
-- `Y2T_API_KEY` (required; enforces `X-API-Key` on all API endpoints except `GET /health`)
+- `Y2T_WEB_AUTH_SESSION_HOURS` (signed console-session lifetime; default 12,
+  clamped to 1-168 hours)
 - `Y2T_CORS_ORIGINS` (comma-separated exact origin allowlist)
   - Example: `https://y2t.example.com`
   - Avoid `*` in production.
@@ -101,12 +105,15 @@ Non-secret defaults:
 ## Security checklist (before going public)
 
 1) `Y2T_API_KEY` set (and NOT using `Y2T_ALLOW_INSECURE_NO_API_KEY=true`).
-2) `Y2T_CORS_ORIGINS` set to specific origins (avoid `*`).
-3) `Y2T_WEBHOOK_ALLOWED_DOMAINS` set (explicit allowlist).
-4) `Y2T_WEBHOOK_SECRET` set (HMAC signatures enabled).
-5) `Y2T_HEALTH_DEEP_PUBLIC=false` (deep health requires auth).
-6) If using a proxy: `Y2T_TRUST_PROXY=true` only when behind a trusted proxy.
-7) API not exposed publicly if avoidable; otherwise ensure rate limits are enabled.
+2) `Y2T_WEB_AUTH_SECRET` and `Y2T_WEB_AUTH_PASSPHRASE` set; verify an
+   unauthenticated web request redirects to `/login` and an unauthenticated
+   `/api/runs` request returns `401`.
+3) `Y2T_CORS_ORIGINS` set to specific origins (avoid `*`).
+4) `Y2T_WEBHOOK_ALLOWED_DOMAINS` set (explicit allowlist).
+5) `Y2T_WEBHOOK_SECRET` set (HMAC signatures enabled).
+6) `Y2T_HEALTH_DEEP_PUBLIC=false` (deep health requires auth).
+7) If using a proxy: `Y2T_TRUST_PROXY=true` only when behind a trusted proxy.
+8) API not exposed publicly if avoidable; otherwise ensure rate limits are enabled.
 
 ## Reverse proxy (recommended)
 
@@ -154,7 +161,9 @@ doppler run -- docker compose up --build -d
 1) Copy `docker-compose.yml` to your server.
 2) Provide env vars (`.env` file, Doppler, or shell env):
    - `ASSEMBLYAI_API_KEY`
-   - `Y2T_API_KEY` (recommended)
+   - `Y2T_API_KEY`
+   - `Y2T_WEB_AUTH_SECRET`
+   - `Y2T_WEB_AUTH_PASSPHRASE`
    - `Y2T_CORS_ORIGINS` (recommended)
 3) Run: `docker compose up --build -d`
 4) Verify:

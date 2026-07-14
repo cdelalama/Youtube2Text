@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.11 -->
+<!-- doc-version: 0.36.12 -->
 # LLM Work Handoff
 
 This file is the current operational snapshot. Keep it short (target: 1-2 screens).
@@ -53,23 +53,23 @@ All content should be ASCII-only to avoid Windows encoding issues.
   decide which roadmap-badged console screens survive the boundary decision
   before refactoring MediaConsole. The y2t-vs-Cortex boundary decision itself
   is not yet written in DECISIONS.md (next free decision ID).
-- Current slice: source patch 0.36.11 fixes Pipeline Integration API execution
-  parity and restart truth. Plan preview and pipeline runs now share the same
-  candidate selection logic, including `beforeDate`; persisted `queued` or
-  `running` API runs are marked `error: interrupted` on startup; the operator
-  console derives its displayed version from live `/health` or `/metrics`
-  instead of a hardcoded string. NAS runtime remains 0.36.8 until rollout.
+- Current slice: source release 0.36.12 completes the correctness and web-auth
+  subset of the safety foundation. OpenAI Whisper keeps its 25 MB provider
+  limit, run artifacts are run-scoped, AssemblyAI abort is fail-closed and
+  polling retries cannot repurchase work, scheduler capacity skips are fair,
+  and the web BFF requires a signed operator session before backend API-key
+  injection. NAS runtime remains 0.36.8 until rollout.
 - Product state: Media2Text operator-console scheduler state clarification is
   implemented and deployed in NAS runtime 0.36.8: Status and Automations now
   distinguish live watchlist/scheduler capability from production auto-start
   being OFF via `Y2T_SCHEDULER_ENABLED=false`.
 - Next product work: follow the operator-ratified
-  `docs/MEDIA_PIPELINE_CROSS_PROJECT_ROADMAP.md`. Start with the Media2Text
-  0.36.12 safety foundation (correctness and auth), then cost controls, CI, and
-  deploy automation before the versioned transcript/intake contracts.
+  `docs/MEDIA_PIPELINE_CROSS_PROJECT_ROADMAP.md`. The next gate is
+  provider-boundary cost accounting and hard caps, followed by CI and deploy
+  automation before the versioned transcript/intake contracts.
 
 ## Current Status
-- Version: 0.36.11 in source; NAS runtime remains 0.36.8. Visible brand: Media2Text.
+- Version: 0.36.12 in source; NAS runtime remains 0.36.8. Visible brand: Media2Text.
   Technical runtime/repo/config contract: `youtube2text` + `Y2T_` (see
   `docs/llm/DECISIONS.md` D-018).
 - GitHub: `cdelalama/Youtube2Text` is the canonical repo and is not a fork.
@@ -347,18 +347,22 @@ I) **Concurrency limits** (document in Operator Notes):
 
 J) **Optional future**: `getAccount()` for pre-flight balance check via `GET /v1/projects/{project_id}/balances`. Requires knowing the project_id. Defer unless needed.
 
-## Latest Checks (0.36.11 source)
-- Targeted tests: `node --test --import tsx tests/apiPlan.test.ts
-  tests/apiPersistence.test.ts` PASS 11/11 before version bump.
-- Tests: `npm test` PASS 154/154.
-- Build: `npm run build` OK; `npm --prefix web run build` OK.
-- API contract: `npm run api:contract:check` OK.
+## Latest Checks (0.36.12 source)
+- Tests: `npm test` PASS 164/164; focused web-auth tests PASS 5/5.
+- Build: `npm run build` OK; `npm run build:web` OK, including middleware,
+  login, and both auth routes.
+- HTTP auth flow against the production Next build: anonymous page 307,
+  anonymous BFF 401, login 200, authenticated page 200, logout 200, logged-out
+  page 307.
+- Chromium desktop (1440x900) and mobile (390x844) login renders inspected:
+  centered layout, readable controls, and no clipping or overlap.
+- API contract: `npm run api:contract:check` OK after regenerating the changed
+  run-artifacts summary in `web/lib/apiTypes.gen.ts`.
 - Version sync: `npm run version:check` + `scripts/check-version-sync.sh` OK.
 - Naming contract: `npm run naming:check` OK.
 - DocKit validator: `scripts/dockit-validate-session.sh --human` PASS 10/10.
-- Whitespace: `git diff --check` OK.
-- LLM-DocKit sync-check: `youtube2text` CURRENT at v4.12.3
-- NAS live: `/health` reports 0.36.8, `/runs` returns 401 unauthenticated, web returns 200, and the served web chunk contains the explicit `AUTO OFF` / `Y2T_SCHEDULER_ENABLED=false` scheduler copy.
+- NAS live remains unchanged: `/health` reports 0.36.8, `/runs` returns 401
+  unauthenticated, and scheduler auto-start remains OFF.
 
 ## Documentation Alignment Fixes (0.33.0)
 - Added `assemblyAiApiKeys` to `config.yaml.example`.

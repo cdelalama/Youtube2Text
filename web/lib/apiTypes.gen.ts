@@ -410,7 +410,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get artifacts for a run (channel videos listing) */
+        /** Get artifacts produced by a run */
         get: operations["getRunArtifacts"];
         put?: never;
         post?: never;

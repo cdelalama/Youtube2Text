@@ -86,6 +86,48 @@ function getCreditsMinutesRemaining(
   return undefined;
 }
 
+export async function checkAssemblyAiCredits(
+  config: AppConfig,
+  providerFactory = createTranscriptionProvider
+): Promise<void> {
+  if (config.assemblyAiCreditsCheck === "none" || config.sttProvider !== "assemblyai") {
+    return;
+  }
+
+  try {
+    const provider = providerFactory(config);
+    if (!provider.getAccount) {
+      throw new Error("STT provider does not support credits check");
+    }
+
+    const account = (await provider.getAccount()) as AssemblyAiAccountResponse;
+    const minutesRemaining = getCreditsMinutesRemaining(account);
+    if (minutesRemaining === undefined) {
+      throw new Error("AssemblyAI account balance unavailable");
+    }
+
+    logStep("credits", `AssemblyAI balance: ~${minutesRemaining.toFixed(1)} minutes remaining`);
+    if (minutesRemaining >= config.assemblyAiMinBalanceMinutes) return;
+
+    if (config.assemblyAiCreditsCheck === "abort") {
+      throw new Error(
+        `AssemblyAI credits below threshold (${config.assemblyAiMinBalanceMinutes} min). Aborting run.`
+      );
+    }
+
+    logWarn(
+      `Low AssemblyAI credits: ~${minutesRemaining.toFixed(1)} min remaining (< ${config.assemblyAiMinBalanceMinutes} min)`
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (config.assemblyAiCreditsCheck === "abort") {
+      if (message.includes("Aborting run.")) throw error;
+      throw new Error(`AssemblyAI credits check failed (${message}). Aborting run.`);
+    }
+    logWarn(`AssemblyAI credits check failed (${message}); continuing.`);
+  }
+}
+
 export async function runPipeline(
   input: RunInput,
   config: AppConfig,
@@ -127,53 +169,7 @@ export async function runPipeline(
     },
     { once: true }
   );
-  if (config.assemblyAiCreditsCheck !== "none" && config.sttProvider === "assemblyai") {
-    try {
-      const provider = createTranscriptionProvider(config);
-      if (!provider.getAccount) {
-        logWarn("STT provider does not support credits check; continuing.");
-      } else {
-        const account = (await provider.getAccount()) as AssemblyAiAccountResponse;
-        const minutesRemaining = getCreditsMinutesRemaining(account);
-        if (minutesRemaining !== undefined) {
-          logStep(
-            "credits",
-            `AssemblyAI balance: ~${minutesRemaining.toFixed(
-              1
-            )} minutes remaining`
-          );
-          if (
-            minutesRemaining < config.assemblyAiMinBalanceMinutes &&
-            config.assemblyAiCreditsCheck === "abort"
-          ) {
-            throw new Error(
-              `AssemblyAI credits below threshold (${config.assemblyAiMinBalanceMinutes} min). Aborting run.`
-            );
-          }
-          if (
-            minutesRemaining < config.assemblyAiMinBalanceMinutes &&
-            config.assemblyAiCreditsCheck === "warn"
-          ) {
-            logWarn(
-              `Low AssemblyAI credits: ~${minutesRemaining.toFixed(
-                1
-              )} min remaining (< ${config.assemblyAiMinBalanceMinutes} min)`
-            );
-          }
-        } else {
-          logWarn(
-            "AssemblyAI account balance unavailable; continuing without credits check."
-          );
-        }
-      }
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : String(error);
-      logWarn(
-        `AssemblyAI credits check failed (${message}); continuing.`
-      );
-    }
-  }
+  await checkAssemblyAiCredits(config);
 
   const ytDlpExtraArgs: string[] = [];
   const listing: YoutubeListing = audioInput

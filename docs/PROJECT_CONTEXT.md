@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.11 -->
+<!-- doc-version: 0.36.12 -->
 # Project Context - Media2Text
 
 ## Vision
@@ -52,12 +52,13 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Storage | Persist outputs + idempotency | TBD | Layout: `output/<channel_title_slug>__<channel_id>/<basename>.*`. |
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
-## Current Status (2026-07-04)
-v0.36.11 stable in source with Pipeline Integration API execution parity fixed:
-plan preview and pipeline runs share candidate selection, `beforeDate` is
-honored during execution, persisted active runs are reconciled as interrupted on
-startup, and the Media2Text console derives its visible version from live API
-health/metrics instead of a hardcoded string. NAS runtime remains v0.36.8 with
+## Current Status (2026-07-14)
+v0.36.12 stable in source adds signed application sessions to
+the operator console and rejects unauthenticated BFF requests before backend
+API-key injection. It also corrects OpenAI Whisper provider wiring, makes run
+artifact listings run-scoped, makes AssemblyAI credit aborts fail closed while
+preventing retry re-purchases, and fixes scheduler fairness. NAS runtime remains
+v0.36.8 with
 the Media2Text operator console splitting `Estado` and `Nueva captura`,
 English-mode activity table headers fixed on the `Status` screen, and explicit
 scheduler auto-start OFF copy when `Y2T_SCHEDULER_ENABLED=false`. All planned phases (0-3.0) and
@@ -75,7 +76,7 @@ Completed:
 - Structured JSONL events via `--json-events` (for a future service/UI)
 - Language auto-detection via yt-dlp metadata/captions (with manual override)
 - AssemblyAI automatic language detection fallback when yt-dlp has no language
-- 152 tests (node:test framework)
+- 164 tests (node:test framework)
 - yt-dlp error classification + smarter retries (no retries for access-denied)
 - HTTP API runner with OpenAPI spec (SSE events + artifacts listing)
 - API run/event persistence on disk (restart-safe by default)

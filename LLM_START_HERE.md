@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.11 -->
+<!-- doc-version: 0.36.12 -->
 # LLM Start Guide - Media2Text
 
 ## Read This First (Mandatory)
@@ -52,7 +52,7 @@ Recommended reading order:
 Source of truth: docs/llm/HANDOFF.md.
 - Last Updated: 2026-07-14
 - Working on: the operator-ratified cross-project media pipeline roadmap and the Media2Text 0.36.12 safety foundation.
-- Status: v0.36.11 is published in source while NAS remains v0.36.8. Cortex V1 proceeds independently; Media2Text owns correctness, authentication, cost controls, deployment automation, provenance, Transcript Store, and versioned media contracts before any live Cortex or Plaud integration.
+- Status: v0.36.12 is the current source release with the correctness and web-auth subset of the safety foundation complete; NAS remains v0.36.8. Cost controls, CI/deploy automation, provenance, Transcript Store, and versioned media contracts remain before any live Cortex or Plaud integration.
 
 Keep this section synchronized with the "Current Status" block in docs/llm/HANDOFF.md.
 
