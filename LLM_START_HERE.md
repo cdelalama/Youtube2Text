@@ -50,9 +50,9 @@ Recommended reading order:
 ## Current Focus (Snapshot)
 
 Source of truth: docs/llm/HANDOFF.md.
-- Last Updated: 2026-07-04
-- Working on: source patch 0.36.11 for Pipeline Integration API execution parity and restart truth.
-- Status: v0.36.11 stable in source with shared plan/run candidate selection, `beforeDate` execution parity, interrupted-run startup reconciliation, and live API-derived console version display. NAS runtime remains v0.36.8. CLI + API + redesigned Media2Text Web UI + Docker operational. Security roadmap v8 P0/P1/P2 done.
+- Last Updated: 2026-07-14
+- Working on: the operator-ratified cross-project media pipeline roadmap and the Media2Text 0.36.12 safety foundation.
+- Status: v0.36.11 is published in source while NAS remains v0.36.8. Cortex V1 proceeds independently; Media2Text owns correctness, authentication, cost controls, deployment automation, provenance, Transcript Store, and versioned media contracts before any live Cortex or Plaud integration.
 
 Keep this section synchronized with the "Current Status" block in docs/llm/HANDOFF.md.
 

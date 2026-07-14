@@ -6,9 +6,26 @@ Older long-form notes were moved to `docs/llm/HANDOFF_ARCHIVE.md`.
 
 All content should be ASCII-only to avoid Windows encoding issues.
 
-- Last Updated: 2026-07-13
+- Last Updated: 2026-07-14
 
 ## Open work
+- Session 2026-07-14: the operator issued GO for the complete cross-project
+  roadmap. Cortex V1 is active in its own repository/session; that does not
+  authorize this repository to edit Cortex or depend on Cortex internals.
+  Media2Text is authorized to execute its safety foundation, provenance,
+  Transcript Store, byte-stable real fixture/export, Transcript Ready v1,
+  Media Intake v1, Plaud adapter, and bounded YouTube rollout in that gated
+  order. Commits, pushes, Home Infra reconciliation, and NAS deployment are
+  authorized after each owning repository passes its gates.
+- Session 2026-07-14: the canonical cross-project execution order and
+  copy/paste session prompts now live in
+  `docs/MEDIA_PIPELINE_CROSS_PROJECT_ROADMAP.md`. Cortex integration is deferred
+  while its architecture is under evaluation; only the independent PostgreSQL
+  exposure/default-credential containment task should be raised there now.
+  Home Infra work is limited to truthful Media2Text catalog identity and current
+  policy: do not register project contracts or sync jobs until Media2Text ships
+  the required status producer. The next local product slice is the Media2Text
+  safety foundation, followed by the unified Media Intake v1 contract.
 - Session 2026-07-13: revised cross-repo roadmap accepted (advisory). New
   operator requirement (guaranteed notification per finished job + restart
   survival per ForgeOS R-X3) supersedes the 2026-07-10 pull-only advice:
@@ -27,8 +44,8 @@ All content should be ASCII-only to avoid Windows encoding issues.
   Doppler project-limit prerequisite undecided.
 - Session 2026-07-10: full architecture review (4 parallel analyses: core, API/web,
   ecosystem fit, ops/governance) plus independent audit of the 0.36.11 patch
-  (APPROVED; all checks reproduced green). The patch is still UNCOMMITTED in the
-  worktree awaiting operator commit/push authorization. Advisory revisions from
+  (APPROVED; all checks reproduced green). The patch was later published as
+  commit `05ebdf8`. Advisory revisions from
   the re-analysis: prefer pull-based reconciliation (catalog + runs + artifacts)
   over building a durable webhook outbox (webhooks stay best-effort hints);
   reduce local state after the y2t-vs-Cortex boundary decision instead of
@@ -46,12 +63,10 @@ All content should be ASCII-only to avoid Windows encoding issues.
   implemented and deployed in NAS runtime 0.36.8: Status and Automations now
   distinguish live watchlist/scheduler capability from production auto-start
   being OFF via `Y2T_SCHEDULER_ENABLED=false`.
-- Next product planning: convert the visible `TODAVIA NO IMPLEMENTADO` /
-  `PARCIAL` UI surfaces into a backend roadmap, especially speaker renaming,
-  durable inbound/outbound webhooks, cost metrics, and Cortex-facing transcript
-  feed decisions. Start from `web/app/MediaConsole.tsx`,
-  `docs/SCRIBERR_COMPARISON.md`, and a new decision in `docs/llm/DECISIONS.md`
-  if the y2t-vs-Cortex boundary changes.
+- Next product work: follow the operator-ratified
+  `docs/MEDIA_PIPELINE_CROSS_PROJECT_ROADMAP.md`. Start with the Media2Text
+  0.36.12 safety foundation (correctness and auth), then cost controls, CI, and
+  deploy automation before the versioned transcript/intake contracts.
 
 ## Current Status
 - Version: 0.36.11 in source; NAS runtime remains 0.36.8. Visible brand: Media2Text.

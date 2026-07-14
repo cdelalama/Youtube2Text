@@ -27,6 +27,7 @@ youtube2text/
 | Path | Purpose | Notes |
 |------|---------|-------|
 | docs/ | Central documentation, policies, and runbooks | Required |
+| docs/MEDIA_PIPELINE_CROSS_PROJECT_ROADMAP.md | Cross-project ownership, sequencing, gates, and session dispatch prompts | Planning |
 | docs/llm/ | LLM-specific handoff/history/decisions | Required |
 | docs/operations/ | Runbooks and operational procedures | Recommended |
 | src/ | Application source code | Required |
