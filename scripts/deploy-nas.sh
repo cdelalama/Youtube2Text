@@ -140,9 +140,10 @@ install_runtime_files() {
       fi
     done
   "
-  scp deploy/nas/docker-compose.yml "$NAS_HOST:$NAS_DIR/docker-compose.yml.new"
-  scp deploy/nas/start.sh "$NAS_HOST:$NAS_DIR/start.sh.new"
-  scp deploy/nas/stop.sh "$NAS_HOST:$NAS_DIR/stop.sh.new"
+  # QNAP's SSH server has no SFTP subsystem; force OpenSSH's legacy SCP transport.
+  scp -O deploy/nas/docker-compose.yml "$NAS_HOST:$NAS_DIR/docker-compose.yml.new"
+  scp -O deploy/nas/start.sh "$NAS_HOST:$NAS_DIR/start.sh.new"
+  scp -O deploy/nas/stop.sh "$NAS_HOST:$NAS_DIR/stop.sh.new"
   ssh -o BatchMode=yes "$NAS_HOST" "
     set -eu
     mv '$NAS_DIR/docker-compose.yml.new' '$NAS_DIR/docker-compose.yml'

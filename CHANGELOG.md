@@ -5,6 +5,16 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.37.3] - 2026-07-15
+
+### Added
+
+### Changed
+
+### Fixed
+- NAS deployment now forces the legacy SCP transport supported by QNAP instead
+  of assuming that its SSH server provides an SFTP subsystem.
+
 ## [0.37.2] - 2026-07-15
 
 ### Added
