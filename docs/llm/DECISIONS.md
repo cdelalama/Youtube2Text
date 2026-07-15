@@ -371,3 +371,42 @@ Implications:
   perform 11-target bump round-trip, detect version drift and unknown markers,
   reject dash-formatted HISTORY under `history_format: no-dash`, and preserve
   the `DOCKIT_ALLOW_READ_ONLY_SKIP=1` zero-diff skip.
+
+## D-020 - Media2Text owns transcription truth and guaranteed item completion
+
+Decision:
+- Source systems such as Plaud Mirror own original media and stable source item
+  identity. Media2Text owns intake, transcription execution, immutable
+  Transcript Store records, cost enforcement, and durable per-item completion
+  obligations. Cortex owns semantic ingestion, embeddings, retrieval, and its
+  downstream document state.
+- Every successfully materialized transcript creates one durable,
+  deterministic `transcript.ready` outbox obligation before Media2Text emits
+  `video:done`. At-least-once webhook delivery is primary; authenticated pull
+  reconciliation from Transcript Store is recovery.
+- A webhook intake `202 Accepted` means only that an idempotent processing
+  obligation was committed. Artifact transfer and transcription happen
+  asynchronously.
+- SQLite is bounded to new coordination state: intake jobs, attempts, leases,
+  idempotency, and outbox. Existing run, catalog, settings, watchlist, usage,
+  and presentation stores are not migrated for consistency.
+
+Rationale:
+- A process-local queue or best-effort callback can lose work across a restart,
+  while making Cortex the transcription source of truth would duplicate media
+  and provider concerns in the semantic system.
+- Persisting an obligation before acknowledgement permits fast webhook ACKs
+  without coupling producer retries to artifact download speed.
+- Per-item events let Cortex advance incrementally during large channel or
+  Plaud backlogs and make reconciliation measurable.
+
+Implications:
+- Cross-host contracts carry opaque authenticated URLs and SHA-256 revisions,
+  never producer-local filesystem paths or shared-volume assumptions.
+- `Media Intake v1` and `Transcript Ready v1` remain drafts until their actual
+  consumers review them. Code may persist disabled obligations, but live
+  delivery must not be configured against an unfrozen contract.
+- Legacy direct audio routes remain compatibility surfaces and must converge on
+  the same job state machine before the contract is declared live-verified.
+- Home Infra observes sanitized status snapshots; it neither transports media
+  nor executes replay.

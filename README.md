@@ -1,4 +1,4 @@
-<!-- doc-version: 0.37.3 -->
+<!-- doc-version: 0.38.0 -->
 # Media2Text
 
 Media2Text is the visible product name for the `youtube2text` engine: a
@@ -45,14 +45,15 @@ Pipeline stages with explicit module boundaries:
 - **AudioExtractor**: downloads and caches audio tracks locally.
 - **TranscriptionProvider**: interface for ASR backends (AssemblyAI + Deepgram + OpenAI Whisper).
 - **Formatter**: converts diarized transcript JSON into `.txt`, `.md`, `.jsonl` and optional `.csv` formats.
-- **Storage**: writes outputs and handles idempotency checks.
+- **Storage**: writes legacy presentations plus immutable, content-addressed Transcript Store records.
+- **Media jobs**: bounded SQLite state for intake, leases, attempts, idempotency, and durable per-item delivery.
 - **Orchestrator (CLI)**: coordinates stages with concurrency, filtering, retries, and logging.
 
 Later extensions read from `output/` only (e.g., React dashboard), keeping the pipeline server-agnostic.
 
 ## Requirements
 
-- Node.js 18+
+- Node.js 24+
 - `yt-dlp` installed and available on PATH (system dependency)
 - AssemblyAI API key (required when `sttProvider=assemblyai`)
 - Deepgram API key (required when `sttProvider=deepgram`)
@@ -452,6 +453,10 @@ Endpoints:
 - `GET /providers` (provider capabilities: max upload size, diarization support)
 - `GET /metrics` (Prometheus text format)
 - `GET /metrics/cost` (usage ledger and estimated provider cost)
+- `GET /status/media-pipeline` (public sanitized Home Infra status snapshot)
+- `POST /v1/intakes` (durably accept a remote media reference; `202` precedes asynchronous fetch)
+- `GET /v1/intakes`, `GET /v1/intakes/:id` (operator intake reconciliation)
+- `GET /v1/transcripts`, `GET /v1/transcripts/:id` (immutable Transcript Store pull reconciliation)
 - `POST /maintenance/cleanup` (retention cleanup for `output/_runs/*` + old audio cache)
 - `POST /audio` (upload local audio, returns `audioId`)
 - `GET /settings`, `PATCH /settings` (persist non-secret defaults to `output/_settings.json`)
@@ -473,6 +478,21 @@ Endpoints:
 - `GET /library/channels/:channelDirName/videos/:basename/:kind` where `kind` is `txt|md|json|jsonl|meta|comments|csv|audio`
 - `DELETE /library/channels/:channelDirName` (delete channel: output dir + audio dir + catalog cache; returns 409 if active run targets channel)
 - `DELETE /library/channels/:channelDirName/videos/:basename` (delete single video: all file variants + audio)
+
+Media contracts:
+- `docs/contracts/transcript-store.v1.schema.json` is implemented for every new transcript.
+- `docs/contracts/media-intake.v1.schema.json` and
+  `docs/contracts/transcript-ready.v1.schema.json` are drafts until Plaud Mirror
+  and Cortex review them. Do not configure live cross-project delivery against
+  an unfrozen contract.
+- `Y2T_INTAKE_API_KEY` is a least-privilege producer credential accepted only
+  by `POST /v1/intakes`. Artifact origins require an exact
+  `Y2T_INTAKE_ARTIFACT_ALLOWED_ORIGINS` allowlist.
+- Every completed item creates a durable `transcript.ready` outbox obligation.
+  `Y2T_TRANSCRIPT_READY_URL` remains unset until Cortex approves the contract;
+  pending obligations are retained rather than discarded.
+- `npm run transcript:export-fixture -- <path>` exports and verifies the exact
+  canonical bytes of the newest real Transcript Store record for consumer tests.
 
 ## Docker (API runner)
 

@@ -38,7 +38,13 @@ export type RunRecord = {
   previewVideoId?: string;
   previewTitle?: string;
   stats?: { succeeded: number; failed: number; skipped: number; total: number };
-  videoResults?: Array<{ videoId: string; basename: string; status: "done" | "error" | "skipped" }>;
+  videoResults?: Array<{
+    videoId: string;
+    basename: string;
+    status: "done" | "error" | "skipped";
+    transcriptId?: string;
+    transcriptRecordSha256?: string;
+  }>;
 };
 
 export type GlobalEvent =
@@ -59,6 +65,11 @@ export type RunCreateRequest = {
   audioPath?: string;
   audioTitle?: string;
   audioOriginalFilename?: string;
+  intakeId?: string;
+  sourceAuthority?: string;
+  sourceItemId?: string;
+  sourceCollectionId?: string;
+  canonicalUrl?: string;
   force?: boolean;
   callbackUrl?: string;
   config?: Partial<AppConfig>;
@@ -331,6 +342,11 @@ export class RunManager {
             audioPath: req.audioPath,
             title: req.audioTitle,
             originalFilename: req.audioOriginalFilename,
+            intakeId: req.intakeId,
+            sourceAuthority: req.sourceAuthority,
+            sourceItemId: req.sourceItemId,
+            sourceCollectionId: req.sourceCollectionId,
+            canonicalUrl: req.canonicalUrl,
           }
         : (req.url as string);
 
@@ -428,7 +444,17 @@ export class RunManager {
       if (event.type === "video:done" || event.type === "video:error" || event.type === "video:skip") {
         if (!run.videoResults) run.videoResults = [];
         const status = event.type === "video:done" ? "done" : event.type === "video:error" ? "error" : "skipped";
-        run.videoResults.push({ videoId: event.videoId, basename: event.basename, status });
+        run.videoResults.push({
+          videoId: event.videoId,
+          basename: event.basename,
+          status,
+          ...(event.type === "video:done"
+            ? {
+                transcriptId: event.transcriptId,
+                transcriptRecordSha256: event.transcriptRecordSha256,
+              }
+            : {}),
+        });
       }
       if (event.type === "run:start") {
         run.channelId = event.channelId;

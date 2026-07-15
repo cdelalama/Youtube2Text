@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import type { AppConfig } from "../config/schema.js";
 import { execCommand } from "../utils/exec.js";
 import { validateYtDlpInstalled } from "../utils/deps.js";
+import { getBuildVersion } from "../utils/version.js";
 
 export type DeepHealthDeps = {
   ytDlp: { ok: boolean; version?: string; error?: string };
@@ -18,18 +19,6 @@ export type HealthResponse = {
   version?: string;
   deps?: DeepHealthDeps;
 };
-
-async function getVersion(): Promise<string | undefined> {
-  const v = process.env.npm_package_version;
-  if (typeof v === "string" && v.trim().length > 0) return v.trim();
-  try {
-    const raw = await fs.readFile(join(process.cwd(), "package.json"), "utf8");
-    const pkg = JSON.parse(raw) as { version?: string };
-    return typeof pkg.version === "string" ? pkg.version : undefined;
-  } catch {
-    return undefined;
-  }
-}
 
 async function checkCommandVersion(
   command: string,
@@ -100,7 +89,7 @@ export async function getHealth(
   return {
     ok: true,
     service: "youtube2text-api",
-    version: await getVersion(),
+    version: await getBuildVersion(),
   };
 }
 
@@ -165,7 +154,7 @@ export async function getDeepHealth(
   return {
     ok: overallOk,
     service: "youtube2text-api",
-    version: await getVersion(),
+    version: await getBuildVersion(),
     deps,
   };
 }

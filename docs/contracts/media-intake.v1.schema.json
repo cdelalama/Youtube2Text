@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://media2text.local/contracts/media-intake.v1.schema.json",
+  "title": "Media2Text Media Intake v1",
+  "description": "Draft consumer-owned admission contract. A 202 response means only that Media2Text durably persisted an idempotent processing obligation.",
+  "x-contract-status": "draft-consumer-review-required",
+  "type": "object",
+  "required": ["schemaVersion", "eventId", "idempotencyKey", "source", "artifact"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": "media2text.intake.v1" },
+    "eventId": { "$ref": "#/$defs/id" },
+    "idempotencyKey": { "$ref": "#/$defs/id" },
+    "correlationId": { "$ref": "#/$defs/id" },
+    "source": {
+      "type": "object",
+      "required": ["authority", "itemId", "artifactRevision"],
+      "additionalProperties": false,
+      "properties": {
+        "authority": { "$ref": "#/$defs/id" },
+        "itemId": { "$ref": "#/$defs/id" },
+        "collectionId": { "$ref": "#/$defs/id" },
+        "artifactRevision": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "required": ["url", "sha256", "bytes", "contentType"],
+      "additionalProperties": false,
+      "properties": {
+        "url": { "type": "string", "format": "uri", "pattern": "^https?://" },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "bytes": { "type": "integer", "minimum": 1, "maximum": 10737418240 },
+        "contentType": { "type": "string", "pattern": "^audio/[A-Za-z0-9.+-]+$" },
+        "durationSeconds": { "type": "number", "exclusiveMinimum": 0 },
+        "filename": { "type": "string", "minLength": 1, "maxLength": 255 }
+      }
+    },
+    "title": { "type": "string", "minLength": 1, "maxLength": 500 }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1, "maxLength": 200, "pattern": "^[A-Za-z0-9._:@/-]+$" }
+  }
+}

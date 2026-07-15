@@ -234,8 +234,52 @@ export const runCreateSchema = z
     { message: "beforeDate must be >= afterDate" }
   );
 
+const sha256Hex = z.string().regex(/^[a-f0-9]{64}$/, "must be lowercase SHA-256 hex");
+const stableId = z.string().min(1).max(200).regex(/^[A-Za-z0-9._:@/-]+$/);
+
+export const intakeCreateSchema = z
+  .object({
+    schemaVersion: z.literal("media2text.intake.v1"),
+    eventId: stableId,
+    idempotencyKey: stableId,
+    correlationId: stableId.optional(),
+    source: z
+      .object({
+        authority: stableId,
+        itemId: stableId,
+        collectionId: stableId.optional(),
+        artifactRevision: z.string().regex(/^sha256:[a-f0-9]{64}$/),
+      })
+      .strict(),
+    artifact: z
+      .object({
+        url: z.string().url().refine((value) => {
+          const protocol = new URL(value).protocol;
+          return protocol === "http:" || protocol === "https:";
+        }, "artifact URL must use http or https"),
+        sha256: sha256Hex,
+        bytes: z.number().int().positive().max(10 * 1024 * 1024 * 1024),
+        contentType: z.string().regex(/^audio\/[A-Za-z0-9.+-]+$/),
+        durationSeconds: z.number().positive().max(7 * 24 * 60 * 60).optional(),
+        filename: z.string().min(1).max(255).optional(),
+      })
+      .strict(),
+    title: z.string().min(1).max(500).optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.source.artifactRevision !== `sha256:${value.artifact.sha256}`) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["source", "artifactRevision"],
+        message: "must identify the declared artifact SHA-256",
+      });
+    }
+  });
+
 export type SettingsPatchInput = z.infer<typeof settingsPatchSchema>;
 export type WatchlistCreateInput = z.infer<typeof watchlistCreateSchema>;
 export type WatchlistUpdateInput = z.infer<typeof watchlistUpdateSchema>;
 export type RunPlanInput = z.infer<typeof runPlanSchema>;
 export type RunCreateInput = z.infer<typeof runCreateSchema>;
+export type IntakeCreateInput = z.infer<typeof intakeCreateSchema>;

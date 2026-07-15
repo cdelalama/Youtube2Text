@@ -1,4 +1,4 @@
-<!-- doc-version: 0.37.3 -->
+<!-- doc-version: 0.38.0 -->
 # Media2Text Architecture (youtube2text Engine)
 
 > Version: 0.37.3 (synced with package.json)
@@ -74,6 +74,10 @@ Local-first artifacts on disk. Current layout:
 - `audio/<channel_title_slug>__<channel_id>/<basename>.<ext>`
 - `output/_uploads/<audioId>.json` + `audio/_uploads/<audioId>.<ext>` (uploaded audio staging)
 - `output/_usage/ledger.json` (atomic provider-call reservations and estimated cost)
+- `output/_transcripts/v1/<prefix>/<transcriptId>.json` plus
+  `<transcriptId>/transcript.*` (immutable canonical Transcript Store v1 records
+  and representation snapshots; legacy presentation paths remain compatibility references)
+- `output/_jobs/media2text.sqlite` (bounded intake, lease, idempotency, and durable outbox coordination state)
 - `output/uploads/<basename>.*` + `audio/uploads/<basename>.<ext>` (processed local audio runs)
 
 Future multi-tenancy (Phase 2+) can wrap the same structure under a `user_id` prefix:
@@ -92,6 +96,25 @@ Runners decide how to consume events:
 - CLI default: human logs to stdout.
 - CLI `--json-events`: JSONL events to stdout (logs to stderr).
 - API runner: translate events to SSE/WebSocket streams.
+
+`video:done` includes `transcriptId` and the canonical record SHA-256. Before
+that event is emitted, the pipeline has written the immutable Transcript Store
+record and inserted its deterministic `transcript.ready` outbox obligation.
+Run-level `callbackUrl` webhooks remain a compatibility surface; per-item
+outbox delivery is the guaranteed integration path.
+
+## Media Intake and Cortex Boundary
+
+Media2Text owns authenticated media admission, integrity verification,
+transcription, immutable transcript materialization, cost enforcement, and
+per-item completion delivery. Source systems own original media. Cortex owns
+semantic ingestion and retrieval, not provider execution or Media2Text state.
+
+`POST /v1/intakes` commits an idempotent SQLite obligation before returning
+`202`; a worker later fetches bytes from an exact allowlisted origin, verifies
+size and SHA-256, and enters the existing pipeline. Legacy `/audio` plus
+audio-backed `/runs` are adapters to the same job state machine. The Home Infra
+surface is the sanitized `/status/media-pipeline` snapshot, not a transport.
 
 ## Transcription, Language Handling, Credits
 

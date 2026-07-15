@@ -18,7 +18,7 @@ RUN apt-get update \
   && /opt/yt-dlp/bin/pip install --no-cache-dir --upgrade pip \
   && if [ -n "$YT_DLP_VERSION" ]; then /opt/yt-dlp/bin/pip install --no-cache-dir "yt-dlp[default]==$YT_DLP_VERSION"; else /opt/yt-dlp/bin/pip install --no-cache-dir "yt-dlp[default]"; fi \
   && printf '%s\n' '--js-runtimes node' > /etc/yt-dlp.conf \
-  && node -e "const major=Number(process.versions.node.split('.')[0]); if (major < 22) process.exit(1)" \
+  && node -e "const major=Number(process.versions.node.split('.')[0]); if (major < 24) process.exit(1)" \
   && /opt/yt-dlp/bin/python -c "import yt_dlp_ejs" \
   && /opt/yt-dlp/bin/yt-dlp --version \
   && rm -rf /var/lib/apt/lists/*

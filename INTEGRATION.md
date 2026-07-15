@@ -11,7 +11,11 @@ Default local API:
 - `http://127.0.0.1:8787`
 
 The server refuses to start unless `Y2T_API_KEY` is set (use `Y2T_ALLOW_INSECURE_NO_API_KEY=true` **and** `Y2T_ALLOW_INSECURE_NO_API_KEY_CONFIRM=I_UNDERSTAND` for local development only).
-When `Y2T_API_KEY` is set, all endpoints require `X-API-Key` (except `GET /health`; deep health requires a key unless `Y2T_HEALTH_DEEP_PUBLIC=true`).
+When `Y2T_API_KEY` is set, all endpoints require `X-API-Key` except basic
+`GET /health` and the sanitized `GET /status/media-pipeline`. Deep health
+requires a key unless `Y2T_HEALTH_DEEP_PUBLIC=true`.
+Remote media producers may use the separate `X-Media2Text-Intake-Key` only for
+`POST /v1/intakes`; it cannot read transcripts, settings, runs, or other jobs.
 If the API sits behind a trusted reverse proxy, set `Y2T_TRUST_PROXY=true` and `Y2T_TRUST_PROXY_IPS=<proxy_ip[,proxy_ip]>` so rate limiting uses `X-Forwarded-For` / `X-Real-IP`.
 Never enable `Y2T_TRUST_PROXY` unless requests are actually coming through a trusted proxy or load balancer.
 `Y2T_API_KEY_MAX_BYTES` caps the `X-API-Key` header size (default 256). `Y2T_API_KEY_MIN_BYTES` enforces a minimum API key length (default 32).
@@ -114,6 +118,63 @@ curl -sS -X POST http://127.0.0.1:8787/runs \
   -d '{"audioId":"<AUDIO_ID>","callbackUrl":"https://example.com/webhook"}'
 ```
 
+`POST /audio` now creates a `held` intake record. The audio-backed run activates
+that record and uses the same lease, completion, and outbox state machine as
+remote media intake while preserving the legacy HTTP response.
+
+### 3b) Durable remote media intake
+
+`Media Intake v1` is the network-safe replacement for producer-local paths.
+The producer sends an authenticated HTTP(S) artifact URL plus its exact byte
+length and SHA-256. Media2Text commits the idempotent obligation before
+returning `202`, then downloads and verifies bytes asynchronously.
+
+```bash
+curl -sS -X POST http://127.0.0.1:8787/v1/intakes \
+  -H "Content-Type: application/json" \
+  -H "X-Media2Text-Intake-Key: $Y2T_INTAKE_API_KEY" \
+  -d '{
+    "schemaVersion":"media2text.intake.v1",
+    "eventId":"plaud:item-123:revision-1",
+    "idempotencyKey":"plaud:item-123:revision-1",
+    "source":{
+      "authority":"plaud-mirror",
+      "itemId":"item-123",
+      "artifactRevision":"sha256:<SHA256>"
+    },
+    "artifact":{
+      "url":"https://media-source.example/artifacts/item-123",
+      "sha256":"<SHA256>",
+      "bytes":123456,
+      "contentType":"audio/mpeg"
+    }
+  }'
+```
+
+The exact origin must appear in `Y2T_INTAKE_ARTIFACT_ALLOWED_ORIGINS`.
+Identical retries return the same `intakeId`; conflicting reuse returns `409`.
+Status is available to an operator at `GET /v1/intakes/{intakeId}`. Responses
+never expose the artifact URL or a local storage path.
+
+### 3c) Transcript Store and completion
+
+Each successful item writes a canonical immutable record under
+`output/_transcripts/v1/` and returns its identity in `video:done` and
+`run.videoResults[]`.
+
+```bash
+curl -sS -H "X-API-Key: $Y2T_API_KEY" \
+  http://127.0.0.1:8787/v1/transcripts?limit=10
+curl -sS -H "X-API-Key: $Y2T_API_KEY" \
+  http://127.0.0.1:8787/v1/transcripts/<TRANSCRIPT_ID>
+```
+
+The individual response body is the exact canonical byte sequence named by
+`ETag` and `X-Media2Text-Record-SHA256`. Every record also inserts one durable
+`transcript.ready` event. When `Y2T_TRANSCRIPT_READY_URL` is configured, the
+outbox delivers it with `X-Media2Text-Event-Id`, timestamp, and HMAC signature.
+The contract is at-least-once; consumers persist idempotency before ACK.
+
 ## Error responses (common)
 
 Most endpoints can return these errors (JSON):
@@ -129,7 +190,7 @@ Most endpoints can return these errors (JSON):
 | 500 | `internal_error` | Internal error (sanitized message) |
 | 500 | `server_misconfigured` | Server missing required env (e.g., `Y2T_API_KEY`) |
 
-### 3b) Cancel a run
+### 3d) Cancel a run
 
 Cancellation is cooperative. In-flight work may finish, but the run will stop as soon as practical and end with `status: cancelled`.
 

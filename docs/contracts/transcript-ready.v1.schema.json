@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://media2text.local/contracts/transcript-ready.v1.schema.json",
+  "title": "Media2Text Transcript Ready v1",
+  "description": "Draft producer-owned event contract. Delivery is at-least-once; consumers deduplicate and fetch the immutable transcript record by transcriptId.",
+  "x-contract-status": "draft-consumer-review-required",
+  "type": "object",
+  "required": ["schemaVersion", "eventType", "eventId", "idempotencyKey", "occurredAt", "correlation", "source", "transcript"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": "media2text.transcript-ready.v1" },
+    "eventType": { "const": "transcript.ready" },
+    "eventId": { "type": "string", "pattern": "^evt_[a-f0-9]{64}$" },
+    "idempotencyKey": { "type": "string", "pattern": "^transcript\\.ready:trn_[a-f0-9]{64}$" },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "correlation": {
+      "type": "object",
+      "required": ["runId"],
+      "additionalProperties": false,
+      "properties": {
+        "runId": { "type": "string", "minLength": 1 },
+        "intakeId": { "type": "string", "pattern": "^int_[a-f0-9]{64}$" }
+      }
+    },
+    "source": { "$ref": "transcript-store.v1.schema.json#/$defs/source" },
+    "transcript": {
+      "type": "object",
+      "required": ["transcriptId", "recordSha256", "recordBytes", "schemaVersion", "href"],
+      "additionalProperties": false,
+      "properties": {
+        "transcriptId": { "type": "string", "pattern": "^trn_[a-f0-9]{64}$" },
+        "recordSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "recordBytes": { "type": "integer", "minimum": 1 },
+        "schemaVersion": { "const": "media2text.transcript.v1" },
+        "href": { "type": "string", "pattern": "^/v1/transcripts/trn_[a-f0-9]{64}$" }
+      }
+    }
+  }
+}

@@ -42,6 +42,9 @@ import { makeChannelDirName } from "../storage/naming.js";
 import { selectCandidateVideos } from "./plan.js";
 import { UsageLedger, UsageLimitExceededError } from "../usage/index.js";
 import type { UsageReservation } from "../usage/index.js";
+import { TranscriptStore, TRANSCRIPT_SCHEMA_VERSION } from "../transcripts/store.js";
+import { getBuildVersion } from "../utils/version.js";
+import { MediaJobStore } from "../jobs/store.js";
 
 type AssemblyAiAccountResponse = Record<string, unknown> & {
   credit_balance?: number;
@@ -56,6 +59,11 @@ export type AudioRunInput = {
   audioPath: string;
   title?: string;
   originalFilename?: string;
+  intakeId?: string;
+  sourceAuthority?: string;
+  sourceItemId?: string;
+  sourceCollectionId?: string;
+  canonicalUrl?: string;
 };
 
 export type RunInput = string | AudioRunInput;
@@ -70,6 +78,22 @@ async function ensureAudioPath(sourcePath: string, destPath: string): Promise<st
   await fs.mkdir(dirname(destPath), { recursive: true });
   await fs.copyFile(sourcePath, destPath);
   return destPath;
+}
+
+function providerModel(config: AppConfig): string {
+  if (config.sttProvider === "deepgram") return config.deepgramModel;
+  if (config.sttProvider === "openai_whisper") return config.openaiWhisperModel;
+  return "assemblyai-default";
+}
+
+function audioContentType(path: string): string {
+  const extension = extname(path).toLowerCase();
+  if (extension === ".mp3") return "audio/mpeg";
+  if (extension === ".wav") return "audio/wav";
+  if (extension === ".m4a" || extension === ".mp4") return "audio/mp4";
+  if (extension === ".ogg") return "audio/ogg";
+  if (extension === ".flac") return "audio/flac";
+  return "application/octet-stream";
 }
 
 function getCreditsMinutesRemaining(
@@ -144,6 +168,7 @@ export async function runPipeline(
       createTranscriptionProvider?: (config: AppConfig) => TranscriptionProvider;
       getAudioDurationSeconds?: (audioPath: string) => Promise<number>;
       usageLedger?: UsageLedger;
+      mediaJobStore?: MediaJobStore;
     };
   }
 ) {
@@ -331,6 +356,10 @@ export async function runPipeline(
   const provider = providerFactory(config);
   const usageLedger = options.deps?.usageLedger ?? new UsageLedger(config.outputDir);
   const usageRunId = options.runId ?? randomUUID();
+  const transcriptStore = new TranscriptStore(config.outputDir);
+  const producerVersion = await getBuildVersion();
+  const mediaJobStore = options.deps?.mediaJobStore ?? new MediaJobStore(config.outputDir);
+  const ownsMediaJobStore = options.deps?.mediaJobStore === undefined;
   const finishUsage = async (
     reservation: UsageReservation,
     status: "completed" | "failed" | "released"
@@ -396,7 +425,8 @@ export async function runPipeline(
 
           const markFinished = (
             label: "done" | "failed",
-            errorMessage?: string
+            errorMessage?: string,
+            transcriptResult?: { transcriptId: string; recordSha256: string }
           ) => {
             completedVideos += 1;
             if (label === "done") succeeded += 1;
@@ -411,6 +441,8 @@ export async function runPipeline(
                 type: "video:done",
                 videoId: video.id,
                 basename: videoBasename,
+                transcriptId: transcriptResult!.transcriptId,
+                transcriptRecordSha256: transcriptResult!.recordSha256,
                 index,
                 total: totalVideos,
                 completed: completedVideos,
@@ -621,7 +653,94 @@ export async function runPipeline(
 
             stageForError = "save";
             emitStage("save", video.id, index, totalVideos);
+            const finalLanguageCode =
+              typeof transcript.language_code === "string"
+                ? transcript.language_code
+                : language.languageCode;
+            const finalLanguageConfidence =
+              typeof transcript.language_confidence === "number"
+                ? transcript.language_confidence
+                : undefined;
+            const txt = formatTxt(transcript, {
+              channelId: listing.channelId,
+              channelTitle: listing.channelTitle,
+              title: video.title,
+              url: video.url,
+              uploadDate: video.uploadDate,
+              description,
+              languageCode: finalLanguageCode,
+              languageSource: useProviderAutoLanguageDetection ? "auto-detected" : "yt-dlp",
+              languageConfidence: finalLanguageConfidence,
+            });
+            const markdown = formatMd(transcript, {
+              channelId: listing.channelId,
+              channelTitle: listing.channelTitle,
+              title: video.title,
+              url: video.url,
+              uploadDate: video.uploadDate,
+              description,
+              languageCode: finalLanguageCode,
+              languageSource: useProviderAutoLanguageDetection ? "auto-detected" : "yt-dlp",
+              languageConfidence: finalLanguageConfidence,
+            });
+            const jsonl = formatJsonl(transcript, {
+              videoId: video.id,
+              url: video.url,
+              title: video.title,
+              channelId: listing.channelId,
+              channelTitle: listing.channelTitle,
+              languageCode: finalLanguageCode,
+              languageConfidence: finalLanguageConfidence,
+            });
+            const csv = config.csvEnabled ? formatCsv(transcript) : undefined;
+
             await saveTranscriptJson(paths.jsonPath, transcript);
+            await saveTranscriptTxt(paths.txtPath, txt);
+            await saveTranscriptMd(paths.mdPath, markdown);
+            await saveTranscriptJsonl(paths.jsonlPath, jsonl);
+            if (csv !== undefined) await saveTranscriptCsv(paths.csvPath, csv);
+
+            const createdAt = nowIso();
+            const storedTranscript = await transcriptStore.write({
+              createdAt,
+              producerVersion,
+              runId: usageRunId,
+              intakeId: audioInput?.intakeId,
+              source: {
+                kind: audioInput?.intakeId ? "intake" : audioInput ? "upload" : "youtube",
+                authority:
+                  audioInput?.sourceAuthority ?? (audioInput ? "media2text.upload" : "youtube"),
+                sourceItemId: audioInput?.sourceItemId ?? video.id,
+                sourceCollectionId:
+                  audioInput?.sourceCollectionId ?? (audioInput ? undefined : listing.channelId),
+                canonicalUrl: audioInput ? audioInput.canonicalUrl : video.url,
+                title: video.title,
+                publishedAt: video.uploadDate,
+              },
+              audioPath,
+              durationSeconds: itemAudioSeconds,
+              contentType: audioContentType(audioPath),
+              provider: config.sttProvider,
+              model: providerModel(config),
+              transcript,
+              languageCode: finalLanguageCode,
+              languageConfidence: finalLanguageConfidence,
+              representations: [
+                {
+                  format: "provider-json",
+                  absolutePath: paths.jsonPath,
+                  content: JSON.stringify(transcript, null, 2),
+                },
+                { format: "text", absolutePath: paths.txtPath, content: txt },
+                { format: "markdown", absolutePath: paths.mdPath, content: markdown },
+                { format: "jsonl", absolutePath: paths.jsonlPath, content: jsonl },
+                ...(csv === undefined
+                  ? []
+                  : [{ format: "csv" as const, absolutePath: paths.csvPath, content: csv }]),
+              ],
+            });
+            mediaJobStore.enqueueTranscriptReady(storedTranscript);
+
             await saveVideoMetaJson(paths.metaPath, {
               videoId: video.id,
               title: video.title,
@@ -646,71 +765,20 @@ export async function runPipeline(
                 typeof transcript.language_confidence === "number"
                   ? transcript.language_confidence
                   : undefined,
-              createdAt: nowIso(),
+              transcriptId: storedTranscript.record.transcriptId,
+              transcriptRecordSha256: storedTranscript.recordSha256,
+              transcriptSchemaVersion: TRANSCRIPT_SCHEMA_VERSION,
+              createdAt,
             });
-            const finalLanguageCode =
-              typeof transcript.language_code === "string"
-                ? transcript.language_code
-                : language.languageCode;
-            const finalLanguageConfidence =
-              typeof transcript.language_confidence === "number"
-                ? transcript.language_confidence
-                : undefined;
-
-            await saveTranscriptTxt(
-              paths.txtPath,
-              formatTxt(transcript, {
-                channelId: listing.channelId,
-                channelTitle: listing.channelTitle,
-                title: video.title,
-                url: video.url,
-                uploadDate: video.uploadDate,
-                description,
-                languageCode: finalLanguageCode,
-                languageSource: useProviderAutoLanguageDetection ? "auto-detected" : "yt-dlp",
-                languageConfidence: finalLanguageConfidence,
-              })
-            );
-
-            await saveTranscriptMd(
-              paths.mdPath,
-              formatMd(transcript, {
-                channelId: listing.channelId,
-                channelTitle: listing.channelTitle,
-                title: video.title,
-                url: video.url,
-                uploadDate: video.uploadDate,
-                description,
-                languageCode: finalLanguageCode,
-                languageSource: useProviderAutoLanguageDetection ? "auto-detected" : "yt-dlp",
-                languageConfidence: finalLanguageConfidence,
-              })
-            );
-
-            await saveTranscriptJsonl(
-              paths.jsonlPath,
-              formatJsonl(transcript, {
-                videoId: video.id,
-                url: video.url,
-                title: video.title,
-                channelId: listing.channelId,
-                channelTitle: listing.channelTitle,
-                languageCode: finalLanguageCode,
-                languageConfidence: finalLanguageConfidence,
-              })
-            );
 
             stageForError = "format";
             emitStage("format", video.id, index, totalVideos);
-            if (config.csvEnabled) {
-              await saveTranscriptCsv(
-                paths.csvPath,
-                formatCsv(transcript)
-              );
-            }
 
             logStep("done", `Video ${index}/${totalVideos} done: ${video.id}`);
-            markFinished("done");
+            markFinished("done", undefined, {
+              transcriptId: storedTranscript.record.transcriptId,
+              recordSha256: storedTranscript.recordSha256,
+            });
           } catch (error) {
             if (error instanceof InsufficientCreditsError) {
               stopAll = true;
@@ -778,5 +846,7 @@ export async function runPipeline(
       timestamp: nowIso(),
     });
     throw error;
+  } finally {
+    if (ownsMediaJobStore) mediaJobStore.close();
   }
 }

@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createReadStream, promises as fs } from "node:fs";
 import { basename as pathBasename } from "node:path";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { parse as parseUrl } from "node:url";
 import type { AppConfig } from "../config/schema.js";
 import { RunManager } from "./runManager.js";
@@ -21,6 +21,7 @@ import {
 import {
   runCreateSchema,
   runPlanSchema,
+  intakeCreateSchema,
   settingsPatchSchema,
   watchlistCreateSchema,
   watchlistUpdateSchema,
@@ -46,6 +47,17 @@ import { normalizeAssemblyAiLanguageCode } from "../youtube/language.js";
 import { listProviderCapabilities } from "../transcription/index.js";
 import { AudioUploadError, handleAudioUpload, readAudioUpload } from "./uploads.js";
 import { UsageLedger } from "../usage/index.js";
+import { runPipeline } from "../pipeline/run.js";
+import { canonicalJson, TranscriptStore } from "../transcripts/store.js";
+import { sha256File } from "../transcripts/store.js";
+import { getBuildVersion } from "../utils/version.js";
+import { hasValidIntakeKey, validateIntakeAuthConfig } from "./intakeAuth.js";
+import { IntakeConflictError, MediaJobStore, type IntakeRecord } from "../jobs/store.js";
+import { IntakeWorker } from "../jobs/intakeWorker.js";
+import {
+  TranscriptReadyOutboxWorker,
+  validateOutboxConfig,
+} from "../jobs/outboxWorker.js";
 
 type ServerOptions = {
   port: number;
@@ -57,6 +69,7 @@ type ServerOptions = {
     planRun?: typeof planRun;
     fetchChannelMetadata?: typeof fetchChannelMetadata;
     safeChannelThumbnailUrl?: typeof safeChannelThumbnailUrl;
+    runPipeline?: typeof runPipeline;
   };
 };
 
@@ -84,19 +97,6 @@ function promLine(name: string, labels: Record<string, string> | undefined, valu
   return `${name}${labelPart} ${value}`;
 }
 
-let cachedBuildVersion: string | undefined;
-async function getBuildVersion(): Promise<string> {
-  if (cachedBuildVersion) return cachedBuildVersion;
-  try {
-    const raw = await fs.readFile(join(process.cwd(), "package.json"), "utf8");
-    const parsed = JSON.parse(raw) as { version?: string };
-    cachedBuildVersion = typeof parsed.version === "string" ? parsed.version : "unknown";
-  } catch {
-    cachedBuildVersion = "unknown";
-  }
-  return cachedBuildVersion;
-}
-
 function setCors(req: IncomingMessage, res: ServerResponse) {
   const raw = process.env.Y2T_CORS_ORIGINS;
   const allowList =
@@ -121,7 +121,7 @@ function setCors(req: IncomingMessage, res: ServerResponse) {
   res.setHeader("access-control-allow-methods", "GET,POST,PATCH,DELETE,OPTIONS");
   res.setHeader(
     "access-control-allow-headers",
-    "content-type,last-event-id,x-api-key"
+    "content-type,last-event-id,x-api-key,x-media2text-intake-key"
   );
 }
 
@@ -175,6 +175,35 @@ function contentTypeForAudioPath(path: string): string {
   return "application/octet-stream";
 }
 
+function publicIntake(record: IntakeRecord) {
+  return {
+    intakeId: record.intakeId,
+    schemaVersion: record.request.schemaVersion,
+    eventId: record.request.eventId,
+    idempotencyKey: record.request.idempotencyKey,
+    correlationId: record.request.correlationId,
+    source: record.request.source,
+    artifact: {
+      sha256: record.request.artifact.sha256,
+      bytes: record.request.artifact.bytes,
+      contentType: record.request.artifact.contentType,
+      durationSeconds: record.request.artifact.durationSeconds,
+      filename: record.request.artifact.filename,
+    },
+    title: record.request.title,
+    status: record.status,
+    attemptCount: record.attemptCount,
+    runId: record.runId,
+    transcriptId: record.transcriptId,
+    transcriptRecordSha256: record.transcriptRecordSha256,
+    error: record.lastErrorCode
+      ? { code: record.lastErrorCode, message: record.lastErrorMessage }
+      : undefined,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+  };
+}
+
 function allowAnyRunUrl(): boolean {
   const raw = (process.env.Y2T_RUN_ALLOW_ANY_URL ?? "").trim().toLowerCase();
   return raw === "true" || raw === "1" || raw === "yes";
@@ -213,6 +242,8 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
       "Y2T_ALLOW_INSECURE_NO_API_KEY requires Y2T_ALLOW_INSECURE_NO_API_KEY_CONFIRM=I_UNDERSTAND"
     );
   }
+  validateIntakeAuthConfig();
+  validateOutboxConfig();
 
   const planRunFn = opts.deps?.planRun ?? planRun;
   const fetchChannelMetadataFn = opts.deps?.fetchChannelMetadata ?? fetchChannelMetadata;
@@ -235,6 +266,7 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
     persistRuns: opts.persistRuns,
     persistDir: opts.persistDir,
     runTimeoutMs,
+    deps: opts.deps?.runPipeline ? { runPipeline: opts.deps.runPipeline } : undefined,
   });
   await manager.init();
 
@@ -256,6 +288,25 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
     audioDir: config.audioDir,
     audioFormat: config.audioFormat,
   });
+  const transcriptStore = new TranscriptStore(config.outputDir);
+  const mediaJobStore = new MediaJobStore(config.outputDir);
+  for (const transcript of await transcriptStore.list(500)) {
+    mediaJobStore.enqueueTranscriptReady(transcript);
+  }
+  mediaJobStore.pruneTerminal({
+    intakeRetentionDays: Math.max(
+      1,
+      parseEnvInt(process.env.Y2T_INTAKE_TERMINAL_RETENTION_DAYS, 365)
+    ),
+    outboxRetentionDays: Math.max(
+      1,
+      parseEnvInt(process.env.Y2T_OUTBOX_TERMINAL_RETENTION_DAYS, 365)
+    ),
+  });
+  const intakeWorker = new IntakeWorker(mediaJobStore, manager, config);
+  const outboxWorker = new TranscriptReadyOutboxWorker(mediaJobStore);
+  intakeWorker.start();
+  outboxWorker.start();
 
   const writeRateLimiter = createRateLimiter(getRateLimitConfigFromEnv());
   const readRateLimiter = createRateLimiter(getReadRateLimitConfigFromEnv());
@@ -365,6 +416,76 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
     return applySettingsToConfig(config, settings);
   }
 
+  async function ensureLegacyUploadIntake(uploaded: Awaited<ReturnType<typeof readAudioUpload>>) {
+    if (!uploaded) throw new Error("Upload is required");
+    const existing = mediaJobStore.getIntakeBySource("media2text.upload", uploaded.meta.audioId);
+    if (existing) return existing;
+    const digest = await sha256File(uploaded.audioPath);
+    const request = {
+      schemaVersion: "media2text.intake.v1" as const,
+      eventId: `legacy-upload:${uploaded.meta.audioId}`,
+      idempotencyKey: `legacy-upload:${uploaded.meta.audioId}:sha256:${digest.sha256}`,
+      source: {
+        authority: "media2text.upload",
+        itemId: uploaded.meta.audioId,
+        artifactRevision: `sha256:${digest.sha256}`,
+      },
+      artifact: {
+        url: `media2text-upload:///${uploaded.meta.audioId}`,
+        sha256: digest.sha256,
+        bytes: digest.bytes,
+        contentType: uploaded.meta.contentType ?? contentTypeForAudioPath(uploaded.audioPath),
+        filename: uploaded.meta.originalFilename,
+      },
+      title: uploaded.meta.title,
+    };
+    return mediaJobStore.createIntake(request, uploaded.meta.createdAt, {
+      status: "held",
+      localPath: uploaded.audioPath,
+    }).record;
+  }
+
+  function trackLegacyIntakeRun(intakeId: string, owner: string, runId: string): void {
+    const leaseMs = Math.max(60_000, parseEnvInt(process.env.Y2T_INTAKE_LEASE_MS, 300_000));
+    const renewal = setInterval(
+      () => mediaJobStore.renewIntakeLease(intakeId, owner, leaseMs),
+      Math.max(30_000, Math.floor(leaseMs / 3))
+    );
+    renewal.unref?.();
+    const unsubscribe = manager.subscribeGlobal((buffered) => {
+      const run = buffered.event.run;
+      if (run.runId !== runId || run.status === "queued" || run.status === "running") return;
+      clearInterval(renewal);
+      unsubscribe();
+      try {
+        const result = run.videoResults?.find(
+          (item) => item.status === "done" && item.transcriptId && item.transcriptRecordSha256
+        );
+        if (run.status === "done" && result?.transcriptId && result.transcriptRecordSha256) {
+          mediaJobStore.markIntakeCompleted(
+            intakeId,
+            owner,
+            result.transcriptId,
+            result.transcriptRecordSha256
+          );
+        } else {
+          mediaJobStore.markIntakeFailed(
+            intakeId,
+            owner,
+            "running",
+            "transcription_failed",
+            run.error ?? `Run ended with ${run.status}`
+          );
+        }
+      } catch (error) {
+        console.error(
+          "[api] Failed to reconcile legacy audio intake:",
+          error instanceof Error ? error.message : String(error)
+        );
+      }
+    });
+  }
+
   const server = createServer(async (req, res) => {
     setCors(req, res);
     if (req.method === "OPTIONS") {
@@ -396,7 +517,65 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
       res.on("close", clear);
     }
 
-    if (!requireApiKey(req, res)) return;
+    if (
+      req.method === "GET" &&
+      seg.length === 2 &&
+      seg[0] === "status" &&
+      seg[1] === "media-pipeline"
+    ) {
+      if (healthRateLimiter) {
+        const decision = healthRateLimiter.check(healthRateLimitKey(req));
+        if (!decision.allowed) {
+          if (decision.retryAfterSeconds !== undefined) {
+            res.setHeader("retry-after", String(decision.retryAfterSeconds));
+          }
+          json(res, 429, { error: "rate_limited", message: "Rate limit exceeded" });
+          return;
+        }
+      }
+      const counts = mediaJobStore.statusCounts();
+      const failed = counts.intakes.failed;
+      const dead = counts.outbox.dead;
+      const degraded = failed > 0 || dead > 0;
+      json(res, 200, {
+        observed_at: new Date().toISOString(),
+        condition: degraded ? "degraded" : "ok",
+        severity: degraded ? "warning" : "none",
+        summary: degraded
+          ? "Media processing has failed work requiring operator review."
+          : "Media intake and transcript delivery state is healthy.",
+        checks: [
+          {
+            name: "media_intake",
+            label: "Media intake",
+            condition: failed > 0 ? "degraded" : "ok",
+            severity: failed > 0 ? "warning" : "none",
+            summary:
+              failed > 0
+                ? `${failed} intake job(s) require review.`
+                : `${counts.intakes.completed} completed; ${counts.intakes.held + counts.intakes.accepted + counts.intakes.fetching + counts.intakes.ready + counts.intakes.running} active.`,
+          },
+          {
+            name: "transcript_delivery",
+            label: "Transcript delivery",
+            condition: dead > 0 ? "degraded" : "ok",
+            severity: dead > 0 ? "warning" : "none",
+            summary:
+              dead > 0
+                ? `${dead} delivery event(s) exhausted retries.`
+                : `${counts.outbox.delivered} delivered; ${counts.outbox.pending + counts.outbox.delivering} pending.`,
+          },
+        ],
+      });
+      return;
+    }
+
+    const isIntakeAdmission =
+      req.method === "POST" &&
+      seg.length === 2 &&
+      seg[0] === "v1" &&
+      seg[1] === "intakes";
+    if (!(isIntakeAdmission && hasValidIntakeKey(req)) && !requireApiKey(req, res)) return;
 
     if (writeRateLimiter && isWriteMethod(req.method)) {
       const decision = writeRateLimiter.check(rateLimitKey(req));
@@ -563,6 +742,130 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
       if (
         req.method === "GET" &&
         seg.length === 2 &&
+        seg[0] === "v1" &&
+        seg[1] === "transcripts"
+      ) {
+        const parsed = parseUrl(req.url ?? "/v1/transcripts", true);
+        const rawLimit = Array.isArray(parsed.query.limit)
+          ? parsed.query.limit[0]
+          : parsed.query.limit;
+        const parsedLimit = rawLimit === undefined ? 100 : Number(rawLimit);
+        if (!Number.isFinite(parsedLimit) || parsedLimit < 1) {
+          badRequest(res, "limit must be a positive number");
+          return;
+        }
+        const records = await transcriptStore.list(parsedLimit);
+        json(res, 200, {
+          schemaVersion: "media2text.transcript-list.v1",
+          items: records.map(({ record, recordSha256, bytes }) => ({
+            transcriptId: record.transcriptId,
+            createdAt: record.createdAt,
+            source: record.source,
+            transcription: {
+              provider: record.transcription.provider,
+              model: record.transcription.model,
+              languageCode: record.transcription.languageCode,
+              payloadSha256: record.transcription.payloadSha256,
+            },
+            recordSha256,
+            bytes,
+            href: `/v1/transcripts/${record.transcriptId}`,
+          })),
+        });
+        return;
+      }
+
+      if (
+        req.method === "POST" &&
+        seg.length === 2 &&
+        seg[0] === "v1" &&
+        seg[1] === "intakes"
+      ) {
+        const body = await readJsonBodySafe(req, res);
+        if (!body.ok) return;
+        const parsed = intakeCreateSchema.safeParse(body.body);
+        if (!parsed.success) {
+          badRequest(res, parsed.error.issues.map((issue) => issue.message).join(", "));
+          return;
+        }
+        try {
+          const result = mediaJobStore.createIntake(parsed.data);
+          json(res, 202, {
+            intake: publicIntake(result.record),
+            deduplicated: result.deduplicated,
+            links: {
+              self: `/v1/intakes/${result.record.intakeId}`,
+            },
+          });
+        } catch (error) {
+          if (error instanceof IntakeConflictError) {
+            json(res, 409, { error: "idempotency_conflict", message: error.message });
+            return;
+          }
+          throw error;
+        }
+        return;
+      }
+
+      if (
+        req.method === "GET" &&
+        seg.length === 2 &&
+        seg[0] === "v1" &&
+        seg[1] === "intakes"
+      ) {
+        const parsed = parseUrl(req.url ?? "/v1/intakes", true);
+        const rawLimit = Array.isArray(parsed.query.limit)
+          ? parsed.query.limit[0]
+          : parsed.query.limit;
+        const parsedLimit = rawLimit === undefined ? 100 : Number(rawLimit);
+        if (!Number.isFinite(parsedLimit) || parsedLimit < 1) {
+          badRequest(res, "limit must be a positive number");
+          return;
+        }
+        json(res, 200, {
+          schemaVersion: "media2text.intake-list.v1",
+          items: mediaJobStore.listIntakes(parsedLimit).map(publicIntake),
+        });
+        return;
+      }
+
+      if (
+        req.method === "GET" &&
+        seg.length === 3 &&
+        seg[0] === "v1" &&
+        seg[1] === "intakes"
+      ) {
+        const intakeId = decodePathSegment(seg[2]!);
+        if (!intakeId) return notFound(res);
+        const intake = mediaJobStore.getIntake(intakeId);
+        if (!intake) return notFound(res);
+        json(res, 200, { intake: publicIntake(intake) });
+        return;
+      }
+
+      if (
+        req.method === "GET" &&
+        seg.length === 3 &&
+        seg[0] === "v1" &&
+        seg[1] === "transcripts"
+      ) {
+        const transcriptId = decodePathSegment(seg[2]!);
+        if (!transcriptId) return notFound(res);
+        const stored = await transcriptStore.read(transcriptId);
+        if (!stored) return notFound(res);
+        const body = canonicalJson(stored.record);
+        res.setHeader("etag", `\"sha256:${stored.recordSha256}\"`);
+        res.statusCode = 200;
+        res.setHeader("content-type", "application/json; charset=utf-8");
+        res.setHeader("content-length", String(Buffer.byteLength(body)));
+        res.setHeader("x-media2text-record-sha256", stored.recordSha256);
+        res.end(body);
+        return;
+      }
+
+      if (
+        req.method === "GET" &&
+        seg.length === 2 &&
         seg[0] === "metrics" &&
         seg[1] === "cost"
       ) {
@@ -590,7 +893,11 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
             allowedExts: uploadAllowedExts,
             timeoutMs: uploadTimeoutMs,
           });
-          json(res, 201, { audio: result.meta });
+          const intake = await ensureLegacyUploadIntake(result);
+          json(res, 201, {
+            audio: result.meta,
+            intake: publicIntake(intake),
+          });
         } catch (error) {
           if (error instanceof AudioUploadError) {
             if (error.code === "too_large") {
@@ -1139,21 +1446,48 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
             badRequest(res, "Unknown audioId (upload it first via POST /audio)");
             return;
           }
+          let intake = await ensureLegacyUploadIntake(uploaded);
+          if (intake.status === "failed" && force) {
+            mediaJobStore.holdFailedIntake(intake.intakeId);
+            intake = mediaJobStore.getIntake(intake.intakeId)!;
+          }
+          if (intake.status !== "held") {
+            json(res, 409, {
+              error: "intake_not_available",
+              message: `Audio intake is ${intake.status}`,
+              intake: publicIntake(intake),
+            });
+            return;
+          }
           const record = manager.createRun({
             audioId,
             audioPath: uploaded.audioPath,
             audioTitle: uploaded.meta.title,
             audioOriginalFilename: uploaded.meta.originalFilename,
+            intakeId: intake.intakeId,
+            sourceAuthority: intake.request.source.authority,
+            sourceItemId: intake.request.source.itemId,
             force,
             callbackUrl,
             config: runConfigOverrides,
           });
+          const intakeOwner = randomUUID();
+          mediaJobStore.activateHeldIntake(
+            intake.intakeId,
+            intakeOwner,
+            record.runId,
+            Math.max(60_000, parseEnvInt(process.env.Y2T_INTAKE_LEASE_MS, 300_000))
+          );
+          trackLegacyIntakeRun(intake.intakeId, intakeOwner, record.runId);
           if (ownerKeyHash) runOwners.set(record.runId, ownerKeyHash);
           manager.startRun(record.runId, {
             audioId,
             audioPath: uploaded.audioPath,
             audioTitle: uploaded.meta.title,
             audioOriginalFilename: uploaded.meta.originalFilename,
+            intakeId: intake.intakeId,
+            sourceAuthority: intake.request.source.authority,
+            sourceItemId: intake.request.source.itemId,
             force,
             callbackUrl,
             config: runConfigOverrides,
@@ -1388,6 +1722,26 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
     }
   });
 
+  server.on("close", () => {
+    intakeWorker.stop();
+    outboxWorker.stop();
+    if (intakeWorker.isIdle() && outboxWorker.isIdle()) {
+      mediaJobStore.close();
+      return;
+    }
+    const deadline = Date.now() + 5_000;
+    const closeWhenIdle = setInterval(() => {
+      if (
+        (intakeWorker.isIdle() && outboxWorker.isIdle()) ||
+        Date.now() >= deadline
+      ) {
+        clearInterval(closeWhenIdle);
+        if (intakeWorker.isIdle() && outboxWorker.isIdle()) mediaJobStore.close();
+      }
+    }, 25);
+    closeWhenIdle.unref?.();
+  });
+
   server.listen(opts.port, opts.host);
-  return { server, manager, scheduler };
+  return { server, manager, scheduler, intakeWorker, outboxWorker };
 }

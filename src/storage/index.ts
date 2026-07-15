@@ -49,6 +49,9 @@ export type VideoMeta = {
   languageCode?: string;
   languageDetection?: boolean;
   languageConfidence?: number;
+  transcriptId?: string;
+  transcriptRecordSha256?: string;
+  transcriptSchemaVersion?: "media2text.transcript.v1";
   createdAt: string;
 };
 

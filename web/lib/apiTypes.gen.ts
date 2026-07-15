@@ -4,6 +4,96 @@
  */
 
 export interface paths {
+    "/status/media-pipeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get sanitized Home Infra media-pipeline status */
+        get: operations["getMediaPipelineStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/intakes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List media intake jobs */
+        get: operations["listMediaIntakes"];
+        put?: never;
+        /**
+         * Durably accept an external media processing obligation
+         * @description Returns 202 only after the idempotent obligation is committed. Artifact
+         *     download, integrity verification, and transcription happen asynchronously.
+         */
+        post: operations["createMediaIntake"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/intakes/{intakeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a media intake job */
+        get: operations["getMediaIntake"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/transcripts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List immutable Transcript Store records */
+        get: operations["listTranscriptRecords"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/transcripts/{transcriptId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one immutable Transcript Store record */
+        get: operations["getTranscriptRecord"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/metrics": {
         parameters: {
             query?: never;
@@ -554,6 +644,145 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        StatusSnapshot: {
+            /** Format: date-time */
+            observed_at: string;
+            /** @enum {string} */
+            condition: "ok" | "degraded";
+            /** @enum {string} */
+            severity: "none" | "info" | "watch" | "warning" | "critical";
+            summary: string;
+            checks?: ({
+                name: string;
+                label?: string;
+                /** @enum {string} */
+                condition: "ok" | "degraded" | "down";
+                /** @enum {string} */
+                severity?: "none" | "info" | "watch" | "warning" | "critical";
+                summary?: string;
+            } & {
+                [key: string]: unknown;
+            })[];
+        } & {
+            [key: string]: unknown;
+        };
+        MediaIntakeRequestV1: {
+            /** @constant */
+            schemaVersion: "media2text.intake.v1";
+            eventId: string;
+            idempotencyKey: string;
+            correlationId?: string;
+            source: {
+                authority: string;
+                itemId: string;
+                collectionId?: string;
+                artifactRevision: string;
+            };
+            artifact: {
+                /** Format: uri */
+                url: string;
+                sha256: string;
+                bytes: number;
+                contentType: string;
+                durationSeconds?: number;
+                filename?: string;
+            };
+            title?: string;
+        };
+        MediaIntakeRecord: {
+            intakeId: string;
+            /** @constant */
+            schemaVersion: "media2text.intake.v1";
+            eventId: string;
+            idempotencyKey: string;
+            correlationId?: string;
+            source: {
+                [key: string]: unknown;
+            };
+            /** @description Sanitized artifact metadata; the source URL is never returned. */
+            artifact: {
+                [key: string]: unknown;
+            };
+            title?: string;
+            /** @enum {string} */
+            status: "held" | "accepted" | "fetching" | "ready" | "running" | "completed" | "failed";
+            attemptCount: number;
+            runId?: string;
+            transcriptId?: string;
+            transcriptRecordSha256?: string;
+            error?: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        MediaIntakeAcceptedResponse: {
+            intake: components["schemas"]["MediaIntakeRecord"];
+            deduplicated: boolean;
+            links: {
+                [key: string]: string;
+            };
+        };
+        MediaIntakeListResponse: {
+            /** @constant */
+            schemaVersion: "media2text.intake-list.v1";
+            items: components["schemas"]["MediaIntakeRecord"][];
+        };
+        TranscriptSourceV1: {
+            /** @enum {string} */
+            kind: "youtube" | "upload" | "intake";
+            authority: string;
+            sourceItemId: string;
+            sourceCollectionId?: string;
+            canonicalUrl?: string;
+            title: string;
+            publishedAt?: string;
+            artifactRevision: string;
+        };
+        TranscriptRecordV1: {
+            /** @constant */
+            schemaVersion: "media2text.transcript.v1";
+            transcriptId: string;
+            /** Format: date-time */
+            createdAt: string;
+            producer: {
+                [key: string]: unknown;
+            };
+            correlation: {
+                [key: string]: unknown;
+            };
+            source: components["schemas"]["TranscriptSourceV1"];
+            artifact: {
+                [key: string]: unknown;
+            };
+            transcription: {
+                [key: string]: unknown;
+            };
+            representations: {
+                [key: string]: unknown;
+            }[];
+            recordSha256?: string;
+            recordBytes?: number;
+        };
+        TranscriptSummary: {
+            transcriptId: string;
+            /** Format: date-time */
+            createdAt: string;
+            source: components["schemas"]["TranscriptSourceV1"];
+            transcription: {
+                [key: string]: unknown;
+            };
+            recordSha256: string;
+            bytes: number;
+            href: string;
+        };
+        TranscriptListResponse: {
+            /** @constant */
+            schemaVersion: "media2text.transcript-list.v1";
+            items: components["schemas"]["TranscriptSummary"][];
+        };
         ErrorResponse: {
             error: string;
             message?: string;
@@ -1071,6 +1300,10 @@ export interface components {
             basename: string;
             /** @enum {string} */
             status: "done" | "error" | "skipped";
+            /** @description Immutable Transcript Store identity for completed items. */
+            transcriptId?: string;
+            /** @description SHA-256 of the canonical immutable transcript record bytes. */
+            transcriptRecordSha256?: string;
         };
         CatalogVideo: {
             id: string;
@@ -1116,6 +1349,8 @@ export interface components {
         };
     };
     parameters: {
+        IntakeId: string;
+        TranscriptId: string;
         RunId: string;
         ChannelDirName: string;
         Basename: string;
@@ -1127,6 +1362,224 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    getMediaPipelineStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current sanitized producer snapshot */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatusSnapshot"];
+                };
+            };
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    listMediaIntakes: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Intake jobs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaIntakeListResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    createMediaIntake: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MediaIntakeRequestV1"];
+            };
+        };
+        responses: {
+            /** @description Obligation persisted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaIntakeAcceptedResponse"];
+                };
+            };
+            /** @description Invalid contract payload */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Idempotency identity conflicts with a different request */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getMediaIntake: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                intakeId: components["parameters"]["IntakeId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Intake job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        intake: components["schemas"]["MediaIntakeRecord"];
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listTranscriptRecords: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Transcript summaries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TranscriptListResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getTranscriptRecord: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                transcriptId: components["parameters"]["TranscriptId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Immutable transcript record plus record integrity fields */
+            200: {
+                headers: {
+                    ETag?: string;
+                    "X-Media2Text-Record-SHA256"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TranscriptRecordV1"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     getMetrics: {
         parameters: {
             query?: never;

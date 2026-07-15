@@ -5,6 +5,35 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.38.0] - 2026-07-15
+
+### Added
+- Added immutable, content-addressed Transcript Store v1 records with embedded
+  provider payload, provenance, immutable representation snapshots, exact-byte
+  read APIs, and a verified real-fixture export command.
+- Added durable Media Intake v1 coordination using SQLite for intake jobs,
+  leases, attempts, idempotency, and a deterministic per-item completion
+  outbox. Remote artifact fetches require an exact origin allowlist and verify
+  declared size plus SHA-256 before transcription.
+- Added least-privilege `X-Media2Text-Intake-Key` authentication, sanitized
+  `GET /status/media-pipeline`, draft Media Intake/Transcript Ready schemas,
+  and D-020 ownership/delivery semantics.
+
+### Changed
+- `POST /audio` and audio-backed `POST /runs` now act as compatibility adapters
+  to the same intake state machine used by `/v1/intakes`.
+- Successful `video:done` events and `run.videoResults[]` include immutable
+  transcript identity and record hash. Every completion persists one durable
+  `transcript.ready` obligation before the done event.
+- Node.js 24 is now the minimum runtime because coordination state uses the
+  built-in SQLite API. Terminal job/outbox state has a 365-day default
+  retention horizon; transcript artifacts are never pruned by it.
+
+### Fixed
+- Transcript integrity hashes now identify the exact bytes returned by the
+  individual transcript endpoint, and immutable records no longer point only
+  at legacy presentation paths that a forced reprocess can overwrite.
+
 ## [0.37.3] - 2026-07-15
 
 ### Added

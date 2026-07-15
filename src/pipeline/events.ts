@@ -54,6 +54,8 @@ export type PipelineEvent =
       type: "video:done";
       videoId: string;
       basename: string;
+      transcriptId: string;
+      transcriptRecordSha256: string;
       index: number;
       total: number;
       completed: number;

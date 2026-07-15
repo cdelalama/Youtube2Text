@@ -59,6 +59,8 @@ test("videoResults is populated from pipeline events", async () => {
       type: "video:done",
       videoId: "vid1",
       basename: "vid1_title",
+      transcriptId: `trn_${"a".repeat(64)}`,
+      transcriptRecordSha256: "b".repeat(64),
       index: 1,
       total: 3,
       completed: 1,
@@ -117,7 +119,13 @@ test("videoResults is populated from pipeline events", async () => {
 
   assert.ok(Array.isArray(finished.videoResults), "videoResults should be an array");
   assert.equal(finished.videoResults!.length, 3);
-  assert.deepEqual(finished.videoResults![0], { videoId: "vid1", basename: "vid1_title", status: "done" });
+  assert.deepEqual(finished.videoResults![0], {
+    videoId: "vid1",
+    basename: "vid1_title",
+    status: "done",
+    transcriptId: `trn_${"a".repeat(64)}`,
+    transcriptRecordSha256: "b".repeat(64),
+  });
   assert.deepEqual(finished.videoResults![1], { videoId: "vid2", basename: "vid2_title", status: "error" });
   assert.deepEqual(finished.videoResults![2], { videoId: "vid3", basename: "vid3_title", status: "skipped" });
 });

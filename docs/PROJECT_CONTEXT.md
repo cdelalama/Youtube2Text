@@ -1,4 +1,4 @@
-<!-- doc-version: 0.37.3 -->
+<!-- doc-version: 0.38.0 -->
 # Project Context - Media2Text
 
 ## Vision
@@ -53,12 +53,14 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
 ## Current Status (2026-07-15)
-v0.37.3 stable in source adds a persistent provider-boundary usage ledger, hard
-economic limits, preflight estimates, live cost metrics, CI, a pinned yt-dlp
-upstream watch, and registry-based NAS deployment automation. It includes the
-v0.36.12 signed application sessions, run-scoped artifacts, provider fixes,
-and scheduler fairness. NAS runtime remains v0.36.8 until the scripted rollout
-gate passes. The deployed runtime currently has
+v0.38.0 stable in source adds Media Contracts v1 on top of the deployed
+v0.37.3 NAS safety foundation with provider-boundary usage accounting, hard
+economic limits, signed application sessions, CI, and registry deployment.
+The source slice adds Transcript Store v1, immutable provenance,
+bounded SQLite media intake/outbox coordination, a least-privilege producer
+credential, verified cross-host artifact fetch, and sanitized Home Infra
+status. Media Intake v1 and Transcript Ready v1 remain drafts pending their
+actual Plaud Mirror and Cortex consumer reviews. The deployed runtime currently has
 the Media2Text operator console splitting `Estado` and `Nueva captura`,
 English-mode activity table headers fixed on the `Status` screen, and explicit
 scheduler auto-start OFF copy when `Y2T_SCHEDULER_ENABLED=false`. All planned phases (0-3.0) and

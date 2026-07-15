@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Media2Text API
-  version: 0.37.3
+  version: 0.38.0
   description: |
     Minimal local HTTP API for Media2Text, backed by the youtube2text engine.
     Notes:
@@ -15,6 +15,156 @@ servers:
 security:
   - ApiKeyAuth: []
 paths:
+  /status/media-pipeline:
+    get:
+      operationId: getMediaPipelineStatus
+      summary: Get sanitized Home Infra media-pipeline status
+      security: []
+      responses:
+        "200":
+          description: Current sanitized producer snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusSnapshot"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  /v1/intakes:
+    post:
+      operationId: createMediaIntake
+      summary: Durably accept an external media processing obligation
+      description: |
+        Returns 202 only after the idempotent obligation is committed. Artifact
+        download, integrity verification, and transcription happen asynchronously.
+      security:
+        - IntakeKeyAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MediaIntakeRequestV1"
+      responses:
+        "202":
+          description: Obligation persisted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaIntakeAcceptedResponse"
+        "400":
+          description: Invalid contract payload
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "409":
+          description: Idempotency identity conflicts with a different request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+    get:
+      operationId: listMediaIntakes
+      summary: List media intake jobs
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 500, default: 100 }
+      responses:
+        "200":
+          description: Intake jobs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaIntakeListResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /v1/intakes/{intakeId}:
+    get:
+      operationId: getMediaIntake
+      summary: Get a media intake job
+      parameters:
+        - $ref: "#/components/parameters/IntakeId"
+      responses:
+        "200":
+          description: Intake job
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [intake]
+                properties:
+                  intake: { $ref: "#/components/schemas/MediaIntakeRecord" }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /v1/transcripts:
+    get:
+      operationId: listTranscriptRecords
+      summary: List immutable Transcript Store records
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 500, default: 100 }
+      responses:
+        "200":
+          description: Transcript summaries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptListResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /v1/transcripts/{transcriptId}:
+    get:
+      operationId: getTranscriptRecord
+      summary: Get one immutable Transcript Store record
+      parameters:
+        - $ref: "#/components/parameters/TranscriptId"
+      responses:
+        "200":
+          description: Immutable transcript record plus record integrity fields
+          headers:
+            ETag:
+              schema: { type: string }
+            X-Media2Text-Record-SHA256:
+              schema: { type: string, pattern: "^[a-f0-9]{64}$" }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptRecordV1"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
   /metrics:
     get:
       operationId: getMetrics
@@ -991,7 +1141,26 @@ components:
       name: X-API-Key
       description: |
         Required for all endpoints except `/health` (configured by server env `Y2T_API_KEY`).
+    IntakeKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Media2Text-Intake-Key
+      description: Least-privilege service credential accepted only by POST /v1/intakes.
   parameters:
+    IntakeId:
+      name: intakeId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: "^int_[a-f0-9]{64}$"
+    TranscriptId:
+      name: transcriptId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: "^trn_[a-f0-9]{64}$"
     RunId:
       name: runId
       in: path
@@ -1032,6 +1201,154 @@ components:
             $ref: "#/components/schemas/ErrorResponse"
 
   schemas:
+    StatusSnapshot:
+      type: object
+      required: [observed_at, condition, severity, summary]
+      additionalProperties: true
+      properties:
+        observed_at: { type: string, format: date-time }
+        condition: { type: string, enum: [ok, degraded] }
+        severity: { type: string, enum: [none, info, watch, warning, critical] }
+        summary: { type: string }
+        checks:
+          type: array
+          items:
+            type: object
+            required: [name, condition]
+            additionalProperties: true
+            properties:
+              name: { type: string }
+              label: { type: string }
+              condition: { type: string, enum: [ok, degraded, down] }
+              severity: { type: string, enum: [none, info, watch, warning, critical] }
+              summary: { type: string }
+
+    MediaIntakeRequestV1:
+      type: object
+      required: [schemaVersion, eventId, idempotencyKey, source, artifact]
+      additionalProperties: false
+      properties:
+        schemaVersion: { type: string, const: media2text.intake.v1 }
+        eventId: { type: string }
+        idempotencyKey: { type: string }
+        correlationId: { type: string }
+        source:
+          type: object
+          required: [authority, itemId, artifactRevision]
+          additionalProperties: false
+          properties:
+            authority: { type: string }
+            itemId: { type: string }
+            collectionId: { type: string }
+            artifactRevision: { type: string, pattern: "^sha256:[a-f0-9]{64}$" }
+        artifact:
+          type: object
+          required: [url, sha256, bytes, contentType]
+          additionalProperties: false
+          properties:
+            url: { type: string, format: uri }
+            sha256: { type: string, pattern: "^[a-f0-9]{64}$" }
+            bytes: { type: integer, minimum: 1 }
+            contentType: { type: string, pattern: "^audio/" }
+            durationSeconds: { type: number, exclusiveMinimum: 0 }
+            filename: { type: string }
+        title: { type: string }
+
+    MediaIntakeRecord:
+      type: object
+      required: [intakeId, schemaVersion, eventId, idempotencyKey, source, artifact, status, attemptCount, createdAt, updatedAt]
+      properties:
+        intakeId: { type: string }
+        schemaVersion: { type: string, const: media2text.intake.v1 }
+        eventId: { type: string }
+        idempotencyKey: { type: string }
+        correlationId: { type: string }
+        source: { type: object, additionalProperties: true }
+        artifact:
+          type: object
+          description: Sanitized artifact metadata; the source URL is never returned.
+          additionalProperties: true
+        title: { type: string }
+        status: { type: string, enum: [held, accepted, fetching, ready, running, completed, failed] }
+        attemptCount: { type: integer }
+        runId: { type: string }
+        transcriptId: { type: string }
+        transcriptRecordSha256: { type: string }
+        error: { type: object, additionalProperties: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    MediaIntakeAcceptedResponse:
+      type: object
+      required: [intake, deduplicated, links]
+      properties:
+        intake: { $ref: "#/components/schemas/MediaIntakeRecord" }
+        deduplicated: { type: boolean }
+        links: { type: object, additionalProperties: { type: string } }
+
+    MediaIntakeListResponse:
+      type: object
+      required: [schemaVersion, items]
+      properties:
+        schemaVersion: { type: string, const: media2text.intake-list.v1 }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/MediaIntakeRecord" }
+
+    TranscriptSourceV1:
+      type: object
+      required: [kind, authority, sourceItemId, title, artifactRevision]
+      additionalProperties: false
+      properties:
+        kind: { type: string, enum: [youtube, upload, intake] }
+        authority: { type: string }
+        sourceItemId: { type: string }
+        sourceCollectionId: { type: string }
+        canonicalUrl: { type: string }
+        title: { type: string }
+        publishedAt: { type: string }
+        artifactRevision: { type: string }
+
+    TranscriptRecordV1:
+      type: object
+      required: [schemaVersion, transcriptId, createdAt, producer, correlation, source, artifact, transcription, representations]
+      additionalProperties: false
+      properties:
+        schemaVersion: { type: string, const: media2text.transcript.v1 }
+        transcriptId: { type: string }
+        createdAt: { type: string, format: date-time }
+        producer: { type: object, additionalProperties: true }
+        correlation: { type: object, additionalProperties: true }
+        source: { $ref: "#/components/schemas/TranscriptSourceV1" }
+        artifact: { type: object, additionalProperties: true }
+        transcription: { type: object, additionalProperties: true }
+        representations:
+          type: array
+          items: { type: object, additionalProperties: true }
+        recordSha256: { type: string }
+        recordBytes: { type: integer }
+
+    TranscriptSummary:
+      type: object
+      required: [transcriptId, createdAt, source, transcription, recordSha256, bytes, href]
+      properties:
+        transcriptId: { type: string }
+        createdAt: { type: string, format: date-time }
+        source: { $ref: "#/components/schemas/TranscriptSourceV1" }
+        transcription: { type: object, additionalProperties: true }
+        recordSha256: { type: string }
+        bytes: { type: integer }
+        href: { type: string }
+
+    TranscriptListResponse:
+      type: object
+      required: [schemaVersion, items]
+      properties:
+        schemaVersion: { type: string, const: media2text.transcript-list.v1 }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/TranscriptSummary" }
+
     ErrorResponse:
       type: object
       required: [error]
@@ -1836,6 +2153,12 @@ components:
         status:
           type: string
           enum: [done, error, skipped]
+        transcriptId:
+          type: string
+          description: Immutable Transcript Store identity for completed items.
+        transcriptRecordSha256:
+          type: string
+          description: SHA-256 of the canonical immutable transcript record bytes.
 
     CatalogVideo:
       type: object

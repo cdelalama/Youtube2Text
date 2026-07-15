@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://media2text.local/contracts/transcript-store.v1.schema.json",
+  "title": "Media2Text Transcript Store v1",
+  "x-contract-status": "implemented",
+  "type": "object",
+  "required": ["schemaVersion", "transcriptId", "createdAt", "producer", "correlation", "source", "artifact", "transcription", "representations"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": "media2text.transcript.v1" },
+    "transcriptId": { "type": "string", "pattern": "^trn_[a-f0-9]{64}$" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "producer": {
+      "type": "object",
+      "required": ["name", "technicalId", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "Media2Text" },
+        "technicalId": { "const": "youtube2text" },
+        "version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "correlation": {
+      "type": "object",
+      "required": ["runId"],
+      "additionalProperties": false,
+      "properties": {
+        "runId": { "type": "string", "minLength": 1 },
+        "intakeId": { "type": "string", "pattern": "^int_[a-f0-9]{64}$" }
+      }
+    },
+    "source": { "$ref": "#/$defs/source" },
+    "artifact": { "$ref": "#/$defs/artifact" },
+    "transcription": { "$ref": "#/$defs/transcription" },
+    "representations": { "type": "array", "items": { "$ref": "#/$defs/representation" } }
+  },
+  "$defs": {
+    "source": {
+      "type": "object",
+      "required": ["kind", "authority", "sourceItemId", "title", "artifactRevision"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["youtube", "upload", "intake"] },
+        "authority": { "type": "string", "minLength": 1 },
+        "sourceItemId": { "type": "string", "minLength": 1 },
+        "sourceCollectionId": { "type": "string", "minLength": 1 },
+        "canonicalUrl": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "publishedAt": { "type": "string", "minLength": 1 },
+        "artifactRevision": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "required": ["sha256", "bytes", "durationSeconds", "contentType"],
+      "additionalProperties": false,
+      "properties": {
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "bytes": { "type": "integer", "minimum": 1 },
+        "durationSeconds": { "type": "number", "minimum": 0 },
+        "contentType": { "type": "string", "pattern": "^audio/" }
+      }
+    },
+    "transcription": {
+      "type": "object",
+      "required": ["provider", "model", "payloadSha256", "payload"],
+      "additionalProperties": false,
+      "properties": {
+        "provider": { "enum": ["assemblyai", "deepgram", "openai_whisper"] },
+        "model": { "type": "string", "minLength": 1 },
+        "providerTranscriptId": { "type": "string" },
+        "languageCode": { "type": "string" },
+        "languageConfidence": { "type": "number" },
+        "payloadSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "payload": { "type": "object" }
+      }
+    },
+    "representation": {
+      "type": "object",
+      "required": ["format", "relativePath", "sha256", "bytes"],
+      "additionalProperties": false,
+      "properties": {
+        "format": { "enum": ["provider-json", "text", "markdown", "jsonl", "csv"] },
+        "relativePath": { "type": "string", "minLength": 1 },
+        "legacyRelativePath": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "bytes": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

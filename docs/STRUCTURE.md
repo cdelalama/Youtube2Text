@@ -48,7 +48,10 @@ youtube2text/
 - `src/formatters/` - derived artifacts (`.txt`, `.md`, `.jsonl`, optional `.csv`).
 - `src/storage/` - output layout, idempotency checks, processed-index scan, and persistence helpers.
 - `src/pipeline/` - the orchestrated pipeline (events, planning, run execution, JSONL event emitter).
+- `src/transcripts/` - canonical serialization, hashing, and immutable Transcript Store v1 records.
+- `src/jobs/` - bounded SQLite intake/lease/idempotency/outbox state plus artifact and delivery workers.
 - `src/utils/` - filesystem/exec/logging helpers (incl. audio splitting).
+- `docs/contracts/` - versioned media intake, transcript store, and completion event schemas/lifecycle.
 
 ## Naming Conventions
 

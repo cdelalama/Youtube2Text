@@ -56,6 +56,14 @@ if (legacy) {
   process.exit(0);
 }
 
+const mediaStatusResponse = await fetch(`${apiUrl}/status/media-pipeline`);
+expectStatus(mediaStatusResponse, 200, "GET /status/media-pipeline");
+const mediaStatus = await mediaStatusResponse.json();
+if (!["ok", "degraded"].includes(mediaStatus?.condition) || !mediaStatus?.observed_at) {
+  throw new Error("media pipeline status is not a valid sanitized snapshot");
+}
+console.log(`[verify] media pipeline status condition=${mediaStatus.condition}`);
+
 const apiKey = process.env.Y2T_API_KEY;
 const passphrase = process.env.Y2T_WEB_AUTH_PASSPHRASE;
 if (!apiKey || !passphrase) {
@@ -63,6 +71,14 @@ if (!apiKey || !passphrase) {
 }
 
 const headers = { "x-api-key": apiKey };
+const transcriptsResponse = await fetch(`${apiUrl}/v1/transcripts?limit=1`, { headers });
+expectStatus(transcriptsResponse, 200, "authenticated GET /v1/transcripts");
+const transcriptsBody = await transcriptsResponse.json();
+if (transcriptsBody?.schemaVersion !== "media2text.transcript-list.v1") {
+  throw new Error("Transcript Store API returned an unexpected schema version");
+}
+console.log(`[verify] transcript store records=${transcriptsBody.items?.length ?? 0}`);
+
 const usageResponse = await fetch(`${apiUrl}/metrics/cost`, { headers });
 expectStatus(usageResponse, 200, "authenticated GET /metrics/cost");
 const usageBody = await usageResponse.json();

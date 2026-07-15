@@ -54,6 +54,8 @@ test("run artifacts include only videos recorded by that run", async () => {
       type: "video:done",
       videoId: "vid-run",
       basename: "run-video",
+      transcriptId: `trn_${"a".repeat(64)}`,
+      transcriptRecordSha256: "b".repeat(64),
       index: 1,
       total: 1,
       completed: 1,

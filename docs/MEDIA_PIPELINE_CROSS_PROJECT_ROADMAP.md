@@ -110,14 +110,13 @@ Owner: this repository.
 Gate: negative auth tests, cost-cap tests, provider tests, full repository gates,
 and one scripted deployment with rollback evidence.
 
-Progress (2026-07-15): source release `0.37.3` completes the code side of the
-safety foundation: the `0.36.12` correctness/authentication work plus a
+Progress (2026-07-15): release `0.37.3` completes and deploys the safety
+foundation: the `0.36.12` correctness/authentication work plus a
 persistent provider-boundary usage ledger, hard economic limits, plan-time
 cost estimates, live cost metrics, CI, registry deployment/rollback assets, a
 pinned yt-dlp stable release, and a separate weekly upstream watch. The
-remaining Stage 2 gate is operational: rotate/verify credentials without
-breaking consumers, publish the release, execute the scripted NAS deployment,
-reconcile Home Infra deployed truth, and keep the scheduler disabled.
+credential verification, scripted NAS deployment, rollback evidence, and Home
+Infra/Portal reconciliation. The scheduler remains disabled as required.
 
 ### Stage 3 - Media Contracts v1
 
@@ -146,6 +145,18 @@ Owner: this repository.
 
 Gate: duplicate-delivery tests, crash/restart tests at every job stage, artifact
 integrity verification, and protocol snapshot schema validation.
+
+Progress (2026-07-15): the `0.38.0` source slice implements immutable Transcript
+Store v1, provenance and exact-byte pull endpoints; persistent intake, lease,
+attempt, idempotency, and outbox state; least-privilege intake authentication;
+cross-host size/hash verification; legacy audio compatibility adapters; and a
+sanitized status producer. Duplicate, lease recovery, integrity, auth-scope,
+exact-byte, legacy adapter, and HMAC delivery tests pass. Media Intake v1 and
+Transcript Ready v1 are intentionally still `draft-consumer-review-required`:
+Plaud Mirror and Cortex must review them before an operator-ratified frozen SHA
+can be claimed. A real byte-stable fixture can only be exported after the first
+new `0.38.0` transcript exists; the export command and integrity guard are in
+place and must not be satisfied with a synthetic artifact.
 
 ### Stage 4 - Plaud Mirror Adapter
 

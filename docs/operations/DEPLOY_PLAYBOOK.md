@@ -29,6 +29,9 @@ It does not replace the CLI: the CLI remains fully operational and can be run se
 - `Y2T_API_KEY` (private API credential; at least 32 characters)
 - `Y2T_WEB_AUTH_SECRET` (random web-session signing secret; at least 32 characters)
 - `Y2T_WEB_AUTH_PASSPHRASE` (operator console passphrase; at least 12 characters)
+- `Y2T_INTAKE_API_KEY` (least-privilege producer credential; at least 32
+  characters). Configure it before onboarding an external producer. It only
+  authorizes `POST /v1/intakes` and cannot read or administer the API.
 
 ## Strongly recommended (servers)
 
@@ -82,6 +85,18 @@ It does not replace the CLI: the CLI remains fully operational and can be run se
 - `Y2T_USAGE_MAX_SOURCE_MINUTES_24H=600`
 - `Y2T_USAGE_MAX_TOTAL_MINUTES_30D=3000`
 - `Y2T_USAGE_MAX_TOTAL_USD_30D=25`
+- `Y2T_INTAKE_ARTIFACT_ALLOWED_ORIGINS` (comma-separated exact HTTPS origins
+  from which the intake worker may fetch media; leave empty until a producer
+  contract is approved)
+- `Y2T_INTAKE_MAX_ARTIFACT_MB` (hard fetched-artifact cap; default 2048)
+- `Y2T_INTAKE_FETCH_ATTEMPTS` (bounded fetch attempts; default 5)
+- `Y2T_INTAKE_FETCH_TIMEOUT_MS` (per-attempt timeout; default 120000)
+- `Y2T_INTAKE_LEASE_MS` (crash-recovery lease; default 300000)
+- `Y2T_INTAKE_TERMINAL_RETENTION_DAYS` (terminal coordination-row retention;
+  default 365; immutable transcript records are unaffected)
+- `Y2T_TRANSCRIPT_READY_URL` and `Y2T_TRANSCRIPT_READY_SECRET` (fixed
+  downstream endpoint and HMAC secret). Leave both unset until the consumer has
+  reviewed the contract and the operator has ratified a version plus commit SHA.
  
 docker-compose defaults:
 - The compose file now uses `${VAR:-default}` for all optional env vars to match code defaults.
@@ -125,6 +140,11 @@ Non-secret defaults:
 8) API not exposed publicly if avoidable; otherwise ensure rate limits are enabled.
 9) `Y2T_USAGE_ENFORCEMENT=enforce`; inspect `GET /metrics/cost` and confirm the
    limits/rates match the operator-approved spend before enabling the scheduler.
+10) `Y2T_INTAKE_API_KEY` is distinct from `Y2T_API_KEY`; producer credentials
+    must not grant operator access.
+11) Every configured intake artifact origin is HTTPS and explicitly approved.
+12) `Y2T_TRANSCRIPT_READY_URL` remains empty until its contract is frozen. If
+    configured, require a separate random `Y2T_TRANSCRIPT_READY_SECRET`.
 
 ## Reverse proxy (recommended)
 
@@ -138,6 +158,11 @@ Terminate TLS in a reverse proxy (Caddy/Nginx/Traefik) and forward:
 - Deep health (deps + disk + persistence): `GET /health?deep=true` (requires API key unless `Y2T_HEALTH_DEEP_PUBLIC=true`)
 - Manual retention cleanup: `POST /maintenance/cleanup`
 - Usage and estimated cost: `GET /metrics/cost` (authenticated)
+- Media-pipeline status for Home Infra: `GET /status/media-pipeline` (public,
+  sanitized, and rate limited)
+- Intake reconciliation: `GET /v1/intakes` (authenticated operator API)
+- Immutable transcript reconciliation: `GET /v1/transcripts` (authenticated
+  operator API)
 
 The persistent usage ledger lives under `output/_usage/ledger.json`, inside the
 existing output volume. Do not delete or edit it during routine deploys. Failed
@@ -145,6 +170,17 @@ or unresolved reservations are intentionally retained as potentially billable.
 Usage limits and rates are environment-only, so configure them in Doppler or the
 server env rather than `config.yaml` or API settings. A numeric limit of `0`
 disables that individual cap.
+
+Media Contracts state lives in the existing output volume:
+
+- `output/_jobs/media2text.sqlite` is the bounded coordination database for
+  intake leases and durable per-item delivery obligations.
+- `output/_transcripts/v1/` contains immutable canonical transcript records and
+  representation snapshots.
+
+Back up both paths with the output volume. Do not copy the SQLite file while it
+is being modified; use a SQLite-aware backup or stop the API first. Routine
+retention may prune terminal coordination rows, but never transcript records.
 
 ## Periodic maintenance (cron example)
 
@@ -183,6 +219,7 @@ doppler run -- docker compose up --build -d
    - `Y2T_API_KEY`
    - `Y2T_WEB_AUTH_SECRET`
    - `Y2T_WEB_AUTH_PASSPHRASE`
+   - `Y2T_INTAKE_API_KEY`
    - `Y2T_CORS_ORIGINS` (recommended)
 3) Run: `docker compose up --build -d`
 4) Verify:
@@ -255,6 +292,11 @@ fallback, not the normal deployment path. NAS builds remain prohibited.
 - [ ] `/runs` with API key returns 200
 - [ ] Web UI loads and shows correct version
 - [ ] `/metrics/cost` with API key returns `enforcement: enforce` and the approved limits
+- [ ] `/status/media-pipeline` returns a sanitized status document without auth
+- [ ] `/v1/intakes` and `/v1/transcripts` reject unauthenticated requests and
+      return reconciliation data with the operator API key
+- [ ] `Y2T_TRANSCRIPT_READY_URL` is unset unless the reviewed contract version
+      and producer/consumer commit SHAs are recorded
 
 For server-specific deployment details (paths, credentials, workarounds), see the
 private infrastructure documentation.

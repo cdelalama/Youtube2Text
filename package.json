@@ -1,6 +1,6 @@
 {
   "name": "youtube2text",
-  "version": "0.37.3",
+  "version": "0.38.0",
   "description": "Local-first media transcription pipeline for YouTube and direct audio inputs.",
   "type": "module",
   "main": "dist/cli.js",
@@ -23,10 +23,11 @@
     "naming:check": "node scripts/check-naming-contract.mjs",
     "version:check": "node scripts/versionCheck.mjs",
     "test:docker-smoke": "node scripts/dockerSmokeTest.mjs",
+    "transcript:export-fixture": "node scripts/export-transcript-fixture.mjs",
     "test": "node --import tsx --test tests/all.test.ts"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=24"
   },
   "dependencies": {
     "busboy": "^1.6.0",
