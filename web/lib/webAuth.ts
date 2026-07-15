@@ -86,15 +86,23 @@ export async function verifyWebSessionToken(
   if (!encodedPayload || !encodedSignature || extra !== undefined) return false;
 
   try {
+    const payloadBytes = new Uint8Array(fromBase64Url(encodedPayload));
+    const signatureBytes = new Uint8Array(fromBase64Url(encodedSignature));
+    if (
+      toBase64Url(payloadBytes) !== encodedPayload
+      || toBase64Url(signatureBytes) !== encodedSignature
+    ) {
+      return false;
+    }
     const valid = await crypto.subtle.verify(
       "HMAC",
       await importHmacKey(),
-      fromBase64Url(encodedSignature),
+      signatureBytes,
       encoder.encode(encodedPayload)
     );
     if (!valid) return false;
     const payload = JSON.parse(
-      new TextDecoder().decode(fromBase64Url(encodedPayload))
+      new TextDecoder().decode(payloadBytes)
     ) as Partial<SessionPayload>;
     return payload.v === 1 && typeof payload.exp === "number" && payload.exp > nowMs / 1000;
   } catch {

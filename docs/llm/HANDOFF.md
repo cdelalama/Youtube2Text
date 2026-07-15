@@ -1,4 +1,4 @@
-<!-- doc-version: 0.37.1 -->
+<!-- doc-version: 0.37.2 -->
 # LLM Work Handoff
 
 This file is the current operational snapshot. Keep it short (target: 1-2 screens).
@@ -53,7 +53,7 @@ All content should be ASCII-only to avoid Windows encoding issues.
   decide which roadmap-badged console screens survive the boundary decision
   before refactoring MediaConsole. The y2t-vs-Cortex boundary decision itself
   is not yet written in DECISIONS.md (next free decision ID).
-- Current slice: source release 0.37.1 completes the economic and deployment
+- Current slice: source release 0.37.2 completes the economic and deployment
   safety foundation. Provider-boundary reservations enforce durable item, run,
   source/24h, total/30d, and USD/30d limits; the console exposes authenticated
   estimates and actual usage. CI, stable yt-dlp upstream watch, registry-based
@@ -63,13 +63,13 @@ All content should be ASCII-only to avoid Windows encoding issues.
   implemented and deployed in NAS runtime 0.36.8: Status and Automations now
   distinguish live watchlist/scheduler capability from production auto-start
   being OFF via `Y2T_SCHEDULER_ENABLED=false`.
-- Next product work: deploy and live-verify 0.37.1, reconcile Home Infra and
+- Next product work: deploy and live-verify 0.37.2, reconcile Home Infra and
   Infra Portal from deployed truth, then follow the operator-ratified
   `docs/MEDIA_PIPELINE_CROSS_PROJECT_ROADMAP.md` into the versioned
   transcript/intake contracts.
 
 ## Current Status
-- Version: 0.37.1 in source; NAS runtime remains 0.36.8. Visible brand: Media2Text.
+- Version: 0.37.2 in source; NAS runtime remains 0.36.8. Visible brand: Media2Text.
   Technical runtime/repo/config contract: `youtube2text` + `Y2T_` (see
   `docs/llm/DECISIONS.md` D-018).
 - GitHub: `cdelalama/Youtube2Text` is the canonical repo and is not a fork.
@@ -347,7 +347,7 @@ I) **Concurrency limits** (document in Operator Notes):
 
 J) **Optional future**: `getAccount()` for pre-flight balance check via `GET /v1/projects/{project_id}/balances`. Requires knowing the project_id. Defer unless needed.
 
-## Latest Checks (0.37.1 source)
+## Latest Checks (0.37.2 source)
 - Tests: `npm test` PASS 180/180, including ledger concurrency and three
   provider-boundary integration tests that prove denied work makes zero provider
   calls, remains a terminal RunManager error, and allowed work is persisted.

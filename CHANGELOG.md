@@ -5,6 +5,16 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.37.2] - 2026-07-15
+
+### Added
+
+### Changed
+
+### Fixed
+- Web session verification now rejects non-canonical Base64URL payload and
+  signature encodings, removing token-representation ambiguity.
+
 ## [0.37.1] - 2026-07-15
 
 ### Added

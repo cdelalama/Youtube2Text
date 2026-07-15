@@ -1,4 +1,4 @@
-<!-- doc-version: 0.37.1 -->
+<!-- doc-version: 0.37.2 -->
 # Project Context - Media2Text
 
 ## Vision
@@ -53,7 +53,7 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
 ## Current Status (2026-07-15)
-v0.37.1 stable in source adds a persistent provider-boundary usage ledger, hard
+v0.37.2 stable in source adds a persistent provider-boundary usage ledger, hard
 economic limits, preflight estimates, live cost metrics, CI, a pinned yt-dlp
 upstream watch, and registry-based NAS deployment automation. It includes the
 v0.36.12 signed application sessions, run-scoped artifacts, provider fixes,
