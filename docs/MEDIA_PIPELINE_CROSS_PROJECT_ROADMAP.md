@@ -110,7 +110,7 @@ Owner: this repository.
 Gate: negative auth tests, cost-cap tests, provider tests, full repository gates,
 and one scripted deployment with rollback evidence.
 
-Progress (2026-07-15): source release `0.37.0` completes the code side of the
+Progress (2026-07-15): source release `0.37.1` completes the code side of the
 safety foundation: the `0.36.12` correctness/authentication work plus a
 persistent provider-boundary usage ledger, hard economic limits, plan-time
 cost estimates, live cost metrics, CI, registry deployment/rollback assets, a

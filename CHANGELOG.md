@@ -5,6 +5,16 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.37.1] - 2026-07-15
+
+### Added
+
+### Changed
+- Updated the official GitHub `checkout` and `setup-node` actions to v7 so CI
+  runs natively on the supported Node 24 action runtime.
+
+### Fixed
+
 ## [0.37.0] - 2026-07-15
 
 ### Added
