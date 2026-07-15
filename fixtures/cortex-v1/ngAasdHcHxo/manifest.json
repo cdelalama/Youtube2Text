@@ -1,0 +1,85 @@
+{
+  "schemaVersion": "media2text.cortex-evidence-fixture.v1",
+  "fixtureId": "youtube-ngAasdHcHxo-jsonl",
+  "artifact": {
+    "path": "transcript.jsonl",
+    "contentType": "application/x-ndjson; charset=utf-8",
+    "language": "es",
+    "bytes": 11887,
+    "sha256": "c44a7e35344c02e88fdb20f9f7987486d6852da28edef35496b2255ee4b86744",
+    "createdAt": "2026-02-02T21:38:11.176Z",
+    "lineCount": 1,
+    "terminalNewline": false
+  },
+  "source": {
+    "kind": "youtube",
+    "videoId": "ngAasdHcHxo",
+    "url": "https://www.youtube.com/watch?v=ngAasdHcHxo",
+    "publicAtExport": true,
+    "publicCheck": {
+      "method": "youtube-oembed",
+      "checkedAt": "2026-07-15T22:03:16Z"
+    }
+  },
+  "provenance": {
+    "provider": null,
+    "engine": null,
+    "model": "universal",
+    "modelVersion": null,
+    "providerTranscriptId": "6027630a-e2d2-4e28-a679-0531139d4cce",
+    "runId": "d601d5a2-514e-4570-ac0b-463ac7c7d3ae",
+    "timestamps": {
+      "runCreatedAt": "2026-02-02T21:35:03.472Z",
+      "runStartedAt": "2026-02-02T21:35:03.474Z",
+      "transcriptionStartedAt": "2026-02-02T21:35:58.298Z",
+      "artifactSaveStartedAt": "2026-02-02T21:38:11.166Z",
+      "videoCompletedAt": "2026-02-02T21:38:11.182Z",
+      "runFinishedAt": "2026-02-02T21:38:11.183Z"
+    }
+  },
+  "commits": {
+    "artifactProducer": null,
+    "exportSource": "943960f26e83f097493cffbbc28e03e8a8b4b1f5",
+    "fixtureCommit": null
+  },
+  "unknownReasons": {
+    "provenance.provider": "The legacy artifacts do not persist an explicit provider identifier.",
+    "provenance.engine": "The legacy artifacts do not persist a distinct engine identifier.",
+    "provenance.modelVersion": "The canonical provider response records speech_model_used=universal but no model version.",
+    "commits.artifactProducer": "The artifact predates commit provenance and does not record the producing repository revision.",
+    "commits.fixtureCommit": "A file cannot contain the SHA of the same Git commit that first adds that file without creating a self-reference."
+  },
+  "evidence": [
+    {
+      "role": "jsonl-source",
+      "path": "output/Jose-Luis-Cava__UCvCCLJkQpRg0NdT3zNcI08A/Cuando-hay-panico-debemos-acudir-a-La-Teoria-de-la-Opinion-C__ngAasdHcHxo.jsonl",
+      "sha256": "c44a7e35344c02e88fdb20f9f7987486d6852da28edef35496b2255ee4b86744"
+    },
+    {
+      "role": "video-metadata",
+      "path": "output/Jose-Luis-Cava__UCvCCLJkQpRg0NdT3zNcI08A/Cuando-hay-panico-debemos-acudir-a-La-Teoria-de-la-Opinion-C__ngAasdHcHxo.meta.json",
+      "sha256": "43076d5fd64f82f864e6f50cdc3dc82de6d6db7bad714811477279083e698d4d"
+    },
+    {
+      "role": "canonical-provider-response",
+      "path": "output/Jose-Luis-Cava__UCvCCLJkQpRg0NdT3zNcI08A/Cuando-hay-panico-debemos-acudir-a-La-Teoria-de-la-Opinion-C__ngAasdHcHxo.json",
+      "sha256": "0871aa302747efa486e23f327a69230a6b16cca95a01c87203c3af2c5eac6db0",
+      "assertedFields": [
+        "id",
+        "status",
+        "language_code",
+        "speech_model_used"
+      ]
+    },
+    {
+      "role": "run-state",
+      "path": "output/_runs/d601d5a2-514e-4570-ac0b-463ac7c7d3ae/run.json",
+      "sha256": "d57e8625a109fb62f77ca0854f7a3c8b9393ff2d84b43d9f0bc06f3399ff284c"
+    },
+    {
+      "role": "run-events",
+      "path": "output/_runs/d601d5a2-514e-4570-ac0b-463ac7c7d3ae/events.jsonl",
+      "sha256": "f026c62803b0059c83a67435388f85c55dff4a27ade8efc5a32071ee0bd229e8"
+    }
+  ]
+}

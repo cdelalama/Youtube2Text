@@ -5,6 +5,24 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.38.2] - 2026-07-15
+
+### Added
+- Added a committed, byte-for-byte JSONL fixture from the real public YouTube
+  video `ngAasdHcHxo`, with a sanitized evidence manifest that records the
+  demonstrated language, model, run, timestamps, hashes, and explicit reasons
+  for unknown legacy provenance.
+- Added `transcript:fixture:check` and test-suite coverage for fixture SHA-256,
+  byte count, UTF-8 decoding, JSONL parsing, source identity, and required
+  unknown-field explanations.
+
+### Changed
+- Cortex V1 can consume a stable legacy evidence sample without live delivery,
+  a webhook, a frozen Transcript Ready contract, or changes to stored runtime
+  transcripts.
+
+### Fixed
+
 ## [0.38.1] - 2026-07-15
 
 ### Added

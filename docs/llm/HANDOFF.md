@@ -1,4 +1,4 @@
-<!-- doc-version: 0.38.1 -->
+<!-- doc-version: 0.38.2 -->
 # LLM Work Handoff
 
 This file is the current operational snapshot. Historical detail belongs in
@@ -30,16 +30,23 @@ roadmap.
 - Patch `0.38.1` adds the project-owned Home Infra Protocol 0.9.0 contract and
   the canonical-host public status route required for truthful Portal
   registration.
+- Patch `0.38.2` commits one byte-for-byte real legacy JSONL fixture for Cortex
+  V1 at `fixtures/cortex-v1/ngAasdHcHxo/`. Its manifest records only provenance
+  demonstrated by the existing sidecar, canonical response, run, and events;
+  provider, engine, model version, and producer commit remain null with reasons.
+  The fixture is offline evidence only and does not implement or activate live
+  delivery, a Cortex webhook, or a frozen Transcript Ready contract.
 
 ## Current Status
 
-- Version: 0.38.1 in source; publication and NAS deployment pending.
-- Current NAS runtime: `0.38.0`, healthy and authenticated. Media pipeline
-  status is `ok`; Transcript Store currently contains zero new records.
+- Version: 0.38.2 in source. This fixture/validation patch does not require a
+  NAS deployment.
+- Current NAS runtime: `0.38.1`, healthy and authenticated. Media pipeline
+  status is `ok`; Transcript Store contains no new 0.38.x records.
 - Home Infra/Infra Portal: service identity is `Media2Text`, technical id is
   `y2t`, project id is `youtube2text`, application auth is satisfied, and the
-  deployed image is `0.38.0`. Its project contract registration is pending the
-  `0.38.1` publish/deploy and Home Infra validation.
+  deployed image is `0.38.1`. Its project contract and sanitized pipeline job
+  are registered and observed without warnings.
 - Scheduler remains OFF. No YouTube channels are configured in the watchlist.
 - Production Deepgram and AssemblyAI credentials were verified during the
   `0.37.x` safety rollout. The OpenAI credential returns 401 and remains an
@@ -49,18 +56,16 @@ roadmap.
 
 ## Next Gates
 
-1. Validate, publish, and deploy `0.38.1`; retain `0.38.0` for rollback and
-   verify the canonical web status route without an operator session.
-2. Register the live sanitized media-pipeline status producer in Home Infra
-   and sync committed portal inputs to the NAS. Home Infra does not transport
-   media or run backfills.
-3. Export one real byte-stable `0.38.x` transcript fixture with
-   `npm run transcript:export-fixture -- <ignored-output-path>`. Do not satisfy
-   this gate with synthetic content.
-4. Ask Cortex to review `transcript-ready.v1.schema.json` and Plaud Mirror to
+1. Give Cortex commit-pinned access to the 0.38.2 fixture and manifest so its
+   Slice 2 can test exact bytes and honest unknown legacy provenance. The
+   evidence fixture does not authorize live integration.
+2. Export the first new byte-stable 0.38.x Transcript Store fixture when a real
+   new transcript exists; do not replace that native-provenance gate with the
+   legacy Cortex evidence sample.
+3. Ask Cortex to review `transcript-ready.v1.schema.json` and Plaud Mirror to
    review `media-intake.v1.schema.json`. Freeze only after consumer review and
    operator ratification.
-5. Configure exact YouTube channel URLs disabled first, preview duration/cost,
+4. Configure exact YouTube channel URLs disabled first, preview duration/cost,
    obtain operator cost approval, then canary at concurrency 1. Exact channel
    URLs are not yet available in this repository.
 
@@ -82,6 +87,7 @@ roadmap.
 
 ```bash
 npm test
+npm run transcript:fixture:check
 npm run build
 npm run build:web
 npm run api:contract:check

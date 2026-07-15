@@ -65,6 +65,7 @@ import "./apiIntakes.test.js";
 import "./legacyAudioIntake.test.js";
 import "./apiTranscripts.test.js";
 import "./outboxWorker.test.js";
+import "./cortexFixture.test.js";
 import "./runArtifacts.test.js";
 import "./apiCatalog.test.js";
 import "./versionCheck.test.js";

@@ -13,6 +13,7 @@ youtube2text/
 +- HOW_TO_USE.md
 +- infra.contract.yml # Project-owned Home Infra Protocol contract
 +- docs/
++- fixtures/        # committed consumer evidence
 +- src/
 +- scripts/
 +- tests/
@@ -32,6 +33,7 @@ youtube2text/
 | docs/llm/ | LLM-specific handoff/history/decisions | Required |
 | docs/operations/ | Runbooks and operational procedures | Recommended |
 | infra.contract.yml | Home Infra Protocol project/job ownership and status declaration | Required for portal registration |
+| fixtures/ | Sanitized, byte-stable consumer evidence with integrity manifests | Tracked |
 | src/ | Application source code | Required |
 | scripts/ | Utility scripts (dev, release, ops) | Optional |
 | tests/ | Automated tests | Recommended |

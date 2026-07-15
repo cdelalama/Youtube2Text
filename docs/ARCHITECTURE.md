@@ -1,4 +1,4 @@
-<!-- doc-version: 0.38.1 -->
+<!-- doc-version: 0.38.2 -->
 # Media2Text Architecture (youtube2text Engine)
 
 > Version: 0.38.1 (synced with package.json)

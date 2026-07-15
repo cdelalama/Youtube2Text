@@ -1,4 +1,4 @@
-<!-- doc-version: 0.38.1 -->
+<!-- doc-version: 0.38.2 -->
 # Project Context - Media2Text
 
 ## Vision
@@ -53,9 +53,14 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
 ## Current Status (2026-07-15)
-v0.38.1 stable in source adds the project-owned Home Infra Protocol contract
-and canonical-host status route on top of the deployed v0.38.0 Media Contracts
-runtime and its provider-boundary usage accounting, hard
+v0.38.2 stable in source adds a committed byte-stable JSONL evidence fixture
+for Cortex V1 and CI-enforced integrity validation. The fixture is copied from
+a real successful legacy YouTube transcript, preserves its exact bytes, and
+keeps unavailable provider/engine/version and producer-commit provenance
+explicitly unknown. It does not activate live delivery or freeze Transcript
+Ready v1. The deployed v0.38.1 runtime includes the project-owned Home Infra
+Protocol contract and canonical-host status route on top of Media Contracts
+v1 and its provider-boundary usage accounting, hard
 economic limits, signed application sessions, CI, and registry deployment.
 The deployed runtime adds Transcript Store v1, immutable provenance,
 bounded SQLite media intake/outbox coordination, a least-privilege producer
@@ -105,6 +110,8 @@ Completed:
   direct audio upload, transcript format views, and speaker labels
 - DELETE endpoints for library channels and videos (web UI + API)
 - Graceful handling of deleted content in run detail pages
+- Byte-stable real JSONL consumer fixture with a sanitized provenance manifest
+  and automated SHA-256/JSONL validation
 
 Optional / not yet implemented:
 - Feature Mining Phase D: Error categorization + ETA estimation

@@ -1,4 +1,4 @@
-<!-- doc-version: 0.38.1 -->
+<!-- doc-version: 0.38.2 -->
 # Media2Text
 
 Media2Text is the visible product name for the `youtube2text` engine: a
@@ -498,6 +498,11 @@ Media contracts:
   pending obligations are retained rather than discarded.
 - `npm run transcript:export-fixture -- <path>` exports and verifies the exact
   canonical bytes of the newest real Transcript Store record for consumer tests.
+- `fixtures/cortex-v1/ngAasdHcHxo/` contains one committed, byte-stable legacy
+  JSONL transcript fixture plus a provenance manifest for Cortex V1. Run
+  `npm run transcript:fixture:check` to verify its SHA-256, byte count, UTF-8,
+  and JSONL records. Unknown legacy provenance remains explicit rather than
+  inferred.
 
 ## Docker (API runner)
 
