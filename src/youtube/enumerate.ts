@@ -9,6 +9,7 @@ type YtDlpEntry = {
   url?: string;
   webpage_url?: string;
   upload_date?: string;
+  duration?: number;
 };
 
 type YtDlpListing = {
@@ -20,6 +21,7 @@ type YtDlpListing = {
   webpage_url?: string;
   url?: string;
   upload_date?: string;
+  duration?: number;
   entries?: YtDlpEntry[];
 };
 
@@ -71,6 +73,8 @@ export async function enumerateVideos(
           e.url ||
           `https://www.youtube.com/watch?v=${e.id}`,
         uploadDate: e.upload_date,
+        durationSeconds:
+          typeof e.duration === "number" && e.duration > 0 ? e.duration : undefined,
       })) ?? [];
 
   if (videos.length === 0 && listing.id) {
@@ -84,6 +88,10 @@ export async function enumerateVideos(
           inputUrl ||
           `https://www.youtube.com/watch?v=${listing.id}`,
         uploadDate: listing.upload_date,
+        durationSeconds:
+          typeof listing.duration === "number" && listing.duration > 0
+            ? listing.duration
+            : undefined,
       },
     ];
   }

@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            web/package-lock.json
+      - name: Install engine dependencies
+        run: npm ci
+      - name: Install web dependencies
+        run: npm --prefix web ci
+      - name: Audit engine dependencies
+        run: npm audit --audit-level=moderate
+      - name: Audit web dependencies
+        run: npm --prefix web audit --audit-level=moderate
+      - name: Test
+        run: npm test
+      - name: Build engine
+        run: npm run build
+      - name: Build web
+        run: npm --prefix web run build
+      - name: Check version contract
+        run: npm run version:check
+      - name: Check version manifest
+        run: scripts/check-version-sync.sh
+      - name: Check naming contract
+        run: npm run naming:check
+      - name: Check API contract
+        run: npm run api:contract:check
+      - name: Check yt-dlp pin
+        run: node scripts/check-yt-dlp-upstream.mjs --pin-only
+      - name: Check clean generated tree
+        run: git diff --exit-code

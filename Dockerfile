@@ -10,7 +10,7 @@ RUN npm run build
 
 FROM node:24-bookworm-slim AS runtime
 
-ARG YT_DLP_VERSION=
+ARG YT_DLP_VERSION=2026.7.4
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ffmpeg python3 python3-venv ca-certificates \
@@ -26,10 +26,13 @@ RUN apt-get update \
 ENV PATH="/opt/yt-dlp/bin:${PATH}"
 
 WORKDIR /app
-COPY package.json package-lock.json ./
+COPY --chown=node:node package.json package-lock.json ./
 RUN npm ci --omit=dev
 
-COPY --from=build /app/dist ./dist
+COPY --from=build --chown=node:node /app/dist ./dist
+
+RUN mkdir -p /data/output /data/audio \
+  && chown -R node:node /data
 
 ENV HOST=0.0.0.0
 ENV PORT=8787
@@ -40,6 +43,8 @@ ENV Y2T_API_PERSIST_RUNS=true
 EXPOSE 8787
 
 VOLUME ["/data/output", "/data/audio"]
+
+USER node
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:8787/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"

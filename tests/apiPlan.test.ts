@@ -10,7 +10,7 @@ test("planFromListing counts processed vs remaining (force=false)", async () => 
       channelId: "C1",
       channelTitle: "Channel",
       videos: [
-        { id: "a", title: "A", url: "u1", uploadDate: "20240101" },
+        { id: "a", title: "A", url: "u1", uploadDate: "20240101", durationSeconds: 125 },
         { id: "b", title: "B", url: "u2", uploadDate: "20240102" },
         { id: "c", title: "C", url: "u3", uploadDate: "20240103" },
       ],
@@ -43,6 +43,7 @@ test("planFromListing counts processed vs remaining (force=false)", async () => 
   assert.equal(plan.unprocessed, 2);
   assert.equal(plan.toProcess, 2);
   assert.equal(plan.videos.find((v) => v.id === "b")?.processed, true);
+  assert.equal(plan.selectedVideos.find((v) => v.id === "a")?.durationSeconds, 125);
   assert.deepEqual(
     plan.selectedVideos.map((v) => v.id),
     ["a", "c"]

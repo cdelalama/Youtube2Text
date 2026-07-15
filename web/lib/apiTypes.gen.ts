@@ -24,6 +24,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/metrics/cost": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get estimated transcription usage and cost
+         * @description Returns the local usage ledger snapshot. Cost is estimated from audio duration
+         *     and operator-configured provider rates; failed reservations remain counted
+         *     because a provider may already have billed the request.
+         */
+        get: operations["getUsageCost"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/providers": {
         parameters: {
             query?: never;
@@ -580,6 +602,67 @@ export interface components {
         ProvidersListResponse: {
             providers: components["schemas"]["ProviderCapability"][];
         };
+        UsageViolation: {
+            /** @enum {string} */
+            scope: "item" | "run" | "source_24h" | "total_30d" | "usd_30d";
+            limit: number;
+            projected: number;
+            /** @enum {string} */
+            unit: "minutes" | "usd";
+        };
+        UsageEstimate: {
+            /** @enum {string} */
+            provider: "assemblyai" | "deepgram" | "openai_whisper";
+            knownItems: number;
+            unknownItems: number;
+            audioMinutes: number;
+            estimatedUsd: number;
+            complete: boolean;
+            allowed: boolean | null;
+            enforced: boolean;
+            violations: components["schemas"]["UsageViolation"][];
+        };
+        UsagePolicy: {
+            /** @enum {string} */
+            enforcement: "enforce" | "track";
+            maxItemMinutes: number;
+            maxRunMinutes: number;
+            maxSourceMinutes24h: number;
+            maxTotalMinutes30d: number;
+            maxTotalUsd30d: number;
+            ratesUsdPerHour: {
+                assemblyai: number;
+                deepgram: number;
+                openai_whisper: number;
+            };
+        };
+        UsageProviderSnapshot: {
+            /** @enum {string} */
+            provider: "assemblyai" | "deepgram" | "openai_whisper";
+            audioMinutes: number;
+            estimatedUsd: number;
+            reservations: number;
+        };
+        UsagePeriodSnapshot: {
+            audioMinutes: number;
+            estimatedUsd: number;
+            reservations: number;
+            byProvider: components["schemas"]["UsageProviderSnapshot"][];
+        };
+        UsageSnapshot: {
+            /** Format: date-time */
+            generatedAt: string;
+            /** @enum {string} */
+            currency: "USD";
+            policy: components["schemas"]["UsagePolicy"];
+            last24h: components["schemas"]["UsagePeriodSnapshot"];
+            last30d: components["schemas"]["UsagePeriodSnapshot"];
+            pendingReservations: number;
+            failedReservations: number;
+        };
+        UsageCostResponse: {
+            usage: components["schemas"]["UsageSnapshot"];
+        };
         /** @description Persisted non-secret defaults. Secrets (API keys) are never stored here. */
         NonSecretSettings: {
             /** @enum {string} */
@@ -864,6 +947,7 @@ export interface components {
             title: string;
             url: string;
             uploadDate?: string;
+            durationSeconds?: number;
             basename: string;
             processed: boolean;
         };
@@ -886,6 +970,7 @@ export interface components {
             videos: components["schemas"]["PlannedVideo"][];
             /** @description Videos selected to be processed for this run (unprocessed + capped by `maxNewVideos`). */
             selectedVideos: components["schemas"]["PlannedVideo"][];
+            usageEstimate?: components["schemas"]["UsageEstimate"];
         };
         RunPlanResponse: {
             plan: components["schemas"]["RunPlan"];
@@ -992,6 +1077,7 @@ export interface components {
             title: string;
             url: string;
             uploadDate?: string;
+            durationSeconds?: number;
             description?: string;
         };
         CatalogSummary: {
@@ -1057,6 +1143,35 @@ export interface operations {
                 };
                 content: {
                     "text/plain": string;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getUsageCost: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsageCostResponse"];
                 };
             };
             /** @description Unauthorized */

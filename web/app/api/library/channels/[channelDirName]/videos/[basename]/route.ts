@@ -2,9 +2,9 @@ import { proxyToApi } from "../../../../../../../lib/apiProxy";
 
 export async function DELETE(
   request: Request,
-  ctx: { params: { channelDirName: string; basename: string } }
+  ctx: { params: Promise<{ channelDirName: string; basename: string }> }
 ) {
-  const { channelDirName, basename } = ctx.params;
+  const { channelDirName, basename } = await ctx.params;
   return proxyToApi(
     request,
     `/library/channels/${encodeURIComponent(channelDirName)}/videos/${encodeURIComponent(basename)}`

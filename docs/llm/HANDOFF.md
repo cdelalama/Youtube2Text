@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.12 -->
+<!-- doc-version: 0.37.0 -->
 # LLM Work Handoff
 
 This file is the current operational snapshot. Keep it short (target: 1-2 screens).
@@ -6,7 +6,7 @@ Older long-form notes were moved to `docs/llm/HANDOFF_ARCHIVE.md`.
 
 All content should be ASCII-only to avoid Windows encoding issues.
 
-- Last Updated: 2026-07-14
+- Last Updated: 2026-07-15
 
 ## Open work
 - Session 2026-07-14: the operator issued GO for the complete cross-project
@@ -53,23 +53,23 @@ All content should be ASCII-only to avoid Windows encoding issues.
   decide which roadmap-badged console screens survive the boundary decision
   before refactoring MediaConsole. The y2t-vs-Cortex boundary decision itself
   is not yet written in DECISIONS.md (next free decision ID).
-- Current slice: source release 0.36.12 completes the correctness and web-auth
-  subset of the safety foundation. OpenAI Whisper keeps its 25 MB provider
-  limit, run artifacts are run-scoped, AssemblyAI abort is fail-closed and
-  polling retries cannot repurchase work, scheduler capacity skips are fair,
-  and the web BFF requires a signed operator session before backend API-key
-  injection. NAS runtime remains 0.36.8 until rollout.
+- Current slice: source release 0.37.0 completes the economic and deployment
+  safety foundation. Provider-boundary reservations enforce durable item, run,
+  source/24h, total/30d, and USD/30d limits; the console exposes authenticated
+  estimates and actual usage. CI, stable yt-dlp upstream watch, registry-based
+  NAS deploy/rollback, unprivileged images, and patched runtime dependencies are
+  included. NAS runtime remains 0.36.8 until rollout.
 - Product state: Media2Text operator-console scheduler state clarification is
   implemented and deployed in NAS runtime 0.36.8: Status and Automations now
   distinguish live watchlist/scheduler capability from production auto-start
   being OFF via `Y2T_SCHEDULER_ENABLED=false`.
-- Next product work: follow the operator-ratified
-  `docs/MEDIA_PIPELINE_CROSS_PROJECT_ROADMAP.md`. The next gate is
-  provider-boundary cost accounting and hard caps, followed by CI and deploy
-  automation before the versioned transcript/intake contracts.
+- Next product work: deploy and live-verify 0.37.0, reconcile Home Infra and
+  Infra Portal from deployed truth, then follow the operator-ratified
+  `docs/MEDIA_PIPELINE_CROSS_PROJECT_ROADMAP.md` into the versioned
+  transcript/intake contracts.
 
 ## Current Status
-- Version: 0.36.12 in source; NAS runtime remains 0.36.8. Visible brand: Media2Text.
+- Version: 0.37.0 in source; NAS runtime remains 0.36.8. Visible brand: Media2Text.
   Technical runtime/repo/config contract: `youtube2text` + `Y2T_` (see
   `docs/llm/DECISIONS.md` D-018).
 - GitHub: `cdelalama/Youtube2Text` is the canonical repo and is not a fork.
@@ -347,19 +347,24 @@ I) **Concurrency limits** (document in Operator Notes):
 
 J) **Optional future**: `getAccount()` for pre-flight balance check via `GET /v1/projects/{project_id}/balances`. Requires knowing the project_id. Defer unless needed.
 
-## Latest Checks (0.36.12 source)
-- Tests: `npm test` PASS 164/164; focused web-auth tests PASS 5/5.
-- Build: `npm run build` OK; `npm run build:web` OK, including middleware,
-  login, and both auth routes.
+## Latest Checks (0.37.0 source)
+- Tests: `npm test` PASS 180/180, including ledger concurrency and three
+  provider-boundary integration tests that prove denied work makes zero provider
+  calls, remains a terminal RunManager error, and allowed work is persisted.
+- Build: `npm run build` OK; Next 15.5.20 production build OK across 25 routes.
 - HTTP auth flow against the production Next build: anonymous page 307,
-  anonymous BFF 401, login 200, authenticated page 200, logout 200, logged-out
-  page 307.
-- Chromium desktop (1440x900) and mobile (390x844) login renders inspected:
-  centered layout, readable controls, and no clipping or overlap.
-- API contract: `npm run api:contract:check` OK after regenerating the changed
-  run-artifacts summary in `web/lib/apiTypes.gen.ts`.
+  anonymous BFF 401, login 200, authenticated cost BFF 200.
+- Chromium desktop (1440x900) and mobile (390x844) cost renders inspected:
+  live limits/costs visible, zero horizontal overflow, and zero mobile-footer
+  overlap at the end of the page.
+- API contract: Redocly lint and generated TypeScript contract OK.
+- Dependency audits: root and web `npm audit` report zero known vulnerabilities.
 - Version sync: `npm run version:check` + `scripts/check-version-sync.sh` OK.
 - Naming contract: `npm run naming:check` OK.
+- yt-dlp pin check: stable `2026.7.4` OK.
+- Docker: API smoke passes health/runs/settings/yt-dlp EJS; the paired API+web
+  images pass the production verifier (`health=0.37.0`, backend 401, usage
+  enforce with USD cap, scheduler OFF, login redirect, authenticated BFF).
 - DocKit validator: `scripts/dockit-validate-session.sh --human` PASS 10/10.
 - NAS live remains unchanged: `/health` reports 0.36.8, `/runs` returns 401
   unauthenticated, and scheduler auto-start remains OFF.

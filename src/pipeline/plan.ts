@@ -5,12 +5,15 @@ import { validateYtDlpInstalled } from "../utils/deps.js";
 import { makeVideoBaseName } from "../storage/naming.js";
 import { buildProcessedVideoIdSet } from "../storage/processedIndex.js";
 import { getListingWithCatalogCache } from "../youtube/catalogCache.js";
+import { UsageLedger } from "../usage/index.js";
+import type { UsageEstimate } from "../usage/index.js";
 
 export type PlannedVideo = {
   id: string;
   title: string;
   url: string;
   uploadDate?: string;
+  durationSeconds?: number;
   basename: string;
   processed: boolean;
 };
@@ -32,6 +35,7 @@ export type RunPlan = {
   };
   videos: PlannedVideo[];
   selectedVideos: PlannedVideo[];
+  usageEstimate?: UsageEstimate;
 };
 
 type BuildProcessedSetFn = (outputDir: string, channelId: string) => Promise<Set<string>>;
@@ -126,6 +130,7 @@ export async function planFromListing(
     title: candidate.video.title,
     url: candidate.video.url,
     uploadDate: candidate.video.uploadDate,
+    durationSeconds: candidate.video.durationSeconds,
     basename: candidate.basename,
     processed: candidate.processed,
   });
@@ -161,5 +166,22 @@ export async function planRun(
   }, {
     maxAgeHours: config.catalogMaxAgeHours,
   });
-  return planFromListing(inputUrl, listing, config, options);
+  const plan = await planFromListing(inputUrl, listing, config, options);
+  const known = plan.selectedVideos.filter(
+    (video) => typeof video.durationSeconds === "number" && video.durationSeconds > 0
+  );
+  const ledger = new UsageLedger(config.outputDir);
+  plan.usageEstimate = await ledger.estimate(
+    known.map((video) => ({
+      runId: "plan-preview",
+      sourceId: plan.channelId,
+      itemId: video.id,
+      provider: config.sttProvider,
+      audioSeconds: video.durationSeconds!,
+      itemSeconds: video.durationSeconds!,
+    })),
+    plan.selectedVideos.length - known.length,
+    config.sttProvider
+  );
+  return plan;
 }

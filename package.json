@@ -1,6 +1,6 @@
 {
   "name": "youtube2text",
-  "version": "0.36.12",
+  "version": "0.37.0",
   "description": "Local-first media transcription pipeline for YouTube and direct audio inputs.",
   "type": "module",
   "main": "dist/cli.js",
@@ -33,11 +33,11 @@
     "commander": "^12.1.0",
     "dotenv": "^16.4.5",
     "p-limit": "^6.2.0",
-    "yaml": "^2.5.1",
+    "yaml": "^2.9.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@redocly/cli": "^1.31.0",
+    "@redocly/cli": "^2.39.0",
     "@types/busboy": "^1.5.4",
     "@types/node": "^22.10.2",
     "openapi-typescript": "^7.9.1",

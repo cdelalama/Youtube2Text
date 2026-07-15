@@ -693,7 +693,7 @@ button.m2t-metric {
   align-items: center;
   color: var(--faint);
   font-size: 11px;
-  margin: -8px 0 20px;
+  margin: 12px 0 20px;
 }
 
 .m2t-note {
@@ -1634,7 +1634,7 @@ button.m2t-tr {
   }
 
   .m2t-content {
-    padding: 18px 14px 32px;
+    padding: 18px 14px 88px;
   }
 
   .m2t-intro {

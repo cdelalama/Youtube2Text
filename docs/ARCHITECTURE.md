@@ -1,8 +1,8 @@
-<!-- doc-version: 0.36.12 -->
+<!-- doc-version: 0.37.0 -->
 # Media2Text Architecture (youtube2text Engine)
 
-> Version: 0.36.12 (synced with package.json)
-> Last Updated: 2026-07-14
+> Version: 0.37.0 (synced with package.json)
+> Last Updated: 2026-07-15
 > Status: Implemented baseline plus gated cross-project roadmap
 > Authors: Claude + GPT-5.2 (viewpoints preserved)
 
@@ -73,6 +73,7 @@ Local-first artifacts on disk. Current layout:
 - `output/<channel_title_slug>__<channel_id>/_errors.jsonl` (per-channel error log)
 - `audio/<channel_title_slug>__<channel_id>/<basename>.<ext>`
 - `output/_uploads/<audioId>.json` + `audio/_uploads/<audioId>.<ext>` (uploaded audio staging)
+- `output/_usage/ledger.json` (atomic provider-call reservations and estimated cost)
 - `output/uploads/<basename>.*` + `audio/uploads/<basename>.<ext>` (processed local audio runs)
 
 Future multi-tenancy (Phase 2+) can wrap the same structure under a `user_id` prefix:
@@ -115,6 +116,13 @@ Persist detected language in per-video `.meta.json` for later UI/RAG use.
 Credits behavior:
 - Preflight account/balance check is best-effort (warn/abort/none).
 - Hard stop on "insufficient credits" errors is mandatory.
+- Independently of provider balance APIs, v0.37.0 measures audio duration and
+  reserves it in a persistent ledger immediately before every provider call.
+  Environment-only hard caps cover item, run, source/24h, total minutes/30d,
+  and estimated USD/30d. Corrupt or unavailable state fails closed.
+- Split audio is reserved atomically before the first chunk is sent. Failed or
+  crash-interrupted calls stay counted as potentially billable; chunks that
+  are definitely never sent are released.
 
 ## Phases / Roadmap (counted, sequential)
 

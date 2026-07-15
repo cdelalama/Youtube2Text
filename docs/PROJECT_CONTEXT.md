@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.12 -->
+<!-- doc-version: 0.37.0 -->
 # Project Context - Media2Text
 
 ## Vision
@@ -52,13 +52,13 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Storage | Persist outputs + idempotency | TBD | Layout: `output/<channel_title_slug>__<channel_id>/<basename>.*`. |
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
-## Current Status (2026-07-14)
-v0.36.12 stable in source adds signed application sessions to
-the operator console and rejects unauthenticated BFF requests before backend
-API-key injection. It also corrects OpenAI Whisper provider wiring, makes run
-artifact listings run-scoped, makes AssemblyAI credit aborts fail closed while
-preventing retry re-purchases, and fixes scheduler fairness. NAS runtime remains
-v0.36.8 with
+## Current Status (2026-07-15)
+v0.37.0 stable in source adds a persistent provider-boundary usage ledger, hard
+economic limits, preflight estimates, live cost metrics, CI, a pinned yt-dlp
+upstream watch, and registry-based NAS deployment automation. It includes the
+v0.36.12 signed application sessions, run-scoped artifacts, provider fixes,
+and scheduler fairness. NAS runtime remains v0.36.8 until the scripted rollout
+gate passes. The deployed runtime currently has
 the Media2Text operator console splitting `Estado` and `Nueva captura`,
 English-mode activity table headers fixed on the `Status` screen, and explicit
 scheduler auto-start OFF copy when `Y2T_SCHEDULER_ENABLED=false`. All planned phases (0-3.0) and
@@ -76,7 +76,8 @@ Completed:
 - Structured JSONL events via `--json-events` (for a future service/UI)
 - Language auto-detection via yt-dlp metadata/captions (with manual override)
 - AssemblyAI automatic language detection fallback when yt-dlp has no language
-- 164 tests (node:test framework)
+- Node test coverage for core, API, auth, provider safety, ledger concurrency,
+  and provider-boundary economic enforcement
 - yt-dlp error classification + smarter retries (no retries for access-denied)
 - HTTP API runner with OpenAPI spec (SSE events + artifacts listing)
 - API run/event persistence on disk (restart-safe by default)
@@ -95,6 +96,8 @@ Completed:
 - Security Audit v8: All P0/P1/P2 items fixed (11 CRITICAL + 18 HIGH + 17 MEDIUM)
 - Feature Mining Phase A: Atomic file writes + provider timeouts
 - Feature Mining Phase B: Multi-key load balancer with failover
+- Provider-boundary usage ledger, hard economic limits, and live cost metrics
+- GitHub Actions CI, stable yt-dlp pin/watch, and registry NAS deploy/rollback
 - Redesigned Next.js Media2Text operator console with visible roadmap badges,
   direct audio upload, transcript format views, and speaker labels
 - DELETE endpoints for library channels and videos (web UI + API)

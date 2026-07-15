@@ -10,6 +10,8 @@ import "./ytDlpErrors.test.js";
 import "./configEnvAliases.test.js";
 import "./sttProvider.test.js";
 import "./assemblyAiSafety.test.js";
+import "./usageLedger.test.js";
+import "./pipelineUsage.test.js";
 import "./loadBalancer.test.js";
 import "./utilsFetch.test.js";
 import "./catalogCache.test.js";

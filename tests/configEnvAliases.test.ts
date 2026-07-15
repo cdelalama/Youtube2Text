@@ -65,3 +65,18 @@ test("env config falls back to legacy names when Y2T_ vars are absent", async ()
     }
   );
 });
+
+test("empty optional numeric env values remain unset", async () => {
+  await withEnv(
+    {
+      Y2T_MAX_AUDIO_MB: "",
+      Y2T_CATALOG_MAX_AGE_HOURS: "  ",
+    },
+    () => {
+      const cfgPath = tempConfigPath();
+      const snap = loadConfigSourceSnapshots(cfgPath, { outputDirOverride: "output" });
+      assert.equal(snap.envConfig.maxAudioMB, undefined);
+      assert.equal(snap.envConfig.catalogMaxAgeHours, undefined);
+    }
+  );
+});

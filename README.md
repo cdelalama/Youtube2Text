@@ -1,4 +1,4 @@
-<!-- doc-version: 0.36.12 -->
+<!-- doc-version: 0.37.0 -->
 # Media2Text
 
 Media2Text is the visible product name for the `youtube2text` engine: a
@@ -177,6 +177,12 @@ Y2T_ASSEMBLYAI_KEY_FAILURES=2
 Y2T_ASSEMBLYAI_KEY_COOLDOWN_MS=60000
 Y2T_DEEPGRAM_KEY_FAILURES=2
 Y2T_DEEPGRAM_KEY_COOLDOWN_MS=60000
+Y2T_USAGE_ENFORCEMENT=enforce
+Y2T_USAGE_MAX_ITEM_MINUTES=180
+Y2T_USAGE_MAX_RUN_MINUTES=300
+Y2T_USAGE_MAX_SOURCE_MINUTES_24H=600
+Y2T_USAGE_MAX_TOTAL_MINUTES_30D=3000
+Y2T_USAGE_MAX_TOTAL_USD_30D=25
 ```
 
 Notes:
@@ -200,6 +206,15 @@ Example files:
 - `config.yaml.example` - optional non-secret defaults (copy to `config.yaml`).
 - `runs.yaml.example` - optional batch runs template (copy to `runs.yaml` or `runs.yml`).
 - `output/_settings.json` - optional non-secret defaults persisted by the API/web UI (never commit this file).
+
+Repository enforcement:
+- GitHub Actions runs engine/web installs, tests, both builds, version sync,
+  naming, OpenAPI/type drift, and clean generated-tree checks on pushes and
+  pull requests.
+- Dependabot covers root npm, web npm, and GitHub Actions dependencies.
+- A separate weekly workflow compares the pinned stable yt-dlp release with
+  the official PyPI release. This is dependency monitoring, not a Home Infra
+  `sync_job`.
 
 ## CLI Usage
 
@@ -368,6 +383,37 @@ Scheduler / watchlist (Phase 2.3, opt-in):
 Monitoring:
 - `GET /metrics` exposes Prometheus text metrics (requires `X-API-Key`).
   - Includes catalog cache counters: `y2t_catalog_cache_hit_total`, `y2t_catalog_cache_miss_total`, `y2t_catalog_cache_expired_total`, `y2t_catalog_full_refresh_total`, `y2t_catalog_incremental_refresh_total`, `y2t_catalog_incremental_added_videos_total`.
+- `GET /metrics/cost` returns the authenticated JSON usage snapshot used by the
+  operator console. Prometheus output also includes usage minutes, estimated
+  USD, and pending/failed reservations.
+
+Usage ledger and economic limits:
+- Every provider call reserves measured audio duration immediately before
+  transcription. This single boundary covers CLI, API, console, scheduler, and
+  future intake adapters.
+- The ledger is stored atomically at `output/_usage/ledger.json`. A corrupt or
+  unavailable ledger fails closed. Failed and crash-interrupted reservations
+  remain counted because the provider may already have billed them.
+- `POST /runs/plan` returns `usageEstimate` when listing durations are known.
+  Older catalog entries without durations produce an explicitly incomplete
+  estimate rather than a guessed total.
+- Limits are environment-only and cannot be weakened by per-run input:
+  - `Y2T_USAGE_ENFORCEMENT=enforce` blocks violations; `track` records without
+    blocking and is intended only for observation/emergency operation.
+  - `Y2T_USAGE_MAX_ITEM_MINUTES=180`
+  - `Y2T_USAGE_MAX_RUN_MINUTES=300`
+  - `Y2T_USAGE_MAX_SOURCE_MINUTES_24H=600`
+  - `Y2T_USAGE_MAX_TOTAL_MINUTES_30D=3000`
+  - `Y2T_USAGE_MAX_TOTAL_USD_30D=25`
+  - Set an individual numeric limit to `0` to disable only that limit.
+- Default rates are conservative public pay-as-you-go estimates verified on
+  2026-07-14. Override them to match the active model and account agreement:
+  - `Y2T_USAGE_RATE_ASSEMBLYAI_USD_PER_HOUR=0.23`
+  - `Y2T_USAGE_RATE_DEEPGRAM_USD_PER_HOUR=0.552`
+  - `Y2T_USAGE_RATE_OPENAI_WHISPER_USD_PER_HOUR=0.36`
+  - Sources: [AssemblyAI pricing](https://www.assemblyai.com/pricing),
+    [Deepgram pricing](https://deepgram.com/pricing), and
+    [OpenAI Whisper pricing](https://developers.openai.com/api/docs/models/whisper-1).
 
 Webhooks (optional, production guidance):
 - `POST /runs` supports `callbackUrl`. The API sends a POST webhook when the run ends:
@@ -405,6 +451,7 @@ Endpoints:
 - `GET /health?deep=true` (best-effort deps + disk + persistence checks; requires `X-API-Key` unless `Y2T_HEALTH_DEEP_PUBLIC=true`)
 - `GET /providers` (provider capabilities: max upload size, diarization support)
 - `GET /metrics` (Prometheus text format)
+- `GET /metrics/cost` (usage ledger and estimated provider cost)
 - `POST /maintenance/cleanup` (retention cleanup for `output/_runs/*` + old audio cache)
 - `POST /audio` (upload local audio, returns `audioId`)
 - `GET /settings`, `PATCH /settings` (persist non-secret defaults to `output/_settings.json`)

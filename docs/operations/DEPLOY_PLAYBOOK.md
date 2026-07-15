@@ -24,6 +24,8 @@ It does not replace the CLI: the CLI remains fully operational and can be run se
 - `ASSEMBLYAI_API_KEY` (required when `sttProvider=assemblyai`)
 - `DEEPGRAM_API_KEY` (required when `sttProvider=deepgram`)
 - `OPENAI_API_KEY` or `Y2T_OPENAI_API_KEY` (required when `sttProvider=openai_whisper`)
+- `Y2T_ASSEMBLYAI_API_KEYS` / `Y2T_DEEPGRAM_API_KEYS` (optional comma-separated
+  rotation pools; keep the singular key during staged rotation, then remove it)
 - `Y2T_API_KEY` (private API credential; at least 32 characters)
 - `Y2T_WEB_AUTH_SECRET` (random web-session signing secret; at least 32 characters)
 - `Y2T_WEB_AUTH_PASSPHRASE` (operator console passphrase; at least 12 characters)
@@ -73,6 +75,13 @@ It does not replace the CLI: the CLI remains fully operational and can be run se
 - `Y2T_WEBHOOK_RETRIES` (webhook retries; default 3)
 - `Y2T_WEBHOOK_TIMEOUT_MS` (per-attempt webhook timeout; default 5000)
 - `NEXT_PUBLIC_Y2T_API_BASE_URL` (web browser API base URL; must be publicly reachable)
+- `Y2T_USAGE_ENFORCEMENT=enforce` (provider-boundary economic guard; do not use
+  `track` for unattended production runs)
+- `Y2T_USAGE_MAX_ITEM_MINUTES=180`
+- `Y2T_USAGE_MAX_RUN_MINUTES=300`
+- `Y2T_USAGE_MAX_SOURCE_MINUTES_24H=600`
+- `Y2T_USAGE_MAX_TOTAL_MINUTES_30D=3000`
+- `Y2T_USAGE_MAX_TOTAL_USD_30D=25`
  
 docker-compose defaults:
 - The compose file now uses `${VAR:-default}` for all optional env vars to match code defaults.
@@ -114,6 +123,8 @@ Non-secret defaults:
 6) `Y2T_HEALTH_DEEP_PUBLIC=false` (deep health requires auth).
 7) If using a proxy: `Y2T_TRUST_PROXY=true` only when behind a trusted proxy.
 8) API not exposed publicly if avoidable; otherwise ensure rate limits are enabled.
+9) `Y2T_USAGE_ENFORCEMENT=enforce`; inspect `GET /metrics/cost` and confirm the
+   limits/rates match the operator-approved spend before enabling the scheduler.
 
 ## Reverse proxy (recommended)
 
@@ -126,6 +137,14 @@ Terminate TLS in a reverse proxy (Caddy/Nginx/Traefik) and forward:
 - Basic health: `GET /health`
 - Deep health (deps + disk + persistence): `GET /health?deep=true` (requires API key unless `Y2T_HEALTH_DEEP_PUBLIC=true`)
 - Manual retention cleanup: `POST /maintenance/cleanup`
+- Usage and estimated cost: `GET /metrics/cost` (authenticated)
+
+The persistent usage ledger lives under `output/_usage/ledger.json`, inside the
+existing output volume. Do not delete or edit it during routine deploys. Failed
+or unresolved reservations are intentionally retained as potentially billable.
+Usage limits and rates are environment-only, so configure them in Doppler or the
+server env rather than `config.yaml` or API settings. A numeric limit of `0`
+disables that individual cap.
 
 ## Periodic maintenance (cron example)
 
@@ -180,7 +199,7 @@ compose). Secrets are managed via Doppler service tokens fetched at startup usin
 `dopplerhq/cli` Docker image.
 
 Key design decisions:
-- Healthcheck uses `node` (not `wget`/`curl`) since `node:20-slim` does not include them
+- Healthchecks use `node` (not `wget`/`curl`) because the slim runtime images do not include them
 - `start.sh` uses `umask 077` + `trap` to protect ephemeral secrets files
 - On NAS, never run Compose directly for this service. Always use `/bin/sh
   start.sh`, which fetches Doppler secrets and invokes Compose with
@@ -216,23 +235,18 @@ flags; arbitrary yt-dlp args are intentionally not exposed through Settings/UI/A
 ### Deploy a new version
 
 ```bash
-# 1. Build new images
-npm run build && npm --prefix web run build
-docker build -t youtube2text-api:v<VERSION> .
-docker build -t youtube2text-web:v<VERSION> -f web/Dockerfile web/
+# From a clean, committed release tree. This runs all gates, builds and pushes
+# both images to registry.lamanoriega.com, installs versioned NAS runtime files,
+# starts through Doppler-aware start.sh, verifies auth/cost/scheduler state, and
+# restores the previous deployment files automatically if verification fails.
+scripts/deploy-nas.sh <VERSION>
 
-# 2. Transfer images to production server
-docker save youtube2text-api:v<VERSION> | ssh <SERVER> 'docker load'
-docker save youtube2text-web:v<VERSION> | ssh <SERVER> 'docker load'
-
-# 3. Update docker-compose.yml image tags, copy to server, restart through
-#    the server start script. Do not run Compose directly on NAS; start.sh
-#    materializes Doppler secrets before invoking Compose.
-
-# 4. Verify
-curl -s http://<SERVER>:8787/health
-# Expected: {"ok":true,"version":"<VERSION>"}
+# Explicit rollback uses retained registry tags.
+scripts/deploy-nas.sh --rollback <PREVIOUS_VERSION>
 ```
+
+The previous `docker save | ssh docker load` procedure remains an emergency
+fallback, not the normal deployment path. NAS builds remain prohibited.
 
 ### Verification checklist
 
@@ -240,6 +254,7 @@ curl -s http://<SERVER>:8787/health
 - [ ] `/runs` without API key returns 401
 - [ ] `/runs` with API key returns 200
 - [ ] Web UI loads and shows correct version
+- [ ] `/metrics/cost` with API key returns `enforcement: enforce` and the approved limits
 
 For server-specific deployment details (paths, credentials, workarounds), see the
 private infrastructure documentation.

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Media2Text API
-  version: 0.36.12
+  version: 0.37.0
   description: |
     Minimal local HTTP API for Media2Text, backed by the youtube2text engine.
     Notes:
@@ -28,6 +28,28 @@ paths:
             text/plain:
               schema:
                 type: string
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /metrics/cost:
+    get:
+      operationId: getUsageCost
+      summary: Get estimated transcription usage and cost
+      description: |
+        Returns the local usage ledger snapshot. Cost is estimated from audio duration
+        and operator-configured provider rates; failed reservations remain counted
+        because a provider may already have billed the request.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsageCostResponse"
         "401":
           description: Unauthorized
           content:
@@ -1088,6 +1110,102 @@ components:
           items:
             $ref: "#/components/schemas/ProviderCapability"
 
+    UsageViolation:
+      type: object
+      required: [scope, limit, projected, unit]
+      properties:
+        scope:
+          type: string
+          enum: [item, run, source_24h, total_30d, usd_30d]
+        limit: { type: number }
+        projected: { type: number }
+        unit:
+          type: string
+          enum: [minutes, usd]
+
+    UsageEstimate:
+      type: object
+      required:
+        [provider, knownItems, unknownItems, audioMinutes, estimatedUsd, complete, allowed, enforced, violations]
+      properties:
+        provider:
+          type: string
+          enum: [assemblyai, deepgram, openai_whisper]
+        knownItems: { type: integer }
+        unknownItems: { type: integer }
+        audioMinutes: { type: number }
+        estimatedUsd: { type: number }
+        complete: { type: boolean }
+        allowed:
+          type: [boolean, "null"]
+        enforced: { type: boolean }
+        violations:
+          type: array
+          items: { $ref: "#/components/schemas/UsageViolation" }
+
+    UsagePolicy:
+      type: object
+      required:
+        [enforcement, maxItemMinutes, maxRunMinutes, maxSourceMinutes24h, maxTotalMinutes30d, maxTotalUsd30d, ratesUsdPerHour]
+      properties:
+        enforcement:
+          type: string
+          enum: [enforce, track]
+        maxItemMinutes: { type: number }
+        maxRunMinutes: { type: number }
+        maxSourceMinutes24h: { type: number }
+        maxTotalMinutes30d: { type: number }
+        maxTotalUsd30d: { type: number }
+        ratesUsdPerHour:
+          type: object
+          required: [assemblyai, deepgram, openai_whisper]
+          properties:
+            assemblyai: { type: number }
+            deepgram: { type: number }
+            openai_whisper: { type: number }
+
+    UsageProviderSnapshot:
+      type: object
+      required: [provider, audioMinutes, estimatedUsd, reservations]
+      properties:
+        provider:
+          type: string
+          enum: [assemblyai, deepgram, openai_whisper]
+        audioMinutes: { type: number }
+        estimatedUsd: { type: number }
+        reservations: { type: integer }
+
+    UsagePeriodSnapshot:
+      type: object
+      required: [audioMinutes, estimatedUsd, reservations, byProvider]
+      properties:
+        audioMinutes: { type: number }
+        estimatedUsd: { type: number }
+        reservations: { type: integer }
+        byProvider:
+          type: array
+          items: { $ref: "#/components/schemas/UsageProviderSnapshot" }
+
+    UsageSnapshot:
+      type: object
+      required: [generatedAt, currency, policy, last24h, last30d, pendingReservations, failedReservations]
+      properties:
+        generatedAt: { type: string, format: date-time }
+        currency:
+          type: string
+          enum: [USD]
+        policy: { $ref: "#/components/schemas/UsagePolicy" }
+        last24h: { $ref: "#/components/schemas/UsagePeriodSnapshot" }
+        last30d: { $ref: "#/components/schemas/UsagePeriodSnapshot" }
+        pendingReservations: { type: integer }
+        failedReservations: { type: integer }
+
+    UsageCostResponse:
+      type: object
+      required: [usage]
+      properties:
+        usage: { $ref: "#/components/schemas/UsageSnapshot" }
+
     NonSecretSettings:
       type: object
       description: |
@@ -1500,6 +1618,7 @@ components:
         title: { type: string }
         url: { type: string }
         uploadDate: { type: string }
+        durationSeconds: { type: number }
         basename: { type: string }
         processed: { type: boolean }
 
@@ -1546,6 +1665,8 @@ components:
           type: array
           description: Videos selected to be processed for this run (unprocessed + capped by `maxNewVideos`).
           items: { $ref: "#/components/schemas/PlannedVideo" }
+        usageEstimate:
+          $ref: "#/components/schemas/UsageEstimate"
 
     RunPlanResponse:
       type: object
@@ -1724,6 +1845,7 @@ components:
         title: { type: string }
         url: { type: string }
         uploadDate: { type: string }
+        durationSeconds: { type: number }
         description: { type: string }
 
     CatalogSummary:

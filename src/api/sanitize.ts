@@ -11,6 +11,9 @@ export function sanitizeConfigOverrides(
     "prototype",
     "constructor",
     "assemblyAiApiKey",
+    "assemblyAiApiKeys",
+    "deepgramApiKey",
+    "deepgramApiKeys",
     "openaiApiKey",
     "ytDlpPath",
   ]) {
@@ -21,4 +24,3 @@ export function sanitizeConfigOverrides(
   const parsed = configSchemaBase.partial().safeParse(copy);
   return parsed.success ? parsed.data : {};
 }
-

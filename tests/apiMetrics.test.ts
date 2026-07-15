@@ -74,6 +74,37 @@ test("GET /metrics requires X-API-Key when Y2T_API_KEY is set", async () => {
     });
     assert.equal(ok.status, 200);
     assert.match(ok.headers.get("content-type") ?? "", /^text\/plain/);
+    const metrics = await ok.text();
+    assert.match(metrics, /y2t_usage_audio_minutes\{period="30d"\} 0/);
+    assert.match(metrics, /y2t_usage_estimated_usd\{period="30d"\} 0/);
+
+    const costUnauthorized = await fetch(`http://127.0.0.1:${port}/metrics/cost`);
+    assert.equal(costUnauthorized.status, 401);
+
+    const cost = await fetch(`http://127.0.0.1:${port}/metrics/cost`, {
+      headers: { "x-api-key": "test-api-key-aaaaaaaaaaaaaaaaaaaaaa" },
+    });
+    assert.equal(cost.status, 200);
+    const body = await cost.json() as {
+      usage: {
+        currency: string;
+        policy: { enforcement: string; maxTotalUsd30d: number };
+        last30d: { audioMinutes: number; estimatedUsd: number };
+      };
+    };
+    assert.equal(body.usage.currency, "USD");
+    assert.equal(body.usage.policy.enforcement, "enforce");
+    assert.equal(body.usage.policy.maxTotalUsd30d, 25);
+    assert.deepEqual(body.usage.last30d, {
+      audioMinutes: 0,
+      estimatedUsd: 0,
+      reservations: 0,
+      byProvider: [
+        { provider: "assemblyai", audioMinutes: 0, estimatedUsd: 0, reservations: 0 },
+        { provider: "deepgram", audioMinutes: 0, estimatedUsd: 0, reservations: 0 },
+        { provider: "openai_whisper", audioMinutes: 0, estimatedUsd: 0, reservations: 0 },
+      ],
+    });
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
     if (prev === undefined) delete process.env.Y2T_API_KEY;

@@ -22,6 +22,11 @@ function parseScreen(value?: string | string[]): Screen {
   return screens.includes(candidate as Screen) ? (candidate as Screen) : "status";
 }
 
-export default function Page({ searchParams }: { searchParams?: { screen?: string | string[] } }) {
-  return <MediaConsole initialScreen={parseScreen(searchParams?.screen)} />;
+export default async function Page({
+  searchParams,
+}: {
+  searchParams?: Promise<{ screen?: string | string[] }>;
+}) {
+  const query = await searchParams;
+  return <MediaConsole initialScreen={parseScreen(query?.screen)} />;
 }

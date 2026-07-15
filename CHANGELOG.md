@@ -5,6 +5,40 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.37.0] - 2026-07-15
+
+### Added
+- Added a persistent provider-boundary usage ledger with hard caps by item,
+  run, source/24h, total minutes/30d, and estimated USD/30d.
+- Added authenticated `GET /metrics/cost`, Prometheus usage gauges, plan-time
+  duration/cost estimates, and live operator-console budget visibility.
+- Added GitHub Actions CI for tests, builds, version/naming/API contracts, plus
+  Dependabot and a weekly stable yt-dlp upstream watch.
+- Added versioned NAS compose/start/stop assets, registry-based deployment and
+  rollback automation, and an authenticated post-deploy verifier.
+
+### Changed
+- Provider credentials and economic policy can no longer be overridden by run
+  payloads. Provider key pools remain available through env/Doppler for staged
+  rotation and failover.
+- The API and web runtime images now run as the unprivileged `node` user; the
+  web image moves to Node 24 and yt-dlp is pinned to stable `2026.7.4`.
+- Updated the web runtime to Next.js 15.5.20 with patched PostCSS 8.5.19, and
+  updated the API YAML parser and Redocly contract CLI, leaving the engine and
+  web dependency audits free of known vulnerabilities.
+- YouTube catalog entries carry duration when yt-dlp provides it, allowing
+  preflight estimates to be complete without downloading audio.
+
+### Fixed
+- Runs blocked by an economic limit now finish as `run:error` and stop queued
+  work before any denied provider call is made.
+- Runtime manifests and standalone assets are owned by the unprivileged `node`
+  user, so health/version reporting remains readable after dropping root.
+- Empty optional numeric environment variables remain unset instead of being
+  interpreted as zero, preserving documented values such as `Y2T_MAX_AUDIO_MB=`.
+- The production web healthcheck now probes `/login`, which remains HTTP 200
+  after application authentication redirects `/`.
+
 ## [0.36.12] - 2026-07-14
 
 ### Added

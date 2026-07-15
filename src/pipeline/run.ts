@@ -12,6 +12,7 @@ import {
 import type { YoutubeListing } from "../youtube/index.js";
 import { getListingWithCatalogCache } from "../youtube/catalogCache.js";
 import { createTranscriptionProvider } from "../transcription/index.js";
+import type { TranscriptionProvider } from "../transcription/index.js";
 import { formatTxt, formatCsv, formatMd, formatJsonl } from "../formatters/index.js";
 import {
   getOutputPaths,
@@ -32,12 +33,15 @@ import { validateYtDlpInstalled } from "../utils/deps.js";
 import { InsufficientCreditsError } from "../transcription/errors.js";
 import { PipelineEventEmitter, PipelineStage } from "./events.js";
 import { YtDlpError } from "../youtube/ytDlpErrors.js";
-import { splitAudioByLimit } from "../utils/audio.js";
+import { getAudioDurationSeconds, splitAudioByLimit } from "../utils/audio.js";
 import { mergeChunkTranscripts } from "../transcription/merge.js";
+import { randomUUID } from "node:crypto";
 import { promises as fs } from "node:fs";
 import { dirname, basename as pathBasename, extname } from "node:path";
 import { makeChannelDirName } from "../storage/naming.js";
 import { selectCandidateVideos } from "./plan.js";
+import { UsageLedger, UsageLimitExceededError } from "../usage/index.js";
+import type { UsageReservation } from "../usage/index.js";
 
 type AssemblyAiAccountResponse = Record<string, unknown> & {
   credit_balance?: number;
@@ -88,7 +92,7 @@ function getCreditsMinutesRemaining(
 
 export async function checkAssemblyAiCredits(
   config: AppConfig,
-  providerFactory = createTranscriptionProvider
+  providerFactory: (config: AppConfig) => TranscriptionProvider = createTranscriptionProvider
 ): Promise<void> {
   if (config.assemblyAiCreditsCheck === "none" || config.sttProvider !== "assemblyai") {
     return;
@@ -131,7 +135,17 @@ export async function checkAssemblyAiCredits(
 export async function runPipeline(
   input: RunInput,
   config: AppConfig,
-  options: { force: boolean; emitter?: PipelineEventEmitter; abortSignal?: AbortSignal }
+  options: {
+    force: boolean;
+    emitter?: PipelineEventEmitter;
+    abortSignal?: AbortSignal;
+    runId?: string;
+    deps?: {
+      createTranscriptionProvider?: (config: AppConfig) => TranscriptionProvider;
+      getAudioDurationSeconds?: (audioPath: string) => Promise<number>;
+      usageLedger?: UsageLedger;
+    };
+  }
 ) {
   const isAudioInput = typeof input !== "string";
   const audioInput = isAudioInput ? input : undefined;
@@ -169,7 +183,9 @@ export async function runPipeline(
     },
     { once: true }
   );
-  await checkAssemblyAiCredits(config);
+  const providerFactory = options.deps?.createTranscriptionProvider ?? createTranscriptionProvider;
+  const getAudioDuration = options.deps?.getAudioDurationSeconds ?? getAudioDurationSeconds;
+  await checkAssemblyAiCredits(config, providerFactory);
 
   const ytDlpExtraArgs: string[] = [];
   const listing: YoutubeListing = audioInput
@@ -243,6 +259,7 @@ export async function runPipeline(
   let succeeded = 0;
   let failed = 0;
   let skipped = 0;
+  let usageBlockError: UsageLimitExceededError | undefined;
 
   logStep(
     "progress",
@@ -311,7 +328,21 @@ export async function runPipeline(
     }
   }
 
-  const provider = createTranscriptionProvider(config);
+  const provider = providerFactory(config);
+  const usageLedger = options.deps?.usageLedger ?? new UsageLedger(config.outputDir);
+  const usageRunId = options.runId ?? randomUUID();
+  const finishUsage = async (
+    reservation: UsageReservation,
+    status: "completed" | "failed" | "released"
+  ) => {
+    try {
+      await usageLedger.finish(reservation.reservationId, status);
+    } catch (error) {
+      logWarn(
+        `Usage ledger update failed for ${reservation.reservationId}: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  };
   const limit = pLimit(config.concurrency);
   const providerCaps = provider.getCapabilities();
   const providerMaxBytes = providerCaps.maxAudioBytes;
@@ -432,6 +463,8 @@ export async function runPipeline(
               return;
             }
 
+            const itemAudioSeconds = await getAudioDuration(audioPath);
+
             const language =
               config.languageDetection === "manual"
                 ? {
@@ -479,16 +512,43 @@ export async function runPipeline(
               );
               try {
                 const chunkResults = [];
-                for (const chunk of chunks) {
+                const chunkDurations = await Promise.all(
+                  chunks.map((chunk) => getAudioDuration(chunk.path))
+                );
+                const reservations = await usageLedger.reserveBatch(
+                  chunks.map((_chunk, chunkIndex) => ({
+                    runId: usageRunId,
+                    sourceId: listing.channelId,
+                    itemId: video.id,
+                    provider: config.sttProvider,
+                    audioSeconds: chunkDurations[chunkIndex]!,
+                    itemSeconds: itemAudioSeconds,
+                  }))
+                );
+                for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex += 1) {
+                  const chunk = chunks[chunkIndex]!;
+                  const reservation = reservations[chunkIndex]!;
                   stageForError = "transcribe";
-                  const chunkTranscript = await provider.transcribe(chunk.path, {
-                    languageCode: useProviderAutoLanguageDetection ? undefined : language.languageCode,
-                    languageDetection: useProviderAutoLanguageDetection ? true : undefined,
-                    pollIntervalMs: config.pollIntervalMs,
-                    maxPollMinutes: config.maxPollMinutes,
-                    retries: config.transcriptionRetries,
-                    providerTimeoutMs: config.providerTimeoutMs,
-                  });
+                  let chunkTranscript;
+                  try {
+                    chunkTranscript = await provider.transcribe(chunk.path, {
+                      languageCode: useProviderAutoLanguageDetection ? undefined : language.languageCode,
+                      languageDetection: useProviderAutoLanguageDetection ? true : undefined,
+                      pollIntervalMs: config.pollIntervalMs,
+                      maxPollMinutes: config.maxPollMinutes,
+                      retries: config.transcriptionRetries,
+                      providerTimeoutMs: config.providerTimeoutMs,
+                    });
+                    await finishUsage(reservation, "completed");
+                  } catch (error) {
+                    await finishUsage(reservation, "failed");
+                    await Promise.all(
+                      reservations
+                        .slice(chunkIndex + 1)
+                        .map((unused) => finishUsage(unused, "released"))
+                    );
+                    throw error;
+                  }
                   chunkResults.push({
                     transcript: chunkTranscript,
                     startSeconds: chunk.startSeconds,
@@ -500,14 +560,28 @@ export async function runPipeline(
                 await cleanup();
               }
             } else {
-              transcript = await provider.transcribe(audioPath, {
-                languageCode: useProviderAutoLanguageDetection ? undefined : language.languageCode,
-                languageDetection: useProviderAutoLanguageDetection ? true : undefined,
-                pollIntervalMs: config.pollIntervalMs,
-                maxPollMinutes: config.maxPollMinutes,
-                retries: config.transcriptionRetries,
-                providerTimeoutMs: config.providerTimeoutMs,
+              const reservation = await usageLedger.reserve({
+                runId: usageRunId,
+                sourceId: listing.channelId,
+                itemId: video.id,
+                provider: config.sttProvider,
+                audioSeconds: itemAudioSeconds,
+                itemSeconds: itemAudioSeconds,
               });
+              try {
+                transcript = await provider.transcribe(audioPath, {
+                  languageCode: useProviderAutoLanguageDetection ? undefined : language.languageCode,
+                  languageDetection: useProviderAutoLanguageDetection ? true : undefined,
+                  pollIntervalMs: config.pollIntervalMs,
+                  maxPollMinutes: config.maxPollMinutes,
+                  retries: config.transcriptionRetries,
+                  providerTimeoutMs: config.providerTimeoutMs,
+                });
+                await finishUsage(reservation, "completed");
+              } catch (error) {
+                await finishUsage(reservation, "failed");
+                throw error;
+              }
             }
 
             const description = audioInput
@@ -645,6 +719,10 @@ export async function runPipeline(
               );
               throw error;
             }
+            if (error instanceof UsageLimitExceededError) {
+              stopAll = true;
+              usageBlockError ??= error;
+            }
             if (error instanceof YtDlpError) {
               hintForError = error.info.hint;
             }
@@ -669,6 +747,7 @@ export async function runPipeline(
       )
     );
 
+    if (usageBlockError) throw usageBlockError;
     if (isCancelled()) {
       emitter?.emit({
         type: "run:cancelled",

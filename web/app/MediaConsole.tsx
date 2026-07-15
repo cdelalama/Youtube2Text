@@ -55,6 +55,36 @@ type MetricsSnapshot = {
   nextTickSeconds?: number;
 };
 
+type UsageSnapshot = {
+  generatedAt: string;
+  currency: "USD";
+  policy: {
+    enforcement: "enforce" | "track";
+    maxItemMinutes: number;
+    maxRunMinutes: number;
+    maxSourceMinutes24h: number;
+    maxTotalMinutes30d: number;
+    maxTotalUsd30d: number;
+    ratesUsdPerHour: Record<string, number>;
+  };
+  last24h: UsagePeriodSnapshot;
+  last30d: UsagePeriodSnapshot;
+  pendingReservations: number;
+  failedReservations: number;
+};
+
+type UsagePeriodSnapshot = {
+  audioMinutes: number;
+  estimatedUsd: number;
+  reservations: number;
+  byProvider: Array<{
+    provider: string;
+    audioMinutes: number;
+    estimatedUsd: number;
+    reservations: number;
+  }>;
+};
+
 const navItems: Array<{ id: Screen; es: string; en: string; badge?: string; icon: IconName }> = [
   { id: "status", es: "Estado", en: "Status", icon: "pulse" },
   { id: "capture", es: "Nueva captura", en: "New capture", icon: "plus" },
@@ -163,6 +193,19 @@ function timecode(ms?: number): string {
 
 function compactNumber(value: number): string {
   return new Intl.NumberFormat("es-ES", { notation: "compact", maximumFractionDigits: 1 }).format(value);
+}
+
+function formatUsd(value: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+function formatMinutes(value: number): string {
+  return new Intl.NumberFormat("es-ES", { maximumFractionDigits: 1 }).format(value);
 }
 
 function initials(text?: string): string {
@@ -280,6 +323,7 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
   const [providers, setProviders] = useState<ProviderCapability[]>([]);
   const [health, setHealth] = useState<HealthResponse | undefined>();
   const [metrics, setMetrics] = useState<MetricsSnapshot>({ runs: {} });
+  const [usage, setUsage] = useState<UsageSnapshot | undefined>();
   const [selectedChannel, setSelectedChannel] = useState<ChannelInfo | undefined>();
   const [selectedVideo, setSelectedVideo] = useState<VideoInfo | undefined>();
   const [transcript, setTranscript] = useState<TranscriptJson | undefined>();
@@ -323,7 +367,7 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
   }
 
   async function refreshAll() {
-    const [runsRes, channelsRes, watchlistRes, schedulerRes, settingsRes, providersRes, healthRes] = await Promise.all([
+    const [runsRes, channelsRes, watchlistRes, schedulerRes, settingsRes, providersRes, healthRes, usageRes] = await Promise.all([
       maybeJson<{ runs: RunRecord[] }>("/api/runs"),
       maybeJson<{ channels: ChannelInfo[] }>("/api/library/channels"),
       maybeJson<{ entries: WatchlistEntry[] }>("/api/watchlist"),
@@ -331,6 +375,7 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
       maybeJson<SettingsGetResponse>("/api/settings"),
       maybeJson<{ providers: ProviderCapability[] }>("/api/providers"),
       maybeJson<HealthResponse>("/api/health"),
+      maybeJson<{ usage: UsageSnapshot }>("/api/metrics/cost"),
     ]);
     setRuns(runsRes?.runs ?? []);
     setChannels(channelsRes?.channels ?? []);
@@ -339,6 +384,7 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
     setSettings(settingsRes);
     setProviders(providersRes?.providers ?? []);
     setHealth(healthRes);
+    setUsage(usageRes?.usage);
     setSettingsDraft({
       sttProvider: settingsRes?.effective?.sttProvider ?? "assemblyai",
       languageDetection: settingsRes?.effective?.languageDetection ?? "auto",
@@ -674,10 +720,10 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
         <div className="m2t-metrics">
           <Metric label={t(lang, "PROCESADOS", "PROCESSED")} value={String(videoStats.succeeded || doneRuns)} text={t(lang, "ítems transcritos en total", "items transcribed in total")} />
           <Metric label={t(lang, "TASA DE ÉXITO", "SUCCESS RATE")} value={successRate === undefined ? "-" : `${successRate}%`} accent text={`${videoStats.succeeded} ÷ ${videoStats.attempts || 0}`} />
-          <Metric label={t(lang, "COSTE (MES)", "COST (MONTH)")} value="—" text={t(lang, "pendiente de /metrics/cost", "waiting for /metrics/cost")} onClick={() => go("cost")} state="ESTIMADO" />
+          <Metric label={t(lang, "COSTE (30 D)", "COST (30 D)")} value={usage ? formatUsd(usage.last30d.estimatedUsd) : "-"} text={t(lang, "estimación registrada", "ledger estimate")} onClick={() => go("cost")} state={usage ? "LIVE" : "PARCIAL"} />
           <Metric label={t(lang, "FALLIDOS", "FAILED")} value={String(videoStats.failed || failedRuns)} danger text={t(lang, "ver y reintentar", "view and retry")} onClick={() => go("errors")} />
         </div>
-        <div className="m2t-honesty"><span>ƒ</span>{t(lang, "Runs y biblioteca vienen del motor. Coste y backlog son visibles como roadmap hasta que exista /metrics/cost y cola persistida.", "Runs and library come from the engine. Cost and backlog are roadmap-visible until /metrics/cost and persisted queue exist.")}</div>
+        <div className="m2t-honesty"><span>ƒ</span>{t(lang, "Runs, biblioteca y coste estimado vienen del motor. El backlog externo sigue pendiente de una cola persistida.", "Runs, library, and estimated cost come from the engine. External backlog still awaits a persisted queue.")}</div>
 
         <SectionHeader title={t(lang, "Actividad", "Activity")} right={<span className="m2t-live"><span />LIVE</span>} />
         <RunsTable runs={runs.slice(0, 5)} lang={lang} onOpenRun={(run) => {
@@ -725,6 +771,13 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
               <span>total {plan.totalVideos}</span>
               <span>processed {plan.alreadyProcessed}</span>
               <span>selected {plan.toProcess}</span>
+              {plan.usageEstimate ? (
+                <span>
+                  {formatMinutes(plan.usageEstimate.audioMinutes)} min · {formatUsd(plan.usageEstimate.estimatedUsd)}
+                  {plan.usageEstimate.complete ? "" : ` · ${plan.usageEstimate.unknownItems} ${t(lang, "sin duración", "without duration")}`}
+                </span>
+              ) : null}
+              {plan.usageEstimate?.allowed === false ? <span className="bad-text">{t(lang, "bloqueado por límite", "blocked by limit")}</span> : null}
               <span>{plan.channelTitle ?? plan.channelId}</span>
             </div>
           ) : null}
@@ -895,19 +948,35 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
   }
 
   function renderCost() {
+    const budget = usage?.policy.maxTotalUsd30d ?? 0;
+    const remaining = usage && budget > 0
+      ? Math.max(0, budget - usage.last30d.estimatedUsd)
+      : undefined;
+    const providerLines = usage?.last30d.byProvider.map((provider) =>
+      `${provider.provider}: ${formatMinutes(provider.audioMinutes)} min · ${formatUsd(provider.estimatedUsd)}`
+    ) ?? [t(lang, "Ledger no disponible", "Ledger unavailable")];
+    const policyLines = usage
+      ? [
+          `${t(lang, "Modo", "Mode")}: ${usage.policy.enforcement}`,
+          `${t(lang, "Run", "Run")}: ${usage.policy.maxRunMinutes || "∞"} min`,
+          `${t(lang, "Fuente / 24 h", "Source / 24 h")}: ${usage.policy.maxSourceMinutes24h || "∞"} min`,
+          `${t(lang, "Total / 30 d", "Total / 30 d")}: ${usage.policy.maxTotalMinutes30d || "∞"} min · ${usage.policy.maxTotalUsd30d > 0 ? formatUsd(usage.policy.maxTotalUsd30d) : "∞"}`,
+        ]
+      : [t(lang, "Política no disponible", "Policy unavailable")];
     return (
       <section className="m2t-page">
-        <PageIntro title={t(lang, "Coste estimado", "Estimated cost")} text={t(lang, "Estimación visual hasta implementar /metrics/cost con minutos y tarifas por proveedor.", "Visual estimate until /metrics/cost ships with minutes and provider rates.")} badge={<FeatureBadge state="ESTIMADO" />} />
+        <PageIntro title={t(lang, "Uso y coste", "Usage and cost")} text={t(lang, "Ledger local de minutos reservados y coste estimado por proveedor.", "Local ledger of reserved minutes and estimated provider cost.")} badge={<FeatureBadge state={usage ? "LIVE" : "PARCIAL"} />} />
         <div className="m2t-metrics">
-          <Metric label={t(lang, "TOTAL · MES", "TOTAL · MONTH")} value="—" text="/metrics/cost TODO" state="ESTIMADO" />
-          <Metric label={t(lang, "MINUTOS", "MINUTES")} value="—" text={t(lang, "pendiente de cálculo", "calculation pending")} state="ESTIMADO" />
-          <Metric label={t(lang, "COSTE/HORA", "COST/HOUR")} value="—" text={t(lang, "tarifa configurable pendiente", "configurable rate pending")} state="ESTIMADO" />
-          <Metric label={t(lang, "PROYECCIÓN MES", "MONTH PROJECTION")} value="—" text={t(lang, "no autoritativo", "not authoritative")} state="ESTIMADO" />
+          <Metric label={t(lang, "COSTE · 30 D", "COST · 30 D")} value={usage ? formatUsd(usage.last30d.estimatedUsd) : "-"} text={t(lang, "estimado, incluye reservas fallidas", "estimated, includes failed reservations")} state={usage ? "LIVE" : "PARCIAL"} />
+          <Metric label={t(lang, "MINUTOS · 30 D", "MINUTES · 30 D")} value={usage ? formatMinutes(usage.last30d.audioMinutes) : "-"} text={`${usage?.last30d.reservations ?? 0} ${t(lang, "reservas", "reservations")}`} state={usage ? "LIVE" : "PARCIAL"} />
+          <Metric label={t(lang, "COSTE · 24 H", "COST · 24 H")} value={usage ? formatUsd(usage.last24h.estimatedUsd) : "-"} text={`${usage ? formatMinutes(usage.last24h.audioMinutes) : "-"} min`} state={usage ? "LIVE" : "PARCIAL"} />
+          <Metric label={t(lang, "PRESUPUESTO RESTANTE", "BUDGET REMAINING")} value={remaining === undefined ? "∞" : formatUsd(remaining)} text={`${usage?.pendingReservations ?? 0} ${t(lang, "reservas pendientes", "pending reservations")}`} state={usage ? "LIVE" : "PARCIAL"} />
         </div>
         <div className="m2t-two-col">
-          <RoadmapPanel title={t(lang, "Por proveedor", "By provider")} lines={["AssemblyAI —", "Deepgram —", "Whisper —"]} state="ESTIMADO" />
-          <RoadmapPanel title={t(lang, "Presupuesto", "Budget")} lines={[t(lang, "Sin presupuesto activo", "No active budget"), t(lang, "Avisar al 80%", "Warn at 80%"), t(lang, "Pausar al 100%", "Pause at 100%")]} state="TODAVIA NO IMPLEMENTADO" />
+          <RoadmapPanel title={t(lang, "Por proveedor · 30 d", "By provider · 30 d")} lines={providerLines} state={usage ? "LIVE" : "PARCIAL"} />
+          <RoadmapPanel title={t(lang, "Límites efectivos", "Effective limits")} lines={policyLines} state={usage ? "LIVE" : "PARCIAL"} />
         </div>
+        {usage ? <div className="m2t-honesty"><span>ƒ</span>{t(lang, "Las tarifas son estimaciones configurables. Las reservas fallidas permanecen contabilizadas porque el proveedor puede haber cobrado.", "Rates are configurable estimates. Failed reservations remain counted because the provider may have charged.")}</div> : null}
       </section>
     );
   }
@@ -1006,7 +1075,7 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
           <Endpoint method="GET" path="/library/channels" state="LIVE" />
           <Endpoint method="GET" path="/events" state="LIVE" />
           <Endpoint method="GET" path="/metrics" state="LIVE" />
-          <Endpoint method="GET" path="/metrics/cost" state="TODAVIA NO IMPLEMENTADO" />
+          <Endpoint method="GET" path="/metrics/cost" state="LIVE" />
         </div>
         <pre className="m2t-pre small">{`{"type":"utterance","index":1,"startSeconds":2,"endSeconds":9,"speaker":"A","text":"...","videoUrl":"https://...","title":"...","channelTitle":"...","languageCode":"en","languageConfidence":0.98}`}</pre>
       </section>

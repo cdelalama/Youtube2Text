@@ -1,6 +1,6 @@
 import { proxyToApi } from "../../../../../lib/apiProxy";
 
-export async function POST(request: Request, ctx: { params: { runId: string } }) {
-  return proxyToApi(request, `/runs/${encodeURIComponent(ctx.params.runId)}/cancel`);
+export async function POST(request: Request, ctx: { params: Promise<{ runId: string }> }) {
+  const { runId } = await ctx.params;
+  return proxyToApi(request, `/runs/${encodeURIComponent(runId)}/cancel`);
 }
-

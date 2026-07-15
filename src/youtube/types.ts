@@ -4,6 +4,7 @@ export type YoutubeVideo = {
   url: string;
   uploadDate?: string;
   description?: string;
+  durationSeconds?: number;
 };
 
 export type YoutubeListing = {

@@ -45,6 +45,7 @@ import {
 import { normalizeAssemblyAiLanguageCode } from "../youtube/language.js";
 import { listProviderCapabilities } from "../transcription/index.js";
 import { AudioUploadError, handleAudioUpload, readAudioUpload } from "./uploads.js";
+import { UsageLedger } from "../usage/index.js";
 
 type ServerOptions = {
   port: number;
@@ -238,6 +239,7 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
   await manager.init();
 
   const watchlistStore = new WatchlistStore(config.outputDir);
+  const usageLedger = new UsageLedger(config.outputDir);
   const schedulerCfg = loadSchedulerConfigFromEnv();
   const scheduler = new Scheduler(
     schedulerCfg,
@@ -524,9 +526,47 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
         lines.push("# TYPE y2t_catalog_incremental_added_videos_total counter");
         lines.push(promLine("y2t_catalog_incremental_added_videos_total", undefined, catalog.incrementalAddedVideos));
 
+        const usage = await usageLedger.snapshot();
+        lines.push("# HELP y2t_usage_audio_minutes Estimated provider-billed audio minutes reserved in the usage ledger.");
+        lines.push("# TYPE y2t_usage_audio_minutes gauge");
+        lines.push(promLine("y2t_usage_audio_minutes", { period: "24h" }, usage.last24h.audioMinutes));
+        lines.push(promLine("y2t_usage_audio_minutes", { period: "30d" }, usage.last30d.audioMinutes));
+
+        lines.push("# HELP y2t_usage_estimated_usd Estimated provider cost in USD reserved in the usage ledger.");
+        lines.push("# TYPE y2t_usage_estimated_usd gauge");
+        lines.push(promLine("y2t_usage_estimated_usd", { period: "24h" }, usage.last24h.estimatedUsd));
+        lines.push(promLine("y2t_usage_estimated_usd", { period: "30d" }, usage.last30d.estimatedUsd));
+        for (const provider of usage.last30d.byProvider) {
+          lines.push(
+            promLine(
+              "y2t_usage_estimated_usd",
+              { period: "30d", provider: provider.provider },
+              provider.estimatedUsd
+            )
+          );
+        }
+
+        lines.push("# HELP y2t_usage_pending_reservations Provider calls with unresolved usage reservations.");
+        lines.push("# TYPE y2t_usage_pending_reservations gauge");
+        lines.push(promLine("y2t_usage_pending_reservations", undefined, usage.pendingReservations));
+
+        lines.push("# HELP y2t_usage_failed_reservations Failed provider calls retained as potentially billable usage.");
+        lines.push("# TYPE y2t_usage_failed_reservations gauge");
+        lines.push(promLine("y2t_usage_failed_reservations", undefined, usage.failedReservations));
+
         res.statusCode = 200;
         res.setHeader("content-type", "text/plain; version=0.0.4; charset=utf-8");
         res.end(`${lines.join("\n")}\n`);
+        return;
+      }
+
+      if (
+        req.method === "GET" &&
+        seg.length === 2 &&
+        seg[0] === "metrics" &&
+        seg[1] === "cost"
+      ) {
+        json(res, 200, { usage: await usageLedger.snapshot() });
         return;
       }
 

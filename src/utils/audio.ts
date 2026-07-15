@@ -10,7 +10,7 @@ export type AudioChunk = {
   overlapSeconds: number;
 };
 
-async function getAudioDurationSeconds(audioPath: string): Promise<number> {
+export async function getAudioDurationSeconds(audioPath: string): Promise<number> {
   const ffprobe = await validateFfprobeInstalled();
   const args = [
     "-v",

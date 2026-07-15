@@ -338,6 +338,7 @@ export class RunManager {
       force: Boolean(req.force),
       emitter,
       abortSignal: controller.signal,
+      runId,
     })
       .then(() => {
         const updated = this.runs.get(runId);

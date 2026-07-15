@@ -13,13 +13,14 @@ function safeNextPath(value?: string | string[]): string {
   }
 }
 
-export default function LoginPage({ searchParams }: {
-  searchParams?: { next?: string | string[]; error?: string | string[] };
+export default async function LoginPage({ searchParams }: {
+  searchParams?: Promise<{ next?: string | string[]; error?: string | string[] }>;
 }) {
-  const error = Array.isArray(searchParams?.error) ? searchParams?.error[0] : searchParams?.error;
+  const query = await searchParams;
+  const error = Array.isArray(query?.error) ? query?.error[0] : query?.error;
   return (
     <LoginForm
-      nextPath={safeNextPath(searchParams?.next)}
+      nextPath={safeNextPath(query?.next)}
       configurationError={error === "not_configured"}
     />
   );

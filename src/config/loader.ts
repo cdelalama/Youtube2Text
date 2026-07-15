@@ -27,7 +27,7 @@ function loadEnvConfig(): PartialConfig {
     return v === "true" || v === "1" || v === "yes";
   };
   const parseOptionalNumber = (raw: string | undefined): number | undefined => {
-    if (raw === undefined) return undefined;
+    if (raw === undefined || raw.trim() === "") return undefined;
     const n = Number(raw);
     return Number.isFinite(n) ? n : undefined;
   };

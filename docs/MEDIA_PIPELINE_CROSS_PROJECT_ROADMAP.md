@@ -110,12 +110,14 @@ Owner: this repository.
 Gate: negative auth tests, cost-cap tests, provider tests, full repository gates,
 and one scripted deployment with rollback evidence.
 
-Progress (2026-07-14): source release `0.36.12` completes the correctness and
-application-authentication subset: OpenAI provider wiring, run-scoped
-artifacts, AssemblyAI fail-closed/retry behavior, scheduler fairness, and web
-BFF authentication. Provider-boundary cost controls, credential rotation, CI,
-registry deployment automation, and dependency monitoring remain in this
-stage; the scheduler stays disabled until the complete gate passes.
+Progress (2026-07-15): source release `0.37.0` completes the code side of the
+safety foundation: the `0.36.12` correctness/authentication work plus a
+persistent provider-boundary usage ledger, hard economic limits, plan-time
+cost estimates, live cost metrics, CI, registry deployment/rollback assets, a
+pinned yt-dlp stable release, and a separate weekly upstream watch. The
+remaining Stage 2 gate is operational: rotate/verify credentials without
+breaking consumers, publish the release, execute the scripted NAS deployment,
+reconcile Home Infra deployed truth, and keep the scheduler disabled.
 
 ### Stage 3 - Media Contracts v1
 

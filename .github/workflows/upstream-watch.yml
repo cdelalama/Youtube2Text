@@ -1,0 +1,21 @@
+name: yt-dlp upstream watch
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 7 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  stable-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Compare pinned and latest stable releases
+        run: node scripts/check-yt-dlp-upstream.mjs
