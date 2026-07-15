@@ -1,4 +1,4 @@
-<!-- doc-version: 0.38.0 -->
+<!-- doc-version: 0.38.1 -->
 # LLM Start Guide - Media2Text
 
 ## Read This First (Mandatory)
@@ -50,9 +50,14 @@ Recommended reading order:
 ## Current Focus (Snapshot)
 
 Source of truth: docs/llm/HANDOFF.md.
-- Last Updated: 2026-07-14
-- Working on: the operator-ratified cross-project media pipeline roadmap and the Media2Text 0.36.12 safety foundation.
-- Status: v0.36.12 is the current source release with the correctness and web-auth subset of the safety foundation complete; NAS remains v0.36.8. Cost controls, CI/deploy automation, provenance, Transcript Store, and versioned media contracts remain before any live Cortex or Plaud integration.
+- Last Updated: 2026-07-15
+- Working on: publishing Media2Text 0.38.1 and registering its live sanitized
+  media-pipeline status in Home Infra/Infra Portal.
+- Status: v0.38.0 is healthy on NAS with authentication, economic enforcement,
+  durable intake/outbox, and Transcript Store active. v0.38.1 adds the
+  project-owned Home Infra Protocol contract and canonical public status route.
+  Cortex/Plaud delivery remains gated on consumer-reviewed frozen contracts;
+  the scheduler and historical backfills remain disabled.
 
 Keep this section synchronized with the "Current Status" block in docs/llm/HANDOFF.md.
 

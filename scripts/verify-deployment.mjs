@@ -64,6 +64,17 @@ if (!["ok", "degraded"].includes(mediaStatus?.condition) || !mediaStatus?.observ
 }
 console.log(`[verify] media pipeline status condition=${mediaStatus.condition}`);
 
+const publicMediaStatusResponse = await fetch(`${webUrl}/api/status/media-pipeline`);
+expectStatus(publicMediaStatusResponse, 200, "public web media pipeline status");
+const publicMediaStatus = await publicMediaStatusResponse.json();
+if (
+  !["ok", "degraded"].includes(publicMediaStatus?.condition) ||
+  !publicMediaStatus?.observed_at
+) {
+  throw new Error("public web media pipeline status is not a valid sanitized snapshot");
+}
+console.log(`[verify] public media pipeline status condition=${publicMediaStatus.condition}`);
+
 const apiKey = process.env.Y2T_API_KEY;
 const passphrase = process.env.Y2T_WEB_AUTH_PASSPHRASE;
 if (!apiKey || !passphrase) {

@@ -1,7 +1,7 @@
-<!-- doc-version: 0.38.0 -->
+<!-- doc-version: 0.38.1 -->
 # Media2Text Architecture (youtube2text Engine)
 
-> Version: 0.37.3 (synced with package.json)
+> Version: 0.38.1 (synced with package.json)
 > Last Updated: 2026-07-15
 > Status: Implemented baseline plus gated cross-project roadmap
 > Authors: Claude + GPT-5.2 (viewpoints preserved)

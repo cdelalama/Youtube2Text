@@ -160,6 +160,8 @@ Terminate TLS in a reverse proxy (Caddy/Nginx/Traefik) and forward:
 - Usage and estimated cost: `GET /metrics/cost` (authenticated)
 - Media-pipeline status for Home Infra: `GET /status/media-pipeline` (public,
   sanitized, and rate limited)
+- Canonical-host status for Infra Portal:
+  `GET /api/status/media-pipeline` on the web origin (public sanitized proxy)
 - Intake reconciliation: `GET /v1/intakes` (authenticated operator API)
 - Immutable transcript reconciliation: `GET /v1/transcripts` (authenticated
   operator API)
@@ -293,6 +295,8 @@ fallback, not the normal deployment path. NAS builds remain prohibited.
 - [ ] Web UI loads and shows correct version
 - [ ] `/metrics/cost` with API key returns `enforcement: enforce` and the approved limits
 - [ ] `/status/media-pipeline` returns a sanitized status document without auth
+- [ ] The web origin `/api/status/media-pipeline` returns the same public status
+      without an operator session
 - [ ] `/v1/intakes` and `/v1/transcripts` reject unauthenticated requests and
       return reconciliation data with the operator API key
 - [ ] `Y2T_TRANSCRIPT_READY_URL` is unset unless the reviewed contract version

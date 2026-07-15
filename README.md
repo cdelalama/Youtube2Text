@@ -1,4 +1,4 @@
-<!-- doc-version: 0.38.0 -->
+<!-- doc-version: 0.38.1 -->
 # Media2Text
 
 Media2Text is the visible product name for the `youtube2text` engine: a
@@ -454,6 +454,8 @@ Endpoints:
 - `GET /metrics` (Prometheus text format)
 - `GET /metrics/cost` (usage ledger and estimated provider cost)
 - `GET /status/media-pipeline` (public sanitized Home Infra status snapshot)
+- `GET /api/status/media-pipeline` on the web origin (public proxy of the same
+  sanitized snapshot for Home Infra/Infra Portal)
 - `POST /v1/intakes` (durably accept a remote media reference; `202` precedes asynchronous fetch)
 - `GET /v1/intakes`, `GET /v1/intakes/:id` (operator intake reconciliation)
 - `GET /v1/transcripts`, `GET /v1/transcripts/:id` (immutable Transcript Store pull reconciliation)
@@ -480,6 +482,9 @@ Endpoints:
 - `DELETE /library/channels/:channelDirName/videos/:basename` (delete single video: all file variants + audio)
 
 Media contracts:
+- `infra.contract.yml` is the project-owned Home Infra Protocol 0.9.0 contract.
+  It declares the event-driven media sync job and its public sanitized status
+  URL; Home Infra remains the private registry/consumer.
 - `docs/contracts/transcript-store.v1.schema.json` is implemented for every new transcript.
 - `docs/contracts/media-intake.v1.schema.json` and
   `docs/contracts/transcript-ready.v1.schema.json` are drafts until Plaud Mirror

@@ -1,4 +1,4 @@
-<!-- doc-version: 0.38.0 -->
+<!-- doc-version: 0.38.1 -->
 # LLM Work Handoff
 
 This file is the current operational snapshot. Historical detail belongs in
@@ -11,7 +11,7 @@ roadmap.
 
 - Operator issued GO for the complete roadmap in
   `docs/MEDIA_PIPELINE_CROSS_PROJECT_ROADMAP.md`.
-- Source release `0.38.0` implements Media Contracts v1 on the Media2Text side:
+- Deployed release `0.38.0` implements Media Contracts v1 on the Media2Text side:
   immutable Transcript Store records and representation snapshots, exact-byte
   integrity endpoints, provenance, bounded SQLite intake/lease/idempotency and
   outbox state, least-privilege intake auth, verified cross-host artifact
@@ -27,14 +27,19 @@ roadmap.
 - The outbox persists every new item even when
   `Y2T_TRANSCRIPT_READY_URL` is unset. Pull reconciliation is available at
   `/v1/transcripts`.
+- Patch `0.38.1` adds the project-owned Home Infra Protocol 0.9.0 contract and
+  the canonical-host public status route required for truthful Portal
+  registration.
 
 ## Current Status
 
-- Version: 0.38.0 in source; publication and NAS deployment pending this session.
-- Current NAS runtime before this rollout: `0.37.3`, healthy and authenticated.
+- Version: 0.38.1 in source; publication and NAS deployment pending.
+- Current NAS runtime: `0.38.0`, healthy and authenticated. Media pipeline
+  status is `ok`; Transcript Store currently contains zero new records.
 - Home Infra/Infra Portal: service identity is `Media2Text`, technical id is
   `y2t`, project id is `youtube2text`, application auth is satisfied, and the
-  deployed image is `0.37.3`.
+  deployed image is `0.38.0`. Its project contract registration is pending the
+  `0.38.1` publish/deploy and Home Infra validation.
 - Scheduler remains OFF. No YouTube channels are configured in the watchlist.
 - Production Deepgram and AssemblyAI credentials were verified during the
   `0.37.x` safety rollout. The OpenAI credential returns 401 and remains an
@@ -44,22 +49,18 @@ roadmap.
 
 ## Next Gates
 
-1. Pass tests, builds, OpenAPI/type drift, naming, version sync, DocKit, Docker
-   smoke, and status-snapshot validation for `0.38.0`.
-2. Commit and push `0.38.0`; require green GitHub CI.
-3. Deploy through `scripts/deploy-nas.sh`, retain `0.37.3` for rollback, and
-   verify health, auth, usage enforcement, scheduler OFF, status snapshot, and
-   Transcript Store API.
-4. Register the now-live sanitized media-pipeline status producer in Home Infra
+1. Validate, publish, and deploy `0.38.1`; retain `0.38.0` for rollback and
+   verify the canonical web status route without an operator session.
+2. Register the live sanitized media-pipeline status producer in Home Infra
    and sync committed portal inputs to the NAS. Home Infra does not transport
    media or run backfills.
-5. Export one real byte-stable `0.38.0` transcript fixture with
+3. Export one real byte-stable `0.38.x` transcript fixture with
    `npm run transcript:export-fixture -- <ignored-output-path>`. Do not satisfy
    this gate with synthetic content.
-6. Ask Cortex to review `transcript-ready.v1.schema.json` and Plaud Mirror to
+4. Ask Cortex to review `transcript-ready.v1.schema.json` and Plaud Mirror to
    review `media-intake.v1.schema.json`. Freeze only after consumer review and
    operator ratification.
-7. Configure exact YouTube channel URLs disabled first, preview duration/cost,
+5. Configure exact YouTube channel URLs disabled first, preview duration/cost,
    obtain operator cost approval, then canary at concurrency 1. Exact channel
    URLs are not yet available in this repository.
 

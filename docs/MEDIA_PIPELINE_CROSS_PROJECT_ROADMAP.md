@@ -146,7 +146,7 @@ Owner: this repository.
 Gate: duplicate-delivery tests, crash/restart tests at every job stage, artifact
 integrity verification, and protocol snapshot schema validation.
 
-Progress (2026-07-15): the `0.38.0` source slice implements immutable Transcript
+Progress (2026-07-15): `0.38.0` is deployed and implements immutable Transcript
 Store v1, provenance and exact-byte pull endpoints; persistent intake, lease,
 attempt, idempotency, and outbox state; least-privilege intake authentication;
 cross-host size/hash verification; legacy audio compatibility adapters; and a
@@ -155,8 +155,11 @@ exact-byte, legacy adapter, and HMAC delivery tests pass. Media Intake v1 and
 Transcript Ready v1 are intentionally still `draft-consumer-review-required`:
 Plaud Mirror and Cortex must review them before an operator-ratified frozen SHA
 can be claimed. A real byte-stable fixture can only be exported after the first
-new `0.38.0` transcript exists; the export command and integrity guard are in
+new `0.38.x` transcript exists; the export command and integrity guard are in
 place and must not be satisfied with a synthetic artifact.
+Patch `0.38.1` adds the project-owned Home Infra Protocol 0.9.0 contract and a
+canonical-host public status route so Home Infra can register the deployed job
+without embedding a private API address in the public project contract.
 
 ### Stage 4 - Plaud Mirror Adapter
 

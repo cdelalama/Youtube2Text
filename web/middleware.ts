@@ -4,8 +4,12 @@ import {
   isSameOriginRequest,
 } from "./lib/webAuth";
 
-function isPublicPath(pathname: string): boolean {
-  return pathname === "/login" || pathname.startsWith("/api/auth/");
+export function isPublicPath(pathname: string): boolean {
+  return (
+    pathname === "/login" ||
+    pathname.startsWith("/api/auth/") ||
+    pathname === "/api/status/media-pipeline"
+  );
 }
 
 function isUnsafeMethod(method: string): boolean {

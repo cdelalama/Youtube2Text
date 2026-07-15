@@ -11,6 +11,7 @@ youtube2text/
 +- LLM_START_HERE.md
 +- INTEGRATION.md
 +- HOW_TO_USE.md
++- infra.contract.yml # Project-owned Home Infra Protocol contract
 +- docs/
 +- src/
 +- scripts/
@@ -30,6 +31,7 @@ youtube2text/
 | docs/MEDIA_PIPELINE_CROSS_PROJECT_ROADMAP.md | Cross-project ownership, sequencing, gates, and session dispatch prompts | Planning |
 | docs/llm/ | LLM-specific handoff/history/decisions | Required |
 | docs/operations/ | Runbooks and operational procedures | Recommended |
+| infra.contract.yml | Home Infra Protocol project/job ownership and status declaration | Required for portal registration |
 | src/ | Application source code | Required |
 | scripts/ | Utility scripts (dev, release, ops) | Optional |
 | tests/ | Automated tests | Recommended |

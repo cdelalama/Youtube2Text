@@ -1,4 +1,4 @@
-<!-- doc-version: 0.38.0 -->
+<!-- doc-version: 0.38.1 -->
 # Project Context - Media2Text
 
 ## Vision
@@ -53,10 +53,11 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
 ## Current Status (2026-07-15)
-v0.38.0 stable in source adds Media Contracts v1 on top of the deployed
-v0.37.3 NAS safety foundation with provider-boundary usage accounting, hard
+v0.38.1 stable in source adds the project-owned Home Infra Protocol contract
+and canonical-host status route on top of the deployed v0.38.0 Media Contracts
+runtime and its provider-boundary usage accounting, hard
 economic limits, signed application sessions, CI, and registry deployment.
-The source slice adds Transcript Store v1, immutable provenance,
+The deployed runtime adds Transcript Store v1, immutable provenance,
 bounded SQLite media intake/outbox coordination, a least-privilege producer
 credential, verified cross-host artifact fetch, and sanitized Home Infra
 status. Media Intake v1 and Transcript Ready v1 remain drafts pending their

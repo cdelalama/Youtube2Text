@@ -1,0 +1,45 @@
+# Media2Text project contract for home-infra-protocol 0.9.0.
+# Home Infra ingests this project-owned contract; no secret values live here.
+
+id: youtube2text
+name: Media2Text
+repository: https://github.com/cdelalama/Youtube2Text
+
+services:
+  - y2t
+
+sync_jobs:
+  - id: media2text-media-pipeline
+    source:
+      kind: media
+      authority: external
+    schedule:
+      mode: webhook
+    runtime:
+      host_id: nas
+      service_id: y2t
+    status_url: https://y2t.lamanoriega.com/api/status/media-pipeline
+    safety:
+      idempotent: true
+      lock: sqlite-leases
+      max_runtime: PT4H
+      backoff: exponential
+
+runbooks:
+  deploy: docs/operations/DEPLOY_PLAYBOOK.md
+  api: docs/operations/API_CONTRACT.md
+  integration: INTEGRATION.md
+
+secret_refs:
+  - name: Y2T_API_KEY
+    store: doppler
+    notes: doppler://youtube2text/prd/Y2T_API_KEY
+  - name: Y2T_INTAKE_API_KEY
+    store: doppler
+    notes: doppler://youtube2text/prd/Y2T_INTAKE_API_KEY
+  - name: Y2T_WEB_AUTH_SECRET
+    store: doppler
+    notes: doppler://youtube2text/prd/Y2T_WEB_AUTH_SECRET
+  - name: Y2T_WEB_AUTH_PASSPHRASE
+    store: doppler
+    notes: doppler://youtube2text/prd/Y2T_WEB_AUTH_PASSPHRASE

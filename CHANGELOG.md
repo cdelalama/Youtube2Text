@@ -5,6 +5,20 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.38.1] - 2026-07-15
+
+### Added
+- Added the project-owned `infra.contract.yml` for Home Infra Protocol 0.9.0,
+  declaring the event-driven media synchronization job, runtime ownership,
+  safety controls, runbooks, and secret references without secret values.
+- Added a public, sanitized web route at
+  `/api/status/media-pipeline` so Infra Portal can consume the protocol status
+  through the canonical Media2Text hostname.
+
+### Changed
+
+### Fixed
+
 ## [0.38.0] - 2026-07-15
 
 ### Added

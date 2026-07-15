@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { proxyToApi } from "../web/lib/apiProxy.js";
+import { proxyPublicMediaStatus } from "../web/lib/publicStatusProxy.js";
+import { isPublicPath } from "../web/middleware.js";
 import {
   issueWebSessionToken,
   verifyOperatorPassphrase,
@@ -124,6 +126,34 @@ test("BFF injects the API key only after session verification", async () => {
       );
       assert.equal(response.status, 200);
       assert.equal(forwardedKey, "backend-api-key-for-tests");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});
+
+test("only the sanitized media status route is public", () => {
+  assert.equal(isPublicPath("/api/status/media-pipeline"), true);
+  assert.equal(isPublicPath("/api/status/media-pipeline/private"), false);
+  assert.equal(isPublicPath("/api/runs"), false);
+});
+
+test("public media status proxy forwards without operator credentials", async () => {
+  await withWebAuthEnv(async () => {
+    const originalFetch = globalThis.fetch;
+    let forwardedUrl = "";
+    let forwardedKey: string | null = null;
+    globalThis.fetch = async (input, init) => {
+      forwardedUrl = String(input);
+      forwardedKey = new Headers(init?.headers).get("x-api-key");
+      return Response.json({ condition: "ok" });
+    };
+    try {
+      const response = await proxyPublicMediaStatus();
+      assert.equal(response.status, 200);
+      assert.equal(forwardedUrl, "http://api.test/status/media-pipeline");
+      assert.equal(forwardedKey, null);
+      assert.equal(response.headers.get("cache-control"), "no-store");
     } finally {
       globalThis.fetch = originalFetch;
     }
