@@ -2,6 +2,14 @@
 
 Status: operator-ratified execution and session-dispatch artifact.
 
+Execution checkpoint (2026-07-17): the Media2Text safety foundation, Transcript
+Store, Home Infra status producer, Plaud compatibility facade, registry deploy,
+and real MP3/OGG canaries are complete in deployed 0.39.3. Home Infra 0.7.6 is
+synchronized. The remaining Plaud replay (622 items, 608.0074 hours, estimated
+USD 335.62), live Transcript Ready delivery to Cortex, and YouTube scheduler
+remain independently gated. Stage descriptions below retain their original
+ratified baseline numbers as execution history, not current runtime claims.
+
 This document assigns work across Media2Text, Home Infra, Plaud Mirror, and
 Cortex. It does not authorize one repository to edit another. Each project must
 load its own onboarding and validate its own current state before acting.

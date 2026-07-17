@@ -11,7 +11,7 @@ roadmap.
 
 - Operator issued GO for the complete roadmap in
   `docs/MEDIA_PIPELINE_CROSS_PROJECT_ROADMAP.md`.
-- Deployed release `0.38.0` implements Media Contracts v1 on the Media2Text side:
+- Release `0.38.0` introduced Media Contracts v1 on the Media2Text side:
   immutable Transcript Store records and representation snapshots, exact-byte
   integrity endpoints, provenance, bounded SQLite intake/lease/idempotency and
   outbox state, least-privilege intake auth, verified cross-host artifact
@@ -75,23 +75,42 @@ roadmap.
   and fail-closes against the admitted revision, and records the original MIME
   type/duration. The immutable `0.39.2` canary record is retained as evidence
   and must not be presented as correct provenance.
-- The current Plaud backlog estimate is 623 recordings, 608.0094 hours, and
+- Patch `0.39.3` is deployed from `3cf1539`. A new real OGG canary completed as
+  Plaud recording `082298d30b32dfcfaa3fab312d9a36b7`,
+  intake `int_9a0a5b350c75e276d92eb7f464d7844dc5ede57d4daf0a60e77ba99211f25226`
+  and transcript
+  `trn_02c5b5125b083ddcd0c08988dba7a377a90b07fbcd9a37822ea7deb3c40fe457`.
+  Run `34db3827-83da-4e6b-9988-be74acf2008b` preserved the 32,768-byte,
+  seven-second source MIME `audio/ogg` and source SHA-256
+  `0f52872594aa61a3c4b522ad245d100ec7f95231750cdd98d9aa740bd8a778a9`,
+  and distinct transcript-record SHA-256
+  `d032644835480bfe174cd56940d3060341b91a269eca29a00fbd3849c087ec99`.
+  Plaud received terminal status and released the source lease. The immutable
+  provenance-incorrect 0.39.2 record remains retained as explicit audit
+  evidence and is not presented as correct.
+- The current Plaud backlog estimate is 622 recordings, 608.0074 hours, and
   USD 335.62 at the configured Deepgram rate.
   This exceeds Media2Text's 30-day hard limits and requires a separate operator
   spend decision before bulk replay.
 
 ## Current Status
 
-- Version: 0.39.3 in source; patch validation and coordinated deployment are
-  active.
-- Current NAS runtime: `0.39.2`, healthy and authenticated. The Plaud facade is
+- Version: 0.39.3 in source and on the NAS from `3cf1539`; release validation,
+  deployment verification, and the final OGG canary pass.
+- Current NAS runtime: `0.39.3`, healthy and authenticated. The Plaud facade is
   reachable only on its three exact TLS machine routes; generic operator paths
   remain behind the web session boundary.
 - Home Infra/Infra Portal: service identity is `Media2Text`, technical id is
-  `y2t`, project id is `youtube2text`, application auth is satisfied, and the
-  catalog still reports the prior deployed version until the final coordinated
-  reconciliation. Its project contract and sanitized pipeline job remain
-  registered.
+  `y2t`, project id is `youtube2text`, and the catalog reports image 0.39.3
+  with application auth satisfied. Home Infra 0.7.6
+  release `bb350ea` is synchronized; Infra Portal 0.20.3 mounts exact source
+  commits with no provenance warnings. Its project contract and sanitized
+  pipeline job remain registered.
+- Live pipeline status remains truthfully `degraded/warning`: two failed intake
+  canaries are retained for review, source-status delivery has zero pending,
+  and three Transcript Ready obligations remain pending because Cortex delivery
+  is intentionally disabled. Usage is 0.587333 audio minutes and estimated USD
+  0.005403 across four Deepgram reservations (one failed), with none pending.
 - Scheduler remains OFF. No YouTube channels are configured in the watchlist.
 - Production Deepgram and AssemblyAI credentials were verified during the
   `0.37.x` safety rollout. The OpenAI credential returns 401 and remains an
@@ -101,15 +120,15 @@ roadmap.
 
 ## Next Gates
 
-1. Publish and deploy `0.39.3`, then run one new short OGG canary to verify the
-   provider derivative, original source revision/MIME/duration in Transcript
-   Store, successful transcription, signed terminal state, pull reconciliation,
-   distinct hashes, and source lease release.
-2. Recalculate the remaining eligible Plaud backlog after the OGG canary.
-   Bulk replay remains blocked until the USD 335.62 estimate receives a
-   separate operator spend approval; use batches of 1, 5, and 25 after approval.
-3. Reconcile the deployed Media2Text/Plaud versions, truthful degraded state,
-   route provenance, and source commits through Home Infra and Infra Portal.
+1. ~~Publish/deploy `0.39.3` and prove one provenance-correct OGG canary.~~ Done
+   2026-07-17; source, provider derivative, transcript, callback, pull, and lease
+   boundaries pass.
+2. Bulk replay remains blocked until the 622-item / 608.0074-hour / estimated
+   USD 335.62 envelope receives separate operator spend approval; use bounded
+   batches of 1, 5, and 25 after approval and respect the live hard caps.
+3. ~~Reconcile deployed Media2Text/Plaud versions, truthful degraded state,
+   route provenance, and source commits through Home Infra/Infra Portal.~~ Done
+   through synchronized Home Infra 0.7.6 and Portal 0.20.3.
 4. Keep Cortex live delivery disabled until Cortex reviews and freezes
    Transcript Ready v1. The committed 0.38.2 fixture remains its current input.
 5. Configure exact YouTube channel URLs disabled first, preview duration/cost,
@@ -127,8 +146,8 @@ roadmap.
 - Do not delete or rewrite existing transcript artifacts. Coordination-state
   retention never deletes Transcript Store or legacy presentation files.
 - Do not enable scheduler, bulk historical replay, or Cortex delivery before
-  the applicable contract and cost gates pass. One bounded Plaud canary is
-  authorized after deployment and conformance checks.
+  the applicable contract and cost gates pass. The authorized Plaud canary is
+  complete; further replay is a separate spend decision.
 - Keep `.dockit-config.yml` `history_format: no-dash` and the D-018 naming check.
 
 ## Validation

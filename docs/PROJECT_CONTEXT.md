@@ -53,12 +53,12 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
 ## Current Status (2026-07-17)
-v0.39.3 stable in source implements the commit-pinned Plaud Mirror
+v0.39.3 stable and deployed from `3cf1539` implements the commit-pinned Plaud Mirror
 Transcription Intake v1 compatibility profile as an additive facade over the
 existing Media2Text job domain. It adds producer-scoped bearer authentication,
 collection-aware idempotency, a separate artifact bearer, durable monotonic
 HMAC status callbacks, pull reconciliation, and byte-pinned contract tests.
-The NAS runs v0.39.2 behind the least-exposure Home Infra route. A bounded MP3
+The NAS runs v0.39.3 behind the least-exposure Home Infra route. A bounded MP3
 canary completed the full Plaud Mirror -> Media2Text -> Plaud Mirror path,
 including authenticated artifact transfer, Deepgram transcription, immutable
 Transcript Store materialization, signed push, pull reconciliation, distinct
@@ -69,13 +69,21 @@ single-stream MP3 provider derivative before any provider reservation. The
 first normalized OGG canary transcribed successfully but exposed that Transcript
 Store attributed the derived MP3 hash to the source. v0.39.3 carries the
 admitted source separately, verifies its revision again, and records the
-original OGG identity while the provider still receives the derivative.
+original OGG identity while the provider still receives the derivative. A new
+real OGG canary then completed with source SHA-256
+`0f52872594aa61a3c4b522ad245d100ec7f95231750cdd98d9aa740bd8a778a9`
+and distinct transcript-record SHA-256
+`d032644835480bfe174cd56940d3060341b91a269eca29a00fbd3849c087ec99`.
+The incorrect immutable 0.39.2 record remains retained as audit evidence.
 v0.38.2 also provides Cortex V1 with a committed byte-stable real
 legacy JSONL fixture, but live Transcript Ready delivery remains separately
 gated on Cortex review. The runtime includes provider-boundary usage accounting,
 hard economic limits, signed application sessions, CI, registry deployment,
 Transcript Store v1, bounded SQLite coordination, and sanitized Home Infra
-status. The deployed runtime currently has
+status. Home Infra 0.7.6 release `bb350ea` is synchronized and Infra Portal
+0.20.3 reports exact source provenance plus the truthful `degraded/warning`
+state caused by two retained failed canaries and three pending Transcript Ready
+obligations. The deployed runtime currently has
 the Media2Text operator console splitting `Estado` and `Nueva captura`,
 English-mode activity table headers fixed on the `Status` screen, and explicit
 scheduler auto-start OFF copy when `Y2T_SCHEDULER_ENABLED=false`. All planned phases (0-3.0) and

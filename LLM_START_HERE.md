@@ -51,14 +51,15 @@ Recommended reading order:
 
 Source of truth: docs/llm/HANDOFF.md.
 - Last Updated: 2026-07-17
-- Working on: Media2Text 0.39.0 implements the frozen Plaud Mirror
-  Transcription Intake v1 compatibility profile as an additive facade.
-- Status: source supports durable Plaud admission, authenticated artifact fetch,
-  monotonic signed status callbacks, and producer pull reconciliation. NAS still
-  runs 0.38.1 until the coordinated deployment and exact Home Infra routes pass
-  a live canary. Transcript Ready delivery to Cortex, the scheduler, and bulk
-  historical replay remain disabled behind their separate contract and cost
-  gates.
+- Working on: Media2Text 0.39.3 is deployed and its additive Plaud Mirror
+  Transcription Intake v1 compatibility facade is live-verified.
+- Status: a provenance-correct real OGG canary passed durable admission,
+  authenticated source fetch, provider-only normalization, Deepgram,
+  immutable Transcript Store materialization, signed terminal callback, pull
+  reconciliation, distinct source/transcript hashes, and source lease release.
+  Home Infra 0.7.6 and Infra Portal 0.20.3 are synchronized. Transcript Ready
+  delivery to Cortex, the scheduler, and the remaining 622-item replay remain
+  disabled behind their separate contract and estimated USD 335.62 cost gates.
 
 Keep this section synchronized with the "Current Status" block in docs/llm/HANDOFF.md.
 
