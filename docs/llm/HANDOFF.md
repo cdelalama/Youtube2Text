@@ -1,11 +1,11 @@
-<!-- doc-version: 0.38.2 -->
+<!-- doc-version: 0.39.0 -->
 # LLM Work Handoff
 
 This file is the current operational snapshot. Historical detail belongs in
 `HISTORY.md`, `HANDOFF_ARCHIVE.md`, `DECISIONS.md`, and the cross-project
 roadmap.
 
-- Last Updated: 2026-07-15
+- Last Updated: 2026-07-17
 
 ## Open work
 
@@ -20,10 +20,11 @@ roadmap.
 - D-020 is the responsibility boundary: sources own original media;
   Media2Text owns intake/transcription/materialization/delivery obligations;
   Cortex owns semantic ingestion and retrieval.
-- `Media Intake v1` and `Transcript Ready v1` remain
-  `draft-consumer-review-required`. Do not configure live Plaud or Cortex
-  delivery until their owning sessions review the schemas and the operator
-  freezes a version plus commit SHA.
+- Internal `Media Intake v1` is implemented. Plaud Mirror's external
+  Transcription Intake v1 Compatibility Profile is operator-ratified, copied
+  byte-for-byte, and pinned to producer `0.14.1` commit
+  `d393a0cefa17dfc4788294ef9bb5e5a89ed0f6b4`; D-021 records the adapter
+  boundary. Transcript Ready v1 remains draft pending Cortex review.
 - The outbox persists every new item even when
   `Y2T_TRANSCRIPT_READY_URL` is unset. Pull reconciliation is available at
   `/v1/transcripts`.
@@ -36,13 +37,24 @@ roadmap.
   provider, engine, model version, and producer commit remain null with reasons.
   The fixture is offline evidence only and does not implement or activate live
   delivery, a Cortex webhook, or a frozen Transcript Ready contract.
+- 2026-07-16 audit APPROVED commit `c982ced` (0.38.2): fixture bytes verified
+  SHA-identical to the still-existing on-disk source artifact, manifest unknowns
+  honest, validation genuine and CI-wired, scope confined to this repo.
+  Observation (non-blocking): the canonical response contains AssemblyAI-specific
+  keys, so provider is inferable; a `providerInferredFrom` note would help Cortex.
+- The 2026-07-16 advisory phrase "ratified receiver-owned wire contract" was
+  not an operator decision and is superseded. The operator subsequently
+  authorized the producer compatibility profile and cross-repo execution.
+- Release `0.39.0` implements the additive Plaud facade: producer-scoped bearer
+  auth, collection-aware identity, separate artifact bearer fetch, durable
+  monotonic HMAC status callbacks, pull reconciliation, and a contract hash
+  pin. It does not enable Cortex delivery or bulk replay.
 
 ## Current Status
 
-- Version: 0.38.2 in source. This fixture/validation patch does not require a
-  NAS deployment.
+- Version: 0.39.0 in source; validation and coordinated deployment are active.
 - Current NAS runtime: `0.38.1`, healthy and authenticated. Media pipeline
-  status is `ok`; Transcript Store contains no new 0.38.x records.
+  status was `ok` before this release; it does not yet expose the Plaud facade.
 - Home Infra/Infra Portal: service identity is `Media2Text`, technical id is
   `y2t`, project id is `youtube2text`, application auth is satisfied, and the
   deployed image is `0.38.1`. Its project contract and sanitized pipeline job
@@ -56,31 +68,33 @@ roadmap.
 
 ## Next Gates
 
-1. Give Cortex commit-pinned access to the 0.38.2 fixture and manifest so its
-   Slice 2 can test exact bytes and honest unknown legacy provenance. The
-   evidence fixture does not authorize live integration.
-2. Export the first new byte-stable 0.38.x Transcript Store fixture when a real
-   new transcript exists; do not replace that native-provenance gate with the
-   legacy Cortex evidence sample.
-3. Ask Cortex to review `transcript-ready.v1.schema.json` and Plaud Mirror to
-   review `media-intake.v1.schema.json`. Freeze only after consumer review and
-   operator ratification.
-4. Configure exact YouTube channel URLs disabled first, preview duration/cost,
-   obtain operator cost approval, then canary at concurrency 1. Exact channel
-   URLs are not yet available in this repository.
+1. Publish and deploy `0.39.0`, then expose only the three exact profile routes
+   through the existing Home Infra TLS hostname.
+2. Run the Plaud-owned executable provider probe and one real, low-cost audio
+   canary. Verify durable admission, authenticated bytes, exact hash/length,
+   transcript materialization, signed push, and matching pull state.
+3. Calculate total eligible Plaud backlog duration and worst-case provider cost.
+   Bulk replay remains blocked until that estimate receives separate operator
+   spend approval; use batches of 1, 5, and 25 after approval.
+4. Keep Cortex live delivery disabled until Cortex reviews and freezes
+   Transcript Ready v1. The committed 0.38.2 fixture remains its current input.
+5. Configure exact YouTube channel URLs disabled first, preview duration/cost,
+   obtain operator cost approval, then canary at concurrency 1.
 
 ## Do Not Touch
 
-- Do not edit Cortex, Plaud Mirror, Home Infra Protocol, or Infra Portal from
-  this repository/session.
+- Cross-repo edits require explicit operator scope. This session has that scope
+  only for Plaud Mirror and Home Infra coordination; Cortex and Home Infra
+  Protocol remain untouched.
 - Do not globally rename `youtube2text` to `media2text` or introduce
   `MEDIA2TEXT_`/`M2T_` env prefixes.
 - Do not rename Docker images, Doppler project/config, NAS paths,
   `y2t.lamanoriega.com`, or root package without a separate approved migration.
 - Do not delete or rewrite existing transcript artifacts. Coordination-state
   retention never deletes Transcript Store or legacy presentation files.
-- Do not enable scheduler, historical replay, intake producer traffic, or
-  Cortex delivery before the applicable contract/cost gates pass.
+- Do not enable scheduler, bulk historical replay, or Cortex delivery before
+  the applicable contract and cost gates pass. One bounded Plaud canary is
+  authorized after deployment and conformance checks.
 - Keep `.dockit-config.yml` `history_format: no-dash` and the D-018 naming check.
 
 ## Validation

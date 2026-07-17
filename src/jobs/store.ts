@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { StoredTranscript } from "../transcripts/store.js";
 import { canonicalJson } from "../transcripts/store.js";
+import { transcriptionStatusEvent } from "./transcriptionProfile.js";
 
 export type IntakeStatus =
   | "held"
@@ -33,6 +34,10 @@ export type IntakeRequestV1 = {
     durationSeconds?: number;
     filename?: string;
   };
+  callback?: {
+    url: string;
+    authentication: "hmac-sha256-v1";
+  };
   title?: string;
 };
 
@@ -59,6 +64,24 @@ export type OutboxRecord = {
   eventType: "transcript.ready";
   aggregateId: string;
   payload: TranscriptReadyEventV1;
+  status: "pending" | "delivering" | "delivered" | "dead";
+  attemptCount: number;
+  nextAttemptAt: string;
+  deliveredAt?: string;
+  lastError?: string;
+  leaseOwner?: string;
+  leaseExpiresAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type IntakeStatusOutboxRecord = {
+  eventId: string;
+  intakeId: string;
+  sourceAuthority: string;
+  sequence: number;
+  callbackUrl: string;
+  payload: ReturnType<typeof transcriptionStatusEvent>;
   status: "pending" | "delivering" | "delivered" | "dead";
   attemptCount: number;
   nextAttemptAt: string;
@@ -124,6 +147,24 @@ type OutboxRow = {
   updated_at: string;
 };
 
+type IntakeStatusOutboxRow = {
+  event_id: string;
+  intake_id: string;
+  source_authority: string;
+  event_sequence: number;
+  callback_url: string;
+  payload_json: string;
+  status: IntakeStatusOutboxRecord["status"];
+  attempt_count: number;
+  next_attempt_at: string;
+  delivered_at: string | null;
+  last_error: string | null;
+  lease_owner: string | null;
+  lease_expires_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export class IntakeConflictError extends Error {
   constructor(message: string) {
     super(message);
@@ -133,6 +174,14 @@ export class IntakeConflictError extends Error {
 
 function sha256(value: string): string {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function storedSourceItemId(request: IntakeRequestV1): string {
+  if (!request.source.collectionId) return request.source.itemId;
+  return `collection:${sha256(canonicalJson({
+    collectionId: request.source.collectionId,
+    itemId: request.source.itemId,
+  }))}`;
 }
 
 function mapIntake(row: IntakeRow): IntakeRecord {
@@ -161,6 +210,26 @@ function mapOutbox(row: OutboxRow): OutboxRecord {
     eventType: row.event_type,
     aggregateId: row.aggregate_id,
     payload: JSON.parse(row.payload_json) as TranscriptReadyEventV1,
+    status: row.status,
+    attemptCount: row.attempt_count,
+    nextAttemptAt: row.next_attempt_at,
+    deliveredAt: row.delivered_at ?? undefined,
+    lastError: row.last_error ?? undefined,
+    leaseOwner: row.lease_owner ?? undefined,
+    leaseExpiresAt: row.lease_expires_at ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapIntakeStatusOutbox(row: IntakeStatusOutboxRow): IntakeStatusOutboxRecord {
+  return {
+    eventId: row.event_id,
+    intakeId: row.intake_id,
+    sourceAuthority: row.source_authority,
+    sequence: row.event_sequence,
+    callbackUrl: row.callback_url,
+    payload: JSON.parse(row.payload_json) as ReturnType<typeof transcriptionStatusEvent>,
     status: row.status,
     attemptCount: row.attempt_count,
     nextAttemptAt: row.next_attempt_at,
@@ -236,7 +305,37 @@ export class MediaJobStore {
       );
       CREATE INDEX IF NOT EXISTS idx_outbox_delivery
         ON outbox(status, next_attempt_at, lease_expires_at);
+
+      CREATE TABLE IF NOT EXISTS intake_status_outbox (
+        event_id TEXT PRIMARY KEY,
+        intake_id TEXT NOT NULL,
+        source_authority TEXT NOT NULL,
+        event_sequence INTEGER NOT NULL DEFAULT 0,
+        callback_url TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('pending','delivering','delivered','dead')),
+        attempt_count INTEGER NOT NULL DEFAULT 0,
+        next_attempt_at TEXT NOT NULL,
+        delivered_at TEXT,
+        last_error TEXT,
+        lease_owner TEXT,
+        lease_expires_at TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY(intake_id) REFERENCES intakes(intake_id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_intake_status_outbox_delivery
+        ON intake_status_outbox(status, next_attempt_at, lease_expires_at);
     `);
+
+    const statusOutboxColumns = this.db
+      .prepare("PRAGMA table_info(intake_status_outbox)")
+      .all() as unknown as Array<{ name: string }>;
+    if (!statusOutboxColumns.some((column) => column.name === "event_sequence")) {
+      this.db.exec(
+        "ALTER TABLE intake_status_outbox ADD COLUMN event_sequence INTEGER NOT NULL DEFAULT 0"
+      );
+    }
   }
 
   createIntake(
@@ -251,10 +350,12 @@ export class MediaJobStore {
     const requestSha256 = sha256(requestJson);
     const identity = canonicalJson({
       authority: request.source.authority,
+      collectionId: request.source.collectionId,
       itemId: request.source.itemId,
       artifactRevision: request.source.artifactRevision,
     });
     const intakeId = `int_${sha256(identity)}`;
+    const sourceItemId = storedSourceItemId(request);
 
     this.db.exec("BEGIN IMMEDIATE");
     try {
@@ -268,7 +369,7 @@ export class MediaJobStore {
         .get(
           request.idempotencyKey,
           request.source.authority,
-          request.source.itemId,
+          sourceItemId,
           request.source.artifactRevision
         ) as IntakeRow | undefined;
       if (existing) {
@@ -293,7 +394,7 @@ export class MediaJobStore {
           intakeId,
           request.idempotencyKey,
           request.source.authority,
-          request.source.itemId,
+          sourceItemId,
           request.source.artifactRevision,
           requestJson,
           requestSha256,
@@ -309,6 +410,7 @@ export class MediaJobStore {
       const row = this.db
         .prepare("SELECT * FROM intakes WHERE intake_id = ?")
         .get(intakeId) as IntakeRow;
+      this.enqueueIntakeStatusRecord(mapIntake(row), now);
       this.db.exec("COMMIT");
       return { record: mapIntake(row), deduplicated: false };
     } catch (error) {
@@ -324,13 +426,20 @@ export class MediaJobStore {
     return row ? mapIntake(row) : undefined;
   }
 
-  getIntakeBySource(authority: string, itemId: string): IntakeRecord | undefined {
+  getIntakeBySource(
+    authority: string,
+    itemId: string,
+    collectionId?: string
+  ): IntakeRecord | undefined {
+    const sourceItemId = collectionId
+      ? `collection:${sha256(canonicalJson({ collectionId, itemId }))}`
+      : itemId;
     const row = this.db
       .prepare(
         `SELECT * FROM intakes WHERE source_authority = ? AND source_item_id = ?
          ORDER BY created_at DESC LIMIT 1`
       )
-      .get(authority, itemId) as IntakeRow | undefined;
+      .get(authority, sourceItemId) as IntakeRow | undefined;
     return row ? mapIntake(row) : undefined;
   }
 
@@ -368,6 +477,7 @@ export class MediaJobStore {
       const leased = this.db
         .prepare("SELECT * FROM intakes WHERE intake_id = ?")
         .get(row.intake_id) as IntakeRow;
+      this.enqueueIntakeStatusRecord(mapIntake(leased), now);
       this.db.exec("COMMIT");
       return mapIntake(leased);
     } catch (error) {
@@ -505,29 +615,41 @@ export class MediaJobStore {
       errorMessage?: string;
     }
   ): void {
-    const result = this.db
-      .prepare(
-        `UPDATE intakes SET status = ?, local_path = COALESCE(?, local_path),
-           transcript_id = COALESCE(?, transcript_id),
-           transcript_record_sha256 = COALESCE(?, transcript_record_sha256),
-           last_error_code = ?, last_error_message = ?, lease_owner = NULL,
-           lease_expires_at = NULL, updated_at = ?
-         WHERE intake_id = ? AND lease_owner = ? AND status = ?`
-      )
-      .run(
-        to,
-        values.localPath ?? null,
-        values.transcriptId ?? null,
-        values.transcriptRecordSha256 ?? null,
-        values.errorCode ?? null,
-        values.errorMessage ?? null,
-        new Date().toISOString(),
-        intakeId,
-        owner,
-        from
-      );
-    if (Number(result.changes) !== 1) {
-      throw new Error(`Intake transition ${from} -> ${to} lost its lease`);
+    const now = new Date().toISOString();
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      const result = this.db
+        .prepare(
+          `UPDATE intakes SET status = ?, local_path = COALESCE(?, local_path),
+             transcript_id = COALESCE(?, transcript_id),
+             transcript_record_sha256 = COALESCE(?, transcript_record_sha256),
+             last_error_code = ?, last_error_message = ?, lease_owner = NULL,
+             lease_expires_at = NULL, updated_at = ?
+           WHERE intake_id = ? AND lease_owner = ? AND status = ?`
+        )
+        .run(
+          to,
+          values.localPath ?? null,
+          values.transcriptId ?? null,
+          values.transcriptRecordSha256 ?? null,
+          values.errorCode ?? null,
+          values.errorMessage ?? null,
+          now,
+          intakeId,
+          owner,
+          from
+        );
+      if (Number(result.changes) !== 1) {
+        throw new Error(`Intake transition ${from} -> ${to} lost its lease`);
+      }
+      const row = this.db
+        .prepare("SELECT * FROM intakes WHERE intake_id = ?")
+        .get(intakeId) as IntakeRow;
+      this.enqueueIntakeStatusRecord(mapIntake(row), now);
+      this.db.exec("COMMIT");
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
     }
   }
 
@@ -543,6 +665,139 @@ export class MediaJobStore {
            AND (lease_expires_at IS NULL OR lease_expires_at <= ?)`
       )
       .run(now, now);
+    return Number(result.changes);
+  }
+
+  private enqueueIntakeStatusRecord(record: IntakeRecord, now: string): void {
+    if (!record.request.callback || !record.request.source.collectionId) return;
+    const event = transcriptionStatusEvent(record);
+    this.db
+      .prepare(
+        `INSERT OR IGNORE INTO intake_status_outbox (
+           event_id, intake_id, source_authority, event_sequence, callback_url, payload_json,
+           status, attempt_count, next_attempt_at, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, ?, ?, 'pending', 0, ?, ?, ?)`
+      )
+      .run(
+        event.eventId,
+        record.intakeId,
+        record.request.source.authority,
+        event.status === "accepted" ? 0 : event.status === "processing" ? 1 : 2,
+        record.request.callback.url,
+        canonicalJson(event),
+        now,
+        now,
+        now
+      );
+  }
+
+  getIntakeStatusOutbox(eventId: string): IntakeStatusOutboxRecord | undefined {
+    const row = this.db
+      .prepare("SELECT * FROM intake_status_outbox WHERE event_id = ?")
+      .get(eventId) as IntakeStatusOutboxRow | undefined;
+    return row ? mapIntakeStatusOutbox(row) : undefined;
+  }
+
+  listIntakeStatusOutbox(intakeId: string): IntakeStatusOutboxRecord[] {
+    const rows = this.db
+      .prepare("SELECT * FROM intake_status_outbox WHERE intake_id = ? ORDER BY created_at ASC")
+      .all(intakeId) as unknown as IntakeStatusOutboxRow[];
+    return rows.map(mapIntakeStatusOutbox);
+  }
+
+  leaseNextIntakeStatusOutbox(
+    owner = randomUUID(),
+    leaseMs = 60_000
+  ): IntakeStatusOutboxRecord | undefined {
+    const now = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + leaseMs).toISOString();
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      const row = this.db
+        .prepare(
+          `SELECT candidate.* FROM intake_status_outbox AS candidate
+           WHERE candidate.status = 'pending' AND candidate.next_attempt_at <= ?
+             AND (candidate.lease_expires_at IS NULL OR candidate.lease_expires_at <= ?)
+             AND NOT EXISTS (
+               SELECT 1 FROM intake_status_outbox AS earlier
+               WHERE earlier.intake_id = candidate.intake_id
+                 AND earlier.event_sequence < candidate.event_sequence
+                 AND earlier.status IN ('pending','delivering')
+             )
+           ORDER BY candidate.created_at ASC, candidate.event_sequence ASC LIMIT 1`
+        )
+        .get(now, now) as IntakeStatusOutboxRow | undefined;
+      if (!row) {
+        this.db.exec("COMMIT");
+        return undefined;
+      }
+      this.db
+        .prepare(
+          `UPDATE intake_status_outbox
+           SET status = 'delivering', lease_owner = ?, lease_expires_at = ?,
+             attempt_count = attempt_count + 1, updated_at = ?
+           WHERE event_id = ?`
+        )
+        .run(owner, expiresAt, now, row.event_id);
+      const leased = this.db
+        .prepare("SELECT * FROM intake_status_outbox WHERE event_id = ?")
+        .get(row.event_id) as IntakeStatusOutboxRow;
+      this.db.exec("COMMIT");
+      return mapIntakeStatusOutbox(leased);
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
+  }
+
+  markIntakeStatusOutboxDelivered(eventId: string, owner: string): void {
+    const now = new Date().toISOString();
+    const result = this.db
+      .prepare(
+        `UPDATE intake_status_outbox
+         SET status = 'delivered', delivered_at = ?, updated_at = ?,
+           lease_owner = NULL, lease_expires_at = NULL, last_error = NULL
+         WHERE event_id = ? AND lease_owner = ? AND status = 'delivering'`
+      )
+      .run(now, now, eventId, owner);
+    if (Number(result.changes) !== 1) throw new Error("Intake status outbox lease lost");
+  }
+
+  markIntakeStatusOutboxFailed(
+    eventId: string,
+    owner: string,
+    error: string,
+    options?: { dead?: boolean; delayMs?: number }
+  ): void {
+    const now = new Date().toISOString();
+    const nextAttemptAt = new Date(Date.now() + (options?.delayMs ?? 60_000)).toISOString();
+    const result = this.db
+      .prepare(
+        `UPDATE intake_status_outbox
+         SET status = ?, next_attempt_at = ?, last_error = ?, updated_at = ?,
+           lease_owner = NULL, lease_expires_at = NULL
+         WHERE event_id = ? AND lease_owner = ? AND status = 'delivering'`
+      )
+      .run(
+        options?.dead ? "dead" : "pending",
+        nextAttemptAt,
+        error.slice(0, 1000),
+        now,
+        eventId,
+        owner
+      );
+    if (Number(result.changes) !== 1) throw new Error("Intake status outbox lease lost");
+  }
+
+  recoverExpiredIntakeStatusOutbox(now = new Date().toISOString()): number {
+    const result = this.db
+      .prepare(
+        `UPDATE intake_status_outbox
+         SET status = 'pending', lease_owner = NULL, lease_expires_at = NULL,
+           next_attempt_at = ?, updated_at = ?, last_error = 'Delivery interrupted; requeued'
+         WHERE status = 'delivering' AND (lease_expires_at IS NULL OR lease_expires_at <= ?)`
+      )
+      .run(now, now, now);
     return Number(result.changes);
   }
 
@@ -677,6 +932,7 @@ export class MediaJobStore {
   statusCounts(): {
     intakes: Record<IntakeStatus, number>;
     outbox: Record<OutboxRecord["status"], number>;
+    intakeStatusOutbox: Record<IntakeStatusOutboxRecord["status"], number>;
   } {
     const intakes: Record<IntakeStatus, number> = {
       held: 0,
@@ -693,22 +949,35 @@ export class MediaJobStore {
       delivered: 0,
       dead: 0,
     };
+    const intakeStatusOutbox: Record<IntakeStatusOutboxRecord["status"], number> = {
+      pending: 0,
+      delivering: 0,
+      delivered: 0,
+      dead: 0,
+    };
     const intakeRows = this.db
       .prepare("SELECT status, COUNT(*) AS count FROM intakes GROUP BY status")
       .all() as unknown as Array<{ status: IntakeStatus; count: number }>;
     const outboxRows = this.db
       .prepare("SELECT status, COUNT(*) AS count FROM outbox GROUP BY status")
       .all() as unknown as Array<{ status: OutboxRecord["status"]; count: number }>;
+    const intakeStatusRows = this.db
+      .prepare("SELECT status, COUNT(*) AS count FROM intake_status_outbox GROUP BY status")
+      .all() as unknown as Array<{
+        status: IntakeStatusOutboxRecord["status"];
+        count: number;
+      }>;
     for (const row of intakeRows) intakes[row.status] = Number(row.count);
     for (const row of outboxRows) outbox[row.status] = Number(row.count);
-    return { intakes, outbox };
+    for (const row of intakeStatusRows) intakeStatusOutbox[row.status] = Number(row.count);
+    return { intakes, outbox, intakeStatusOutbox };
   }
 
   pruneTerminal(options?: {
     nowMs?: number;
     intakeRetentionDays?: number;
     outboxRetentionDays?: number;
-  }): { intakesDeleted: number; outboxDeleted: number } {
+  }): { intakesDeleted: number; outboxDeleted: number; intakeStatusOutboxDeleted: number } {
     const nowMs = options?.nowMs ?? Date.now();
     const intakeDays = Math.max(1, options?.intakeRetentionDays ?? 365);
     const outboxDays = Math.max(1, options?.outboxRetentionDays ?? 365);
@@ -716,6 +985,11 @@ export class MediaJobStore {
     const outboxCutoff = new Date(nowMs - outboxDays * 86_400_000).toISOString();
     this.db.exec("BEGIN IMMEDIATE");
     try {
+      const intakeStatusOutbox = this.db
+        .prepare(
+          "DELETE FROM intake_status_outbox WHERE status IN ('delivered','dead') AND updated_at < ?"
+        )
+        .run(outboxCutoff);
       const outbox = this.db
         .prepare(
           "DELETE FROM outbox WHERE status IN ('delivered','dead') AND updated_at < ?"
@@ -723,13 +997,19 @@ export class MediaJobStore {
         .run(outboxCutoff);
       const intakes = this.db
         .prepare(
-          "DELETE FROM intakes WHERE status IN ('completed','failed') AND updated_at < ?"
+          `DELETE FROM intakes
+           WHERE status IN ('completed','failed') AND updated_at < ?
+             AND NOT EXISTS (
+               SELECT 1 FROM intake_status_outbox
+               WHERE intake_status_outbox.intake_id = intakes.intake_id
+             )`
         )
         .run(intakeCutoff);
       this.db.exec("COMMIT");
       return {
         intakesDeleted: Number(intakes.changes),
         outboxDeleted: Number(outbox.changes),
+        intakeStatusOutboxDeleted: Number(intakeStatusOutbox.changes),
       };
     } catch (error) {
       this.db.exec("ROLLBACK");

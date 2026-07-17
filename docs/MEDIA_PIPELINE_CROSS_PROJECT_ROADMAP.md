@@ -146,7 +146,7 @@ Owner: this repository.
 Gate: duplicate-delivery tests, crash/restart tests at every job stage, artifact
 integrity verification, and protocol snapshot schema validation.
 
-Progress (2026-07-15): `0.38.0` is deployed and implements immutable Transcript
+Progress (2026-07-17): `0.38.0` is deployed and implements immutable Transcript
 Store v1, provenance and exact-byte pull endpoints; persistent intake, lease,
 attempt, idempotency, and outbox state; least-privilege intake authentication;
 cross-host size/hash verification; legacy audio compatibility adapters; and a
@@ -160,23 +160,29 @@ place and must not be satisfied with a synthetic artifact.
 Patch `0.38.1` adds the project-owned Home Infra Protocol 0.9.0 contract and a
 canonical-host public status route so Home Infra can register the deployed job
 without embedding a private API address in the public project contract.
+Patch `0.38.2` publishes the exact Cortex evidence fixture. Source release
+`0.39.0` implements the producer-reviewed, commit-pinned Plaud Mirror
+compatibility profile; NAS deployment and live verification remain the current
+gate.
 
 ### Stage 4 - Plaud Mirror Adapter
 
-Owner: future Plaud Mirror session after Stage 3 contract freeze.
+Owners: Plaud Mirror and Media2Text.
 
-- Add a least-privilege service-to-service artifact endpoint or token scope.
-- Replace machine-local path semantics with an opaque artifact reference.
-- Add an additive versioned event carrying event id, source item id, artifact
-  revision/hash, content type, size, duration, and delivery attempt.
-- Preserve the existing durable outbox and HMAC delivery behavior.
-- Add an authenticated dry-run/replay action that enqueues verified local
-  recordings without re-downloading them from Plaud.
-- Prevent duplicate active or delivered events for the same artifact revision
-  unless the operator explicitly forces replay.
+- Plaud Mirror `0.14.1` publishes the Transcription Intake v1 Compatibility
+  Profile, three-credential boundary, durable delivery, authenticated artifact
+  serving, capabilities, status receiver, cost guard, and executable provider
+  probe at commit `d393a0c`.
+- Media2Text `0.39.0` pins those exact schema bytes and implements an additive
+  receiver facade, collection-aware idempotency, artifact bearer fetch,
+  producer-scoped pull, and durable monotonic HMAC status callbacks.
+- A future neutral Content Intake Protocol is deliberately deferred until a
+  successful live canary plus a second structurally distinct processing profile
+  supplies evidence for the core/profile split.
 
-Gate: one artifact crosses the network boundary, survives receiver restart, and
-produces exactly one Media2Text intake job.
+Gate: deploy both releases, pass the Plaud provider probe across the public TLS
+boundary, and process one operator-approved recording into exactly one immutable
+Media2Text transcript while push and pull status agree.
 
 ### Stage 5 - Cortex Adapter (Separate Track, Integration Gated)
 

@@ -32,6 +32,11 @@ It does not replace the CLI: the CLI remains fully operational and can be run se
 - `Y2T_INTAKE_API_KEY` (least-privilege producer credential; at least 32
   characters). Configure it before onboarding an external producer. It only
   authorizes `POST /v1/intakes` and cannot read or administer the API.
+- `Y2T_TRANSCRIPTION_INTAKE_PROFILES_JSON` (secret JSON array for external
+  compatibility profiles). Each object requires `id`, `authority`, independent
+  `intakeBearer`, `artifactBearer`, and `statusHmacSecret` values, plus exact
+  HTTPS `artifactOrigins` and `callbackOrigins`. Keep the entire value in
+  Doppler; never commit it or print it in logs.
 
 ## Strongly recommended (servers)
 
@@ -94,6 +99,11 @@ It does not replace the CLI: the CLI remains fully operational and can be run se
 - `Y2T_INTAKE_LEASE_MS` (crash-recovery lease; default 300000)
 - `Y2T_INTAKE_TERMINAL_RETENTION_DAYS` (terminal coordination-row retention;
   default 365; immutable transcript records are unaffected)
+- `Y2T_INTAKE_STATUS_OUTBOX_ENABLED` (default true; starts only when at least
+  one transcription profile exists)
+- `Y2T_INTAKE_STATUS_OUTBOX_INTERVAL_MS` (default 1000)
+- `Y2T_INTAKE_STATUS_OUTBOX_MAX_ATTEMPTS` (default 20)
+- `Y2T_INTAKE_STATUS_OUTBOX_TIMEOUT_MS` (default 10000)
 - `Y2T_TRANSCRIPT_READY_URL` and `Y2T_TRANSCRIPT_READY_SECRET` (fixed
   downstream endpoint and HMAC secret). Leave both unset until the consumer has
   reviewed the contract and the operator has ratified a version plus commit SHA.
@@ -145,12 +155,19 @@ Non-secret defaults:
 11) Every configured intake artifact origin is HTTPS and explicitly approved.
 12) `Y2T_TRANSCRIPT_READY_URL` remains empty until its contract is frozen. If
     configured, require a separate random `Y2T_TRANSCRIPT_READY_SECRET`.
+13) For every transcription profile, verify the admission bearer, artifact
+    bearer, and callback HMAC secret are distinct and at least 32 characters.
+14) Route only the exact machine endpoints through the public TLS proxy; do not
+    expose the remaining API surface or reuse the operator API key.
 
 ## Reverse proxy (recommended)
 
 Terminate TLS in a reverse proxy (Caddy/Nginx/Traefik) and forward:
 - `https://y2t.example.com/` -> web container `:3000`
-- Optionally: do not expose the API port at all; the web UI proxies `/api/*`.
+- Exact machine paths `GET /v1/intake-capabilities`, `POST /v1/intakes`, and
+  `GET /v1/intakes/{id}` -> API container `:8787`.
+- Keep every other API path private; the web UI proxies its operator `/api/*`
+  calls only after application authentication.
 
 ## Health and ops
 
@@ -163,6 +180,8 @@ Terminate TLS in a reverse proxy (Caddy/Nginx/Traefik) and forward:
 - Canonical-host status for Infra Portal:
   `GET /api/status/media-pipeline` on the web origin (public sanitized proxy)
 - Intake reconciliation: `GET /v1/intakes` (authenticated operator API)
+- Producer capabilities and reconciliation: `GET /v1/intake-capabilities` and
+  `GET /v1/intakes/{id}` with that producer's admission bearer
 - Immutable transcript reconciliation: `GET /v1/transcripts` (authenticated
   operator API)
 

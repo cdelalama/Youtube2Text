@@ -58,6 +58,16 @@ import {
   TranscriptReadyOutboxWorker,
   validateOutboxConfig,
 } from "../jobs/outboxWorker.js";
+import { IntakeStatusOutboxWorker } from "../jobs/intakeStatusOutboxWorker.js";
+import {
+  adaptTranscriptionIntake,
+  assertTranscriptionProfileRequest,
+  publicTranscriptionStatus,
+  transcriptionCapabilities,
+  transcriptionIntakeRequestSchema,
+  transcriptionProfileForRequest,
+  validateTranscriptionProfiles,
+} from "../jobs/transcriptionProfile.js";
 
 type ServerOptions = {
   port: number;
@@ -121,7 +131,7 @@ function setCors(req: IncomingMessage, res: ServerResponse) {
   res.setHeader("access-control-allow-methods", "GET,POST,PATCH,DELETE,OPTIONS");
   res.setHeader(
     "access-control-allow-headers",
-    "content-type,last-event-id,x-api-key,x-media2text-intake-key"
+    "content-type,last-event-id,authorization,x-api-key,x-media2text-intake-key"
   );
 }
 
@@ -243,6 +253,7 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
     );
   }
   validateIntakeAuthConfig();
+  validateTranscriptionProfiles();
   validateOutboxConfig();
 
   const planRunFn = opts.deps?.planRun ?? planRun;
@@ -305,8 +316,10 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
   });
   const intakeWorker = new IntakeWorker(mediaJobStore, manager, config);
   const outboxWorker = new TranscriptReadyOutboxWorker(mediaJobStore);
+  const intakeStatusOutboxWorker = new IntakeStatusOutboxWorker(mediaJobStore);
   intakeWorker.start();
   outboxWorker.start();
+  intakeStatusOutboxWorker.start();
 
   const writeRateLimiter = createRateLimiter(getRateLimitConfigFromEnv());
   const readRateLimiter = createRateLimiter(getReadRateLimitConfigFromEnv());
@@ -536,7 +549,8 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
       const counts = mediaJobStore.statusCounts();
       const failed = counts.intakes.failed;
       const dead = counts.outbox.dead;
-      const degraded = failed > 0 || dead > 0;
+      const sourceStatusDead = counts.intakeStatusOutbox.dead;
+      const degraded = failed > 0 || dead > 0 || sourceStatusDead > 0;
       json(res, 200, {
         observed_at: new Date().toISOString(),
         condition: degraded ? "degraded" : "ok",
@@ -565,17 +579,38 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
                 ? `${dead} delivery event(s) exhausted retries.`
                 : `${counts.outbox.delivered} delivered; ${counts.outbox.pending + counts.outbox.delivering} pending.`,
           },
+          {
+            name: "source_status_delivery",
+            label: "Source status delivery",
+            condition: sourceStatusDead > 0 ? "degraded" : "ok",
+            severity: sourceStatusDead > 0 ? "warning" : "none",
+            summary:
+              sourceStatusDead > 0
+                ? `${sourceStatusDead} source status event(s) exhausted retries.`
+                : `${counts.intakeStatusOutbox.delivered} delivered; ${counts.intakeStatusOutbox.pending + counts.intakeStatusOutbox.delivering} pending.`,
+          },
         ],
       });
       return;
     }
 
+    const transcriptionProfile = transcriptionProfileForRequest(req);
     const isIntakeAdmission =
       req.method === "POST" &&
       seg.length === 2 &&
       seg[0] === "v1" &&
       seg[1] === "intakes";
-    if (!(isIntakeAdmission && hasValidIntakeKey(req)) && !requireApiKey(req, res)) return;
+    const isTranscriptionProfileRequest = Boolean(
+      transcriptionProfile &&
+      ((req.method === "GET" && seg.length === 2 && seg[0] === "v1" && seg[1] === "intake-capabilities") ||
+        isIntakeAdmission ||
+        (req.method === "GET" && seg.length === 3 && seg[0] === "v1" && seg[1] === "intakes"))
+    );
+    if (
+      !(isIntakeAdmission && hasValidIntakeKey(req)) &&
+      !isTranscriptionProfileRequest &&
+      !requireApiKey(req, res)
+    ) return;
 
     if (writeRateLimiter && isWriteMethod(req.method)) {
       const decision = writeRateLimiter.check(rateLimitKey(req));
@@ -776,6 +811,17 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
       }
 
       if (
+        req.method === "GET" &&
+        seg.length === 2 &&
+        seg[0] === "v1" &&
+        seg[1] === "intake-capabilities"
+      ) {
+        if (!transcriptionProfile) return notFound(res);
+        json(res, 200, await transcriptionCapabilities());
+        return;
+      }
+
+      if (
         req.method === "POST" &&
         seg.length === 2 &&
         seg[0] === "v1" &&
@@ -783,6 +829,39 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
       ) {
         const body = await readJsonBodySafe(req, res);
         if (!body.ok) return;
+        if (transcriptionProfile) {
+          const profileRequest = transcriptionIntakeRequestSchema.safeParse(body.body);
+          if (!profileRequest.success) {
+            badRequest(
+              res,
+              profileRequest.error.issues.map((issue) => issue.message).join(", ")
+            );
+            return;
+          }
+          try {
+            assertTranscriptionProfileRequest(transcriptionProfile, profileRequest.data);
+            const result = mediaJobStore.createIntake(
+              adaptTranscriptionIntake(profileRequest.data)
+            );
+            json(res, 202, {
+              schemaVersion: "transcription.intake-admission.v1",
+              intakeId: result.record.intakeId,
+              status: publicTranscriptionStatus(result.record).status,
+              deduplicated: result.deduplicated,
+            });
+          } catch (error) {
+            if (error instanceof IntakeConflictError) {
+              json(res, 409, { error: "idempotency_conflict", message: error.message });
+              return;
+            }
+            if (error instanceof Error && /producer profile|source authority|origin/.test(error.message)) {
+              json(res, 403, { error: "profile_scope_violation", message: error.message });
+              return;
+            }
+            throw error;
+          }
+          return;
+        }
         const parsed = intakeCreateSchema.safeParse(body.body);
         if (!parsed.success) {
           badRequest(res, parsed.error.issues.map((issue) => issue.message).join(", "));
@@ -839,6 +918,14 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
         if (!intakeId) return notFound(res);
         const intake = mediaJobStore.getIntake(intakeId);
         if (!intake) return notFound(res);
+        if (transcriptionProfile) {
+          if (
+            intake.request.source.authority !== transcriptionProfile.authority ||
+            !intake.request.source.collectionId
+          ) return notFound(res);
+          json(res, 200, publicTranscriptionStatus(intake));
+          return;
+        }
         json(res, 200, { intake: publicIntake(intake) });
         return;
       }
@@ -1725,23 +1812,41 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
   server.on("close", () => {
     intakeWorker.stop();
     outboxWorker.stop();
-    if (intakeWorker.isIdle() && outboxWorker.isIdle()) {
+    intakeStatusOutboxWorker.stop();
+    if (
+      intakeWorker.isIdle() &&
+      outboxWorker.isIdle() &&
+      intakeStatusOutboxWorker.isIdle()
+    ) {
       mediaJobStore.close();
       return;
     }
     const deadline = Date.now() + 5_000;
     const closeWhenIdle = setInterval(() => {
       if (
-        (intakeWorker.isIdle() && outboxWorker.isIdle()) ||
+        (intakeWorker.isIdle() &&
+          outboxWorker.isIdle() &&
+          intakeStatusOutboxWorker.isIdle()) ||
         Date.now() >= deadline
       ) {
         clearInterval(closeWhenIdle);
-        if (intakeWorker.isIdle() && outboxWorker.isIdle()) mediaJobStore.close();
+        if (
+          intakeWorker.isIdle() &&
+          outboxWorker.isIdle() &&
+          intakeStatusOutboxWorker.isIdle()
+        ) mediaJobStore.close();
       }
     }, 25);
     closeWhenIdle.unref?.();
   });
 
   server.listen(opts.port, opts.host);
-  return { server, manager, scheduler, intakeWorker, outboxWorker };
+  return {
+    server,
+    manager,
+    scheduler,
+    intakeWorker,
+    outboxWorker,
+    intakeStatusOutboxWorker,
+  };
 }

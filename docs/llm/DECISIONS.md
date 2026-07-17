@@ -410,3 +410,40 @@ Implications:
   the same job state machine before the contract is declared live-verified.
 - Home Infra observes sanitized status snapshots; it neither transports media
   nor executes replay.
+
+## D-021 - Plaud compatibility is additive and commit-pinned
+
+Decision:
+- Plaud Mirror's `Transcription Intake v1 Compatibility Profile`, frozen at
+  producer commit `d393a0cefa17dfc4788294ef9bb5e5a89ed0f6b4`, is the external
+  wire contract for the first Plaud integration.
+- Media2Text keeps `media2text.intake.v1` as its internal admission domain and
+  implements the Plaud profile as an additive API facade. Neither product
+  adopts the other's internal tables or job model.
+- Admission bearer, source-artifact bearer, and callback HMAC secret are three
+  independent credentials. A `202` means the intake and accepted-status
+  obligation are durable; artifact transfer and transcription remain
+  asynchronous.
+- Producer status callbacks are a durable, monotonic, at-least-once outbox.
+  Authenticated status pull is reconciliation after lost callbacks.
+- A neutral Content Intake Protocol is a future extraction, not a claim made by
+  this release. Reconsider extraction only after one live Plaud canary and a
+  second structurally distinct profile such as OCR provide implementation
+  evidence.
+
+Rationale:
+- A producer-owned compatibility profile lets Plaud add conforming destinations
+  without releases for every transcriber, while an adapter at this boundary
+  protects Media2Text's existing domain and legacy admission paths.
+- Commit-pinned schemas and an executable producer probe make compatibility
+  reviewable. Creating a third protocol repository before a live canary would
+  freeze untested assumptions and add synchronization overhead.
+
+Implications:
+- `docs/contracts/plaud-mirror-transcription-intake-v1/` is copied exactly from
+  the producer and must only change through a reviewed producer version and new
+  pin.
+- Home Infra publishes routing and sanitized synchronization state; it never
+  owns this content contract or transports audio.
+- Transcript Ready v1 remains a separate Media2Text-to-Cortex contract and is
+  not activated by Plaud compatibility.

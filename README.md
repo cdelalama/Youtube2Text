@@ -1,4 +1,4 @@
-<!-- doc-version: 0.38.2 -->
+<!-- doc-version: 0.39.0 -->
 # Media2Text
 
 Media2Text is the visible product name for the `youtube2text` engine: a
@@ -457,6 +457,7 @@ Endpoints:
 - `GET /api/status/media-pipeline` on the web origin (public proxy of the same
   sanitized snapshot for Home Infra/Infra Portal)
 - `POST /v1/intakes` (durably accept a remote media reference; `202` precedes asynchronous fetch)
+- `GET /v1/intake-capabilities` (producer-profile capabilities; bearer-authenticated)
 - `GET /v1/intakes`, `GET /v1/intakes/:id` (operator intake reconciliation)
 - `GET /v1/transcripts`, `GET /v1/transcripts/:id` (immutable Transcript Store pull reconciliation)
 - `POST /maintenance/cleanup` (retention cleanup for `output/_runs/*` + old audio cache)
@@ -486,13 +487,23 @@ Media contracts:
   It declares the event-driven media sync job and its public sanitized status
   URL; Home Infra remains the private registry/consumer.
 - `docs/contracts/transcript-store.v1.schema.json` is implemented for every new transcript.
-- `docs/contracts/media-intake.v1.schema.json` and
-  `docs/contracts/transcript-ready.v1.schema.json` are drafts until Plaud Mirror
-  and Cortex review them. Do not configure live cross-project delivery against
-  an unfrozen contract.
+- `docs/contracts/media-intake.v1.schema.json` is the implemented internal
+  intake domain. The exact Plaud Mirror Transcription Intake v1 compatibility
+  profile is pinned under
+  `docs/contracts/plaud-mirror-transcription-intake-v1/` to producer commit
+  `d393a0cefa17dfc4788294ef9bb5e5a89ed0f6b4`.
+- `docs/contracts/transcript-ready.v1.schema.json` remains a draft until Cortex
+  reviews it. Plaud activation does not authorize Cortex delivery.
 - `Y2T_INTAKE_API_KEY` is a least-privilege producer credential accepted only
   by `POST /v1/intakes`. Artifact origins require an exact
   `Y2T_INTAKE_ARTIFACT_ALLOWED_ORIGINS` allowlist.
+- `Y2T_TRANSCRIPTION_INTAKE_PROFILES_JSON` configures external producer
+  profiles. Each profile has an authority, an intake bearer, a distinct
+  artifact bearer, a distinct status HMAC secret, and exact artifact/callback
+  origin allowlists. Never commit the JSON or its credentials.
+- Plaud-compatible callbacks are persisted before delivery and retried in
+  monotonic status order. `Y2T_INTAKE_STATUS_OUTBOX_ENABLED=true` enables the
+  worker; dead rows make the sanitized Home Infra status degraded.
 - Every completed item creates a durable `transcript.ready` outbox obligation.
   `Y2T_TRANSCRIPT_READY_URL` remains unset until Cortex approves the contract;
   pending obligations are retained rather than discarded.

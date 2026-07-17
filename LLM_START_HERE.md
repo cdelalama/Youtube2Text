@@ -1,4 +1,4 @@
-<!-- doc-version: 0.38.2 -->
+<!-- doc-version: 0.39.0 -->
 # LLM Start Guide - Media2Text
 
 ## Read This First (Mandatory)
@@ -50,15 +50,15 @@ Recommended reading order:
 ## Current Focus (Snapshot)
 
 Source of truth: docs/llm/HANDOFF.md.
-- Last Updated: 2026-07-15
-- Working on: Media2Text 0.38.2 provides Cortex V1 with one committed,
-  byte-stable real JSONL fixture and an explicit legacy-provenance manifest.
-- Status: v0.38.1 is healthy on NAS with authentication, economic enforcement,
-  durable intake/outbox, Transcript Store, and Home Infra status active. The
-  0.38.2 source release adds offline consumer evidence and CI validation only;
-  it does not require a NAS rollout. Cortex/Plaud delivery remains gated on
-  consumer-reviewed frozen contracts; the scheduler and historical backfills
-  remain disabled.
+- Last Updated: 2026-07-17
+- Working on: Media2Text 0.39.0 implements the frozen Plaud Mirror
+  Transcription Intake v1 compatibility profile as an additive facade.
+- Status: source supports durable Plaud admission, authenticated artifact fetch,
+  monotonic signed status callbacks, and producer pull reconciliation. NAS still
+  runs 0.38.1 until the coordinated deployment and exact Home Infra routes pass
+  a live canary. Transcript Ready delivery to Cortex, the scheduler, and bulk
+  historical replay remain disabled behind their separate contract and cost
+  gates.
 
 Keep this section synchronized with the "Current Status" block in docs/llm/HANDOFF.md.
 

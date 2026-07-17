@@ -1,0 +1,26 @@
+{
+  "profile": "plaud-mirror.transcription-intake.v1",
+  "profileVersion": "1.0.0",
+  "schemas": {
+    "transcription-intake-admission.v1.schema.json": {
+      "bytes": 658,
+      "sha256": "0724891e59ca01cc8c58aed7d921acc7675b273579473fa431978ba1443be21e"
+    },
+    "transcription-intake-capabilities.v1.schema.json": {
+      "bytes": 1016,
+      "sha256": "ed24f9ea27b684074c1412b69c1ed630c52f22ea5b423a7e616f65dd16e97446"
+    },
+    "transcription-intake-status-event.v1.schema.json": {
+      "bytes": 1444,
+      "sha256": "fd948a3775ebb627d951d8c5c8c98694dd1edd39a29356c7c6bb802ce478b061"
+    },
+    "transcription-intake-status.v1.schema.json": {
+      "bytes": 1210,
+      "sha256": "71297f0ba8f8566a583516d8f1987213e0b3b95036ed3afdb07d5ea6a26fef74"
+    },
+    "transcription-intake.v1.schema.json": {
+      "bytes": 2425,
+      "sha256": "fe9caee90aaaecdd5640eb87a21a19f9cf681bdc7d52385a2db653e777cdb820"
+    }
+  }
+}

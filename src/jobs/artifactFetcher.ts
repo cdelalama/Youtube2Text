@@ -5,6 +5,7 @@ import { Readable } from "node:stream";
 import type { IntakeRecord } from "./store.js";
 import { ensureDir } from "../utils/fs.js";
 import { sha256File } from "../transcripts/store.js";
+import { transcriptionProfileForAuthority } from "./transcriptionProfile.js";
 
 export class ArtifactFetchError extends Error {
   constructor(
@@ -43,7 +44,11 @@ export async function fetchIntakeArtifact(
 ): Promise<string> {
   const artifact = intake.request.artifact;
   const url = new URL(artifact.url);
-  if (!allowedOrigins().has(url.origin)) {
+  const producerProfile = transcriptionProfileForAuthority(intake.request.source.authority);
+  const origins = producerProfile
+    ? new Set(producerProfile.artifactOrigins)
+    : allowedOrigins();
+  if (!origins.has(url.origin)) {
     throw new ArtifactFetchError(
       "artifact_origin_not_allowed",
       `Artifact origin ${url.origin} is not allowlisted`,
@@ -84,7 +89,12 @@ export async function fetchIntakeArtifact(
         method: "GET",
         redirect: "error",
         signal: controller.signal,
-        headers: { accept: artifact.contentType },
+        headers: {
+          accept: artifact.contentType,
+          ...(producerProfile
+            ? { authorization: `Bearer ${producerProfile.artifactBearer}` }
+            : {}),
+        },
       });
     } catch (error) {
       throw new ArtifactFetchError(

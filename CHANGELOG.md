@@ -5,6 +5,28 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.39.0] - 2026-07-17
+
+### Added
+- Added an authenticated compatibility facade for the commit-pinned Plaud
+  Mirror Transcription Intake v1 profile, including capabilities, durable
+  admission, producer-scoped status pull, authenticated artifact fetch, and a
+  durable HMAC-signed status callback outbox.
+- Added a byte-for-byte contract pin for Plaud Mirror `0.14.1` commit
+  `d393a0cefa17dfc4788294ef9bb5e5a89ed0f6b4` and automated hash validation.
+
+### Changed
+- Collection identity is now part of intake deduplication, so equal item IDs in
+  separate source collections cannot collide.
+- The internal `media2text.intake.v1` domain remains stable; the external Plaud
+  profile is translated at the API boundary rather than leaking producer
+  concepts into the job engine.
+
+### Fixed
+- Producer status transitions are persisted in monotonic order before delivery,
+  survive restarts, and expose dead deliveries through sanitized pipeline
+  health.
+
 ## [0.38.2] - 2026-07-15
 
 ### Added

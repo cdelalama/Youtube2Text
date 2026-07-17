@@ -9,7 +9,17 @@ import { MediaJobStore, type IntakeRequestV1 } from "../src/jobs/store.js";
 
 test("artifact fetch verifies origin, size, and SHA-256 before admission", async () => {
   const previous = process.env.Y2T_INTAKE_ARTIFACT_ALLOWED_ORIGINS;
+  const previousProfiles = process.env.Y2T_TRANSCRIPTION_INTAKE_PROFILES_JSON;
   process.env.Y2T_INTAKE_ARTIFACT_ALLOWED_ORIGINS = "https://source.example";
+  process.env.Y2T_TRANSCRIPTION_INTAKE_PROFILES_JSON = JSON.stringify([{
+    id: "plaud-primary",
+    authority: "plaud-mirror",
+    intakeBearer: "plaud-intake-bearer-aaaaaaaaaaaaaaaaaaaaaaaa",
+    artifactBearer: "plaud-artifact-bearer-bbbbbbbbbbbbbbbbbbbbb",
+    statusHmacSecret: "plaud-status-secret-cccccccccccccccccccccccc",
+    artifactOrigins: ["https://source.example"],
+    callbackOrigins: ["https://source.example"],
+  }]);
   const dir = await mkdtemp(join(tmpdir(), "y2t-artifact-"));
   const body = Buffer.from("verified-audio");
   const digest = createHash("sha256").update(body).digest("hex");
@@ -33,7 +43,16 @@ test("artifact fetch verifies origin, size, and SHA-256 before admission", async
   try {
     const intake = store.createIntake(request).record;
     const path = await fetchIntakeArtifact(intake, join(dir, "audio"), {
-      fetch: async () => new Response(body, { status: 200, headers: { "content-length": String(body.length) } }),
+      fetch: async (_url, init) => {
+        assert.equal(
+          new Headers(init?.headers).get("authorization"),
+          "Bearer plaud-artifact-bearer-bbbbbbbbbbbbbbbbbbbbb"
+        );
+        return new Response(body, {
+          status: 200,
+          headers: { "content-length": String(body.length) },
+        });
+      },
     });
     assert.deepEqual(await readFile(path), body);
 
@@ -59,5 +78,7 @@ test("artifact fetch verifies origin, size, and SHA-256 before admission", async
     await rm(dir, { recursive: true, force: true });
     if (previous === undefined) delete process.env.Y2T_INTAKE_ARTIFACT_ALLOWED_ORIGINS;
     else process.env.Y2T_INTAKE_ARTIFACT_ALLOWED_ORIGINS = previous;
+    if (previousProfiles === undefined) delete process.env.Y2T_TRANSCRIPTION_INTAKE_PROFILES_JSON;
+    else process.env.Y2T_TRANSCRIPTION_INTAKE_PROFILES_JSON = previousProfiles;
   }
 });

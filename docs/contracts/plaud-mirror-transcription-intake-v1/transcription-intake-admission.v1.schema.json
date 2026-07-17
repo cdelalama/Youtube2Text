@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cdelalama/plaud-mirror/main/docs/contracts/transcription-intake-admission.v1.schema.json",
+  "title": "Transcription Intake Admission v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "intakeId", "status", "deduplicated"],
+  "properties": {
+    "schemaVersion": { "const": "transcription.intake-admission.v1" },
+    "intakeId": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "status": { "enum": ["accepted", "processing", "transcribed", "failed"] },
+    "deduplicated": { "type": "boolean" }
+  }
+}

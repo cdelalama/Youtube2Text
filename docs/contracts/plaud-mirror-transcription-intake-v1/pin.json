@@ -1,0 +1,8 @@
+{
+  "profile": "plaud-mirror.transcription-intake.v1",
+  "producerRepository": "https://github.com/cdelalama/plaud-mirror",
+  "producerCommit": "d393a0cefa17dfc4788294ef9bb5e5a89ed0f6b4",
+  "consumer": "Media2Text",
+  "consumerMode": "compatibility-facade",
+  "pinnedAt": "2026-07-17"
+}

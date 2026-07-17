@@ -1,7 +1,7 @@
-<!-- doc-version: 0.38.2 -->
+<!-- doc-version: 0.39.0 -->
 # Media2Text Architecture (youtube2text Engine)
 
-> Version: 0.38.1 (synced with package.json)
+> Version: 0.39.0 (synced with package.json)
 > Last Updated: 2026-07-15
 > Status: Implemented baseline plus gated cross-project roadmap
 > Authors: Claude + GPT-5.2 (viewpoints preserved)
@@ -115,6 +115,16 @@ semantic ingestion and retrieval, not provider execution or Media2Text state.
 size and SHA-256, and enters the existing pipeline. Legacy `/audio` plus
 audio-backed `/runs` are adapters to the same job state machine. The Home Infra
 surface is the sanitized `/status/media-pipeline` snapshot, not a transport.
+
+Plaud Mirror integration is an additive adapter at the HTTP boundary. The
+frozen producer profile is authenticated by a producer-specific admission
+bearer, translated into the internal `media2text.intake.v1` request, and kept
+isolated by source authority plus collection identity. Artifact fetch uses a
+separate bearer and exact origin allowlist. Accepted, processing, and terminal
+status events enter a second durable outbox in the same SQLite transaction as
+their state change; an HMAC worker delivers them in monotonic order while
+producer-scoped pull remains the reconciliation path. Home Infra only routes
+these exact machine endpoints and observes sanitized health.
 
 ## Transcription, Language Handling, Credits
 

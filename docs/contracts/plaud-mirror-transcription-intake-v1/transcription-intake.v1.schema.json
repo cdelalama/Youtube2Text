@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cdelalama/plaud-mirror/main/docs/contracts/transcription-intake.v1.schema.json",
+  "title": "Transcription Intake v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "eventId", "idempotencyKey", "source", "artifact", "callback", "title", "createdAt"],
+  "properties": {
+    "schemaVersion": { "const": "transcription.intake.v1" },
+    "eventId": { "type": "string", "format": "uuid" },
+    "idempotencyKey": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "correlationId": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "source": { "$ref": "#/$defs/source" },
+    "artifact": { "$ref": "#/$defs/artifact" },
+    "callback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url", "authentication"],
+      "properties": {
+        "url": { "type": "string", "format": "uri" },
+        "authentication": { "const": "hmac-sha256-v1" }
+      }
+    },
+    "title": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "createdAt": { "type": ["string", "null"], "format": "date-time" }
+  },
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authority", "collectionId", "itemId", "artifactRevision"],
+      "properties": {
+        "authority": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "collectionId": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "itemId": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "artifactRevision": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url", "accessProfile", "sha256", "bytes", "contentType", "filename", "durationSeconds"],
+      "properties": {
+        "url": { "type": "string", "format": "uri" },
+        "accessProfile": { "const": "bearer" },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "bytes": { "type": "integer", "minimum": 1, "maximum": 10737418240 },
+        "contentType": { "type": "string", "pattern": "^audio/[A-Za-z0-9.+-]+$" },
+        "filename": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "durationSeconds": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    }
+  }
+}

@@ -156,6 +156,28 @@ Identical retries return the same `intakeId`; conflicting reuse returns `409`.
 Status is available to an operator at `GET /v1/intakes/{intakeId}`. Responses
 never expose the artifact URL or a local storage path.
 
+#### Plaud Mirror compatibility profile
+
+Media2Text also implements the exact Plaud Mirror Transcription Intake v1
+Compatibility Profile pinned in
+`docs/contracts/plaud-mirror-transcription-intake-v1/`. Configure a producer
+profile in secret storage with an admission bearer, a distinct artifact bearer,
+a distinct callback HMAC secret, and exact HTTPS origin allowlists. The profile
+uses these machine routes:
+
+- `GET /v1/intake-capabilities`
+- `POST /v1/intakes`
+- `GET /v1/intakes/{intakeId}`
+
+The admission bearer cannot access operator routes or another producer's jobs.
+The artifact bearer is sent only while fetching the immutable source artifact.
+Accepted, processing, transcribed, and failed callbacks are persisted before
+delivery, sent in monotonic order, and signed with
+`X-Transcription-Timestamp` plus `X-Transcription-Signature`. Pull status is the
+reconciliation path when a callback is lost. Run the Plaud-owned provider probe
+against the public TLS origin before enabling a destination or enqueueing a
+real recording.
+
 ### 3c) Transcript Store and completion
 
 Each successful item writes a canonical immutable record under

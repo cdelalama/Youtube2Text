@@ -55,7 +55,9 @@ youtube2text/
 - `src/transcripts/` - canonical serialization, hashing, and immutable Transcript Store v1 records.
 - `src/jobs/` - bounded SQLite intake/lease/idempotency/outbox state plus artifact and delivery workers.
 - `src/utils/` - filesystem/exec/logging helpers (incl. audio splitting).
-- `docs/contracts/` - versioned media intake, transcript store, and completion event schemas/lifecycle.
+- `docs/contracts/` - Media2Text-owned schemas/lifecycle plus byte-pinned
+  producer compatibility profiles. The Plaud Mirror profile copy includes its
+  producer manifest and `pin.json`; changes require a reviewed producer SHA.
 
 ## Naming Conventions
 

@@ -21,6 +21,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/intake-capabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Discover Plaud Mirror Transcription Intake v1 compatibility */
+        get: operations["getTranscriptionIntakeCapabilities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/intakes": {
         parameters: {
             query?: never;
@@ -665,6 +682,79 @@ export interface components {
             })[];
         } & {
             [key: string]: unknown;
+        };
+        TranscriptionSourceIdentityV1: {
+            authority: string;
+            collectionId: string;
+            itemId: string;
+            artifactRevision: string;
+        };
+        TranscriptionIntakeRequestV1: {
+            /** @constant */
+            schemaVersion: "transcription.intake.v1";
+            /** Format: uuid */
+            eventId: string;
+            idempotencyKey: string;
+            correlationId?: string;
+            source: components["schemas"]["TranscriptionSourceIdentityV1"];
+            artifact: {
+                /** Format: uri */
+                url: string;
+                /** @constant */
+                accessProfile: "bearer";
+                sha256: string;
+                bytes: number;
+                contentType: string;
+                filename: string;
+                durationSeconds: number;
+            };
+            callback: {
+                /** Format: uri */
+                url: string;
+                /** @constant */
+                authentication: "hmac-sha256-v1";
+            };
+            title: string;
+            createdAt: string | null;
+        };
+        TranscriptionIntakeCapabilitiesV1: {
+            /** @constant */
+            schemaVersion: "transcription.intake-capabilities.v1";
+            provider: {
+                name: string;
+                version: string;
+            };
+            /** @constant */
+            intakeContract: "transcription.intake.v1";
+            /** @constant */
+            statusContract: "transcription.intake-status.v1";
+            /** @constant */
+            statusPush: true;
+            /** @constant */
+            statusPull: true;
+        };
+        TranscriptionIntakeAdmissionV1: {
+            /** @constant */
+            schemaVersion: "transcription.intake-admission.v1";
+            intakeId: string;
+            /** @enum {string} */
+            status: "accepted" | "processing" | "transcribed" | "failed";
+            deduplicated: boolean;
+        };
+        TranscriptionIntakeStatusV1: {
+            /** @constant */
+            schemaVersion: "transcription.intake-status.v1";
+            intakeId: string;
+            source: components["schemas"]["TranscriptionSourceIdentityV1"];
+            /** @enum {string} */
+            status: "accepted" | "processing" | "transcribed" | "failed";
+            /** Format: date-time */
+            occurredAt: string;
+            transcriptId?: string | null;
+            recordSha256?: string | null;
+            error?: {
+                code: string;
+            } | null;
         };
         MediaIntakeRequestV1: {
             /** @constant */
@@ -1383,6 +1473,35 @@ export interface operations {
             429: components["responses"]["RateLimited"];
         };
     };
+    getTranscriptionIntakeCapabilities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Supported compatibility profile */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TranscriptionIntakeCapabilitiesV1"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     listMediaIntakes: {
         parameters: {
             query?: {
@@ -1423,7 +1542,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["MediaIntakeRequestV1"];
+                "application/json": components["schemas"]["MediaIntakeRequestV1"] | components["schemas"]["TranscriptionIntakeRequestV1"];
             };
         };
         responses: {
@@ -1433,7 +1552,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MediaIntakeAcceptedResponse"];
+                    "application/json": components["schemas"]["MediaIntakeAcceptedResponse"] | components["schemas"]["TranscriptionIntakeAdmissionV1"];
                 };
             };
             /** @description Invalid contract payload */
@@ -1484,7 +1603,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         intake: components["schemas"]["MediaIntakeRecord"];
-                    };
+                    } | components["schemas"]["TranscriptionIntakeStatusV1"];
                 };
             };
             /** @description Unauthorized */

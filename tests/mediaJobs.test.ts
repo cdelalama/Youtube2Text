@@ -109,6 +109,54 @@ test("MediaJobStore durably deduplicates intakes and rejects conflicting reuse",
   }
 });
 
+test("MediaJobStore keeps collection identity distinct and journals monotonic producer status", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "y2t-jobs-profile-status-"));
+  const store = new MediaJobStore(dir);
+  const firstRequest: IntakeRequestV1 = {
+    ...request(),
+    callback: {
+      url: "https://source.example/api/transcription/status/destination",
+      authentication: "hmac-sha256-v1",
+    },
+  };
+  try {
+    const first = store.createIntake(firstRequest, "2026-07-17T00:00:00.000Z").record;
+    const second = store.createIntake({
+      ...firstRequest,
+      eventId: "evt-source-2",
+      idempotencyKey: "source:item-1:revision-1:other-collection",
+      source: { ...firstRequest.source, collectionId: "other-recordings" },
+    }, "2026-07-17T00:01:00.000Z").record;
+    assert.notEqual(first.intakeId, second.intakeId);
+    assert.equal(store.listIntakeStatusOutbox(first.intakeId).length, 1);
+    assert.equal(store.listIntakeStatusOutbox(first.intakeId)[0]?.payload.status, "accepted");
+
+    const fetching = store.leaseNextIntake("fetch-owner", 60_000);
+    assert.equal(fetching?.intakeId, first.intakeId);
+    assert.equal(store.listIntakeStatusOutbox(first.intakeId).length, 2);
+    assert.equal(store.listIntakeStatusOutbox(first.intakeId)[1]?.payload.status, "processing");
+    store.markIntakeReady(first.intakeId, "fetch-owner", "/tmp/audio.mp3");
+    const running = store.leaseNextIntake("run-owner", 60_000);
+    assert.equal(running?.intakeId, first.intakeId);
+    store.markIntakeCompleted(
+      first.intakeId,
+      "run-owner",
+      `trn_${"b".repeat(64)}`,
+      "c".repeat(64)
+    );
+    const events = store.listIntakeStatusOutbox(first.intakeId);
+    assert.deepEqual(events.map((event) => event.payload.status), [
+      "accepted",
+      "processing",
+      "transcribed",
+    ]);
+    assert.equal(events[2]?.payload.recordSha256, "c".repeat(64));
+  } finally {
+    store.close();
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test("MediaJobStore outbox is idempotent and recovers interrupted delivery", async () => {
   const dir = await mkdtemp(join(tmpdir(), "y2t-outbox-store-"));
   const store = new MediaJobStore(dir);

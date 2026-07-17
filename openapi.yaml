@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Media2Text API
-  version: 0.38.2
+  version: 0.39.0
   description: |
     Minimal local HTTP API for Media2Text, backed by the youtube2text engine.
     Notes:
@@ -30,6 +30,25 @@ paths:
         "429":
           $ref: "#/components/responses/RateLimited"
 
+  /v1/intake-capabilities:
+    get:
+      operationId: getTranscriptionIntakeCapabilities
+      summary: Discover Plaud Mirror Transcription Intake v1 compatibility
+      security:
+        - TranscriptionIntakeBearerAuth: []
+      responses:
+        "200":
+          description: Supported compatibility profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionIntakeCapabilitiesV1"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
   /v1/intakes:
     post:
       operationId: createMediaIntake
@@ -38,6 +57,7 @@ paths:
         Returns 202 only after the idempotent obligation is committed. Artifact
         download, integrity verification, and transcription happen asynchronously.
       security:
+        - TranscriptionIntakeBearerAuth: []
         - IntakeKeyAuth: []
         - ApiKeyAuth: []
       requestBody:
@@ -45,14 +65,18 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/MediaIntakeRequestV1"
+              oneOf:
+                - $ref: "#/components/schemas/MediaIntakeRequestV1"
+                - $ref: "#/components/schemas/TranscriptionIntakeRequestV1"
       responses:
         "202":
           description: Obligation persisted
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MediaIntakeAcceptedResponse"
+                oneOf:
+                  - $ref: "#/components/schemas/MediaIntakeAcceptedResponse"
+                  - $ref: "#/components/schemas/TranscriptionIntakeAdmissionV1"
         "400":
           description: Invalid contract payload
           content:
@@ -94,16 +118,21 @@ paths:
       summary: Get a media intake job
       parameters:
         - $ref: "#/components/parameters/IntakeId"
+      security:
+        - ApiKeyAuth: []
+        - TranscriptionIntakeBearerAuth: []
       responses:
         "200":
           description: Intake job
           content:
             application/json:
               schema:
-                type: object
-                required: [intake]
-                properties:
-                  intake: { $ref: "#/components/schemas/MediaIntakeRecord" }
+                oneOf:
+                  - type: object
+                    required: [intake]
+                    properties:
+                      intake: { $ref: "#/components/schemas/MediaIntakeRecord" }
+                  - $ref: "#/components/schemas/TranscriptionIntakeStatusV1"
         "401":
           description: Unauthorized
           content:
@@ -1146,6 +1175,11 @@ components:
       in: header
       name: X-Media2Text-Intake-Key
       description: Least-privilege service credential accepted only by POST /v1/intakes.
+    TranscriptionIntakeBearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+      description: Producer-scoped bearer for the pinned Plaud Mirror compatibility profile.
   parameters:
     IntakeId:
       name: intakeId
@@ -1222,6 +1256,106 @@ components:
               condition: { type: string, enum: [ok, degraded, down] }
               severity: { type: string, enum: [none, info, watch, warning, critical] }
               summary: { type: string }
+
+    TranscriptionSourceIdentityV1:
+      type: object
+      required: [authority, collectionId, itemId, artifactRevision]
+      additionalProperties: false
+      properties:
+        authority: { type: string, minLength: 1, maxLength: 200 }
+        collectionId: { type: string, minLength: 1, maxLength: 200 }
+        itemId: { type: string, minLength: 1, maxLength: 200 }
+        artifactRevision: { type: string, pattern: "^sha256:[a-f0-9]{64}$" }
+
+    TranscriptionIntakeRequestV1:
+      type: object
+      required: [schemaVersion, eventId, idempotencyKey, source, artifact, callback, title, createdAt]
+      additionalProperties: false
+      properties:
+        schemaVersion: { type: string, const: transcription.intake.v1 }
+        eventId: { type: string, format: uuid }
+        idempotencyKey: { type: string, minLength: 1, maxLength: 200 }
+        correlationId: { type: string, minLength: 1, maxLength: 200 }
+        source: { $ref: "#/components/schemas/TranscriptionSourceIdentityV1" }
+        artifact:
+          type: object
+          required: [url, accessProfile, sha256, bytes, contentType, filename, durationSeconds]
+          additionalProperties: false
+          properties:
+            url: { type: string, format: uri }
+            accessProfile: { type: string, const: bearer }
+            sha256: { type: string, pattern: "^[a-f0-9]{64}$" }
+            bytes: { type: integer, minimum: 1, maximum: 10737418240 }
+            contentType: { type: string, pattern: "^audio/[A-Za-z0-9.+-]+$" }
+            filename: { type: string, minLength: 1, maxLength: 255 }
+            durationSeconds: { type: number, exclusiveMinimum: 0 }
+        callback:
+          type: object
+          required: [url, authentication]
+          additionalProperties: false
+          properties:
+            url: { type: string, format: uri }
+            authentication: { type: string, const: hmac-sha256-v1 }
+        title: { type: string, minLength: 1, maxLength: 500 }
+        createdAt:
+          oneOf:
+            - { type: string, format: date-time }
+            - { type: "null" }
+
+    TranscriptionIntakeCapabilitiesV1:
+      type: object
+      required: [schemaVersion, provider, intakeContract, statusContract, statusPush, statusPull]
+      additionalProperties: false
+      properties:
+        schemaVersion: { type: string, const: transcription.intake-capabilities.v1 }
+        provider:
+          type: object
+          required: [name, version]
+          additionalProperties: false
+          properties:
+            name: { type: string }
+            version: { type: string }
+        intakeContract: { type: string, const: transcription.intake.v1 }
+        statusContract: { type: string, const: transcription.intake-status.v1 }
+        statusPush: { type: boolean, const: true }
+        statusPull: { type: boolean, const: true }
+
+    TranscriptionIntakeAdmissionV1:
+      type: object
+      required: [schemaVersion, intakeId, status, deduplicated]
+      additionalProperties: false
+      properties:
+        schemaVersion: { type: string, const: transcription.intake-admission.v1 }
+        intakeId: { type: string }
+        status: { type: string, enum: [accepted, processing, transcribed, failed] }
+        deduplicated: { type: boolean }
+
+    TranscriptionIntakeStatusV1:
+      type: object
+      required: [schemaVersion, intakeId, source, status, occurredAt]
+      additionalProperties: false
+      properties:
+        schemaVersion: { type: string, const: transcription.intake-status.v1 }
+        intakeId: { type: string }
+        source: { $ref: "#/components/schemas/TranscriptionSourceIdentityV1" }
+        status: { type: string, enum: [accepted, processing, transcribed, failed] }
+        occurredAt: { type: string, format: date-time }
+        transcriptId:
+          oneOf:
+            - { type: string }
+            - { type: "null" }
+        recordSha256:
+          oneOf:
+            - { type: string, pattern: "^[a-f0-9]{64}$" }
+            - { type: "null" }
+        error:
+          oneOf:
+            - type: object
+              required: [code]
+              additionalProperties: false
+              properties:
+                code: { type: string }
+            - { type: "null" }
 
     MediaIntakeRequestV1:
       type: object

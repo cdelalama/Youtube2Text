@@ -1,4 +1,4 @@
-<!-- doc-version: 0.38.2 -->
+<!-- doc-version: 0.39.0 -->
 # Project Context - Media2Text
 
 ## Vision
@@ -52,21 +52,19 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Storage | Persist outputs + idempotency | TBD | Layout: `output/<channel_title_slug>__<channel_id>/<basename>.*`. |
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
-## Current Status (2026-07-15)
-v0.38.2 stable in source adds a committed byte-stable JSONL evidence fixture
-for Cortex V1 and CI-enforced integrity validation. The fixture is copied from
-a real successful legacy YouTube transcript, preserves its exact bytes, and
-keeps unavailable provider/engine/version and producer-commit provenance
-explicitly unknown. It does not activate live delivery or freeze Transcript
-Ready v1. The deployed v0.38.1 runtime includes the project-owned Home Infra
-Protocol contract and canonical-host status route on top of Media Contracts
-v1 and its provider-boundary usage accounting, hard
-economic limits, signed application sessions, CI, and registry deployment.
-The deployed runtime adds Transcript Store v1, immutable provenance,
-bounded SQLite media intake/outbox coordination, a least-privilege producer
-credential, verified cross-host artifact fetch, and sanitized Home Infra
-status. Media Intake v1 and Transcript Ready v1 remain drafts pending their
-actual Plaud Mirror and Cortex consumer reviews. The deployed runtime currently has
+## Current Status (2026-07-17)
+v0.39.0 stable in source implements the commit-pinned Plaud Mirror
+Transcription Intake v1 compatibility profile as an additive facade over the
+existing Media2Text job domain. It adds producer-scoped bearer authentication,
+collection-aware idempotency, a separate artifact bearer, durable monotonic
+HMAC status callbacks, pull reconciliation, and byte-pinned contract tests.
+The NAS still runs v0.38.1 until the coordinated Home Infra route and deployment
+are verified. v0.38.2 also provides Cortex V1 with a committed byte-stable real
+legacy JSONL fixture, but live Transcript Ready delivery remains separately
+gated on Cortex review. The runtime includes provider-boundary usage accounting,
+hard economic limits, signed application sessions, CI, registry deployment,
+Transcript Store v1, bounded SQLite coordination, and sanitized Home Infra
+status. The deployed runtime currently has
 the Media2Text operator console splitting `Estado` and `Nueva captura`,
 English-mode activity table headers fixed on the `Status` screen, and explicit
 scheduler auto-start OFF copy when `Y2T_SCHEDULER_ENABLED=false`. All planned phases (0-3.0) and
