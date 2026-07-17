@@ -168,6 +168,12 @@ export class IntakeWorker {
     const runRequest = {
       audioId: intake.intakeId,
       audioPath: providerAudioPath,
+      sourceArtifact: {
+        path: intake.localPath,
+        artifactRevision: request.source.artifactRevision,
+        contentType: request.artifact.contentType,
+        durationSeconds: request.artifact.durationSeconds,
+      },
       audioTitle: request.title ?? request.artifact.filename ?? request.source.itemId,
       audioOriginalFilename: request.artifact.filename,
       intakeId: intake.intakeId,

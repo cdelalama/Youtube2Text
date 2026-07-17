@@ -3,13 +3,83 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { canonicalJson, TranscriptStore } from "../src/transcripts/store.js";
+import {
+  canonicalJson,
+  sha256Text,
+  TranscriptStore,
+} from "../src/transcripts/store.js";
 
 test("canonicalJson sorts object keys recursively", () => {
   assert.equal(
     canonicalJson({ z: 1, a: { y: true, b: "x" }, list: [{ z: 2, a: 1 }] }),
     '{"a":{"b":"x","y":true},"list":[{"a":1,"z":2}],"z":1}\n'
   );
+});
+
+test("TranscriptStore preserves admitted source identity for provider derivatives", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "y2t-transcript-source-"));
+  const outputDir = join(dir, "output");
+  const sourcePath = join(dir, "source.ogg");
+  const providerPath = join(dir, "source.provider.mp3");
+  const txtPath = join(outputDir, "uploads", "item.txt");
+  await mkdir(join(outputDir, "uploads"), { recursive: true });
+  await writeFile(sourcePath, "original-ogg-bytes", "utf8");
+  await writeFile(providerPath, "normalized-provider-bytes", "utf8");
+  await writeFile(txtPath, "hello\n", "utf8");
+
+  try {
+    const store = new TranscriptStore(outputDir);
+    const input = {
+      createdAt: "2026-07-17T00:00:00.000Z",
+      producerVersion: "0.39.3",
+      runId: "run-ogg",
+      intakeId: "intake-ogg",
+      source: {
+        kind: "intake" as const,
+        authority: "plaud-mirror",
+        sourceItemId: "recording-1",
+        sourceCollectionId: "workspace-1",
+        title: "OGG fixture",
+      },
+      audioPath: providerPath,
+      sourceArtifact: {
+        path: sourcePath,
+        artifactRevision: `sha256:${sha256Text("original-ogg-bytes")}`,
+        contentType: "audio/ogg",
+        durationSeconds: 7.58,
+      },
+      durationSeconds: 7.5,
+      contentType: "audio/mpeg",
+      provider: "deepgram" as const,
+      model: "nova-3",
+      transcript: { id: "provider-ogg", status: "completed", text: "hello" },
+      representations: [
+        { format: "text" as const, absolutePath: txtPath, content: "hello\n" },
+      ],
+    };
+    const stored = await store.write(input);
+
+    assert.equal(
+      stored.record.source.artifactRevision,
+      `sha256:${sha256Text("original-ogg-bytes")}`
+    );
+    assert.equal(stored.record.artifact.sha256, sha256Text("original-ogg-bytes"));
+    assert.equal(stored.record.artifact.bytes, Buffer.byteLength("original-ogg-bytes"));
+    assert.equal(stored.record.artifact.contentType, "audio/ogg");
+    assert.equal(stored.record.artifact.durationSeconds, 7.58);
+    await assert.rejects(
+      store.write({
+        ...input,
+        sourceArtifact: {
+          ...input.sourceArtifact,
+          artifactRevision: `sha256:${"f".repeat(64)}`,
+        },
+      }),
+      /Source artifact revision mismatch/
+    );
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });
 
 test("TranscriptStore writes immutable, byte-stable records", async () => {

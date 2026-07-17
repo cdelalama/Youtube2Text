@@ -63,6 +63,12 @@ export type RunCreateRequest = {
   url?: string;
   audioId?: string;
   audioPath?: string;
+  sourceArtifact?: {
+    path: string;
+    artifactRevision: string;
+    contentType: string;
+    durationSeconds?: number;
+  };
   audioTitle?: string;
   audioOriginalFilename?: string;
   intakeId?: string;
@@ -340,6 +346,7 @@ export class RunManager {
             kind: "audio" as const,
             audioId: req.audioId,
             audioPath: req.audioPath,
+            sourceArtifact: req.sourceArtifact,
             title: req.audioTitle,
             originalFilename: req.audioOriginalFilename,
             intakeId: req.intakeId,

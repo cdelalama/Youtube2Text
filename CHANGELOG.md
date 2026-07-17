@@ -5,6 +5,15 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.39.3] - 2026-07-17
+
+### Fixed
+
+- Keep the admitted source artifact and the provider-normalized audio as
+  separate pipeline concepts. Transcript Store now hashes the immutable source,
+  verifies it against the admitted `artifactRevision`, and records the source
+  MIME type and duration instead of attributing a derived MP3 to Plaud.
+
 ## [0.39.2] - 2026-07-17
 
 ### Changed

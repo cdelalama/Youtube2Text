@@ -1,4 +1,4 @@
-<!-- doc-version: 0.39.2 -->
+<!-- doc-version: 0.39.3 -->
 # Media2Text
 
 Media2Text is the visible product name for the `youtube2text` engine: a

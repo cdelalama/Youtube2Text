@@ -57,6 +57,12 @@ export type AudioRunInput = {
   kind: "audio";
   audioId: string;
   audioPath: string;
+  sourceArtifact?: {
+    path: string;
+    artifactRevision: string;
+    contentType: string;
+    durationSeconds?: number;
+  };
   title?: string;
   originalFilename?: string;
   intakeId?: string;
@@ -718,6 +724,7 @@ export async function runPipeline(
                 publishedAt: video.uploadDate,
               },
               audioPath,
+              sourceArtifact: audioInput?.sourceArtifact,
               durationSeconds: itemAudioSeconds,
               contentType: audioContentType(audioPath),
               provider: config.sttProvider,

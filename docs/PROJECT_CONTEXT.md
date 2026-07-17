@@ -1,4 +1,4 @@
-<!-- doc-version: 0.39.2 -->
+<!-- doc-version: 0.39.3 -->
 # Project Context - Media2Text
 
 ## Vision
@@ -53,20 +53,24 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
 ## Current Status (2026-07-17)
-v0.39.2 stable in source implements the commit-pinned Plaud Mirror
+v0.39.3 stable in source implements the commit-pinned Plaud Mirror
 Transcription Intake v1 compatibility profile as an additive facade over the
 existing Media2Text job domain. It adds producer-scoped bearer authentication,
 collection-aware idempotency, a separate artifact bearer, durable monotonic
 HMAC status callbacks, pull reconciliation, and byte-pinned contract tests.
-The NAS runs v0.39.1 behind the least-exposure Home Infra route. A bounded MP3
+The NAS runs v0.39.2 behind the least-exposure Home Infra route. A bounded MP3
 canary completed the full Plaud Mirror -> Media2Text -> Plaud Mirror path,
 including authenticated artifact transfer, Deepgram transcription, immutable
 Transcript Store materialization, signed push, pull reconciliation, distinct
 source/transcript hashes, and source lease release. An OGG canary exposed a
 Plaud container with an additional private stream that Deepgram rejected;
 v0.39.2 preserves the verified original and creates a deterministic
-single-stream MP3 provider derivative before any provider reservation. v0.38.2
-also provides Cortex V1 with a committed byte-stable real
+single-stream MP3 provider derivative before any provider reservation. The
+first normalized OGG canary transcribed successfully but exposed that Transcript
+Store attributed the derived MP3 hash to the source. v0.39.3 carries the
+admitted source separately, verifies its revision again, and records the
+original OGG identity while the provider still receives the derivative.
+v0.38.2 also provides Cortex V1 with a committed byte-stable real
 legacy JSONL fixture, but live Transcript Ready delivery remains separately
 gated on Cortex review. The runtime includes provider-boundary usage accounting,
 hard economic limits, signed application sessions, CI, registry deployment,

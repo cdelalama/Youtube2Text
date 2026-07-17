@@ -1,4 +1,4 @@
-<!-- doc-version: 0.39.2 -->
+<!-- doc-version: 0.39.3 -->
 # LLM Work Handoff
 
 This file is the current operational snapshot. Historical detail belongs in
@@ -67,16 +67,24 @@ roadmap.
   the first audio stream into a deterministic provider-only MP3 derivative,
   preserves the hash-verified source bytes, and fails before provider execution
   if normalization cannot complete.
-- The current Plaud backlog estimate before the OGG follow-up canary is 624
-  recordings, 608.0113 hours, and USD 335.62 at the configured Deepgram rate.
+- The first `0.39.2` normalized OGG canary completed transcription as intake
+  `int_8598602b836995413d2f70654d9401eecce6785fe3628d6fd003fa5609e2bd31`,
+  but verification found that Transcript Store recorded the derivative MP3
+  hash as the source revision instead of Plaud's admitted OGG hash. Patch
+  `0.39.3` separates provider audio from the admitted source artifact, re-hashes
+  and fail-closes against the admitted revision, and records the original MIME
+  type/duration. The immutable `0.39.2` canary record is retained as evidence
+  and must not be presented as correct provenance.
+- The current Plaud backlog estimate is 623 recordings, 608.0094 hours, and
+  USD 335.62 at the configured Deepgram rate.
   This exceeds Media2Text's 30-day hard limits and requires a separate operator
   spend decision before bulk replay.
 
 ## Current Status
 
-- Version: 0.39.2 in source; patch validation and coordinated deployment are
+- Version: 0.39.3 in source; patch validation and coordinated deployment are
   active.
-- Current NAS runtime: `0.39.1`, healthy and authenticated. The Plaud facade is
+- Current NAS runtime: `0.39.2`, healthy and authenticated. The Plaud facade is
   reachable only on its three exact TLS machine routes; generic operator paths
   remain behind the web session boundary.
 - Home Infra/Infra Portal: service identity is `Media2Text`, technical id is
@@ -93,11 +101,12 @@ roadmap.
 
 ## Next Gates
 
-1. Publish and deploy `0.39.2`, then run one short OGG canary to verify the
-   provider derivative, successful transcription, signed terminal state, pull
-   reconciliation, distinct hashes, and source lease release.
+1. Publish and deploy `0.39.3`, then run one new short OGG canary to verify the
+   provider derivative, original source revision/MIME/duration in Transcript
+   Store, successful transcription, signed terminal state, pull reconciliation,
+   distinct hashes, and source lease release.
 2. Recalculate the remaining eligible Plaud backlog after the OGG canary.
-   Bulk replay remains blocked until the USD 335.62-class estimate receives a
+   Bulk replay remains blocked until the USD 335.62 estimate receives a
    separate operator spend approval; use batches of 1, 5, and 25 after approval.
 3. Reconcile the deployed Media2Text/Plaud versions, truthful degraded state,
    route provenance, and source commits through Home Infra and Infra Portal.

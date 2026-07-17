@@ -73,6 +73,12 @@ type TranscriptWriteInput = {
   intakeId?: string;
   source: Omit<TranscriptSourceV1, "artifactRevision">;
   audioPath: string;
+  sourceArtifact?: {
+    path: string;
+    artifactRevision: string;
+    contentType: string;
+    durationSeconds?: number;
+  };
   durationSeconds: number;
   contentType: string;
   provider: SttProviderId;
@@ -183,14 +189,24 @@ export class TranscriptStore {
   }
 
   async write(input: TranscriptWriteInput): Promise<StoredTranscript> {
+    const artifactPath = input.sourceArtifact?.path ?? input.audioPath;
     const [artifact, producerJson] = await Promise.all([
-      sha256File(input.audioPath),
+      sha256File(artifactPath),
       Promise.resolve(canonicalJson(input.transcript)),
     ]);
+    const calculatedArtifactRevision = `sha256:${artifact.sha256}`;
+    if (
+      input.sourceArtifact &&
+      input.sourceArtifact.artifactRevision !== calculatedArtifactRevision
+    ) {
+      throw new Error(
+        `Source artifact revision mismatch: expected ${input.sourceArtifact.artifactRevision}, got ${calculatedArtifactRevision}`
+      );
+    }
     const payloadSha256 = sha256Text(producerJson);
     const source: TranscriptSourceV1 = {
       ...input.source,
-      artifactRevision: `sha256:${artifact.sha256}`,
+      artifactRevision: calculatedArtifactRevision,
     };
     const transcriptId = recordIdentity({ source, payloadSha256 });
     const representationDir = join(
@@ -227,8 +243,9 @@ export class TranscriptStore {
       source,
       artifact: {
         ...artifact,
-        durationSeconds: input.durationSeconds,
-        contentType: input.contentType,
+        durationSeconds:
+          input.sourceArtifact?.durationSeconds ?? input.durationSeconds,
+        contentType: input.sourceArtifact?.contentType ?? input.contentType,
       },
       transcription: {
         provider: input.provider,
