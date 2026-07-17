@@ -1,4 +1,4 @@
-<!-- doc-version: 0.39.1 -->
+<!-- doc-version: 0.39.2 -->
 # Project Context - Media2Text
 
 ## Vision
@@ -53,17 +53,20 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
 ## Current Status (2026-07-17)
-v0.39.1 stable in source implements the commit-pinned Plaud Mirror
+v0.39.2 stable in source implements the commit-pinned Plaud Mirror
 Transcription Intake v1 compatibility profile as an additive facade over the
 existing Media2Text job domain. It adds producer-scoped bearer authentication,
 collection-aware idempotency, a separate artifact bearer, durable monotonic
 HMAC status callbacks, pull reconciliation, and byte-pinned contract tests.
-The NAS runs v0.39.0 behind the least-exposure Home Infra route while the
-v0.39.1 canary patch is validated and deployed. The first bounded Plaud intake
-proved durable admission and authenticated artifact transfer without reaching
-Deepgram, then exposed incorrect FFmpeg version probing and a callback newline
-on the wire; v0.39.1 fixes both with regression tests. v0.38.2 also provides
-Cortex V1 with a committed byte-stable real
+The NAS runs v0.39.1 behind the least-exposure Home Infra route. A bounded MP3
+canary completed the full Plaud Mirror -> Media2Text -> Plaud Mirror path,
+including authenticated artifact transfer, Deepgram transcription, immutable
+Transcript Store materialization, signed push, pull reconciliation, distinct
+source/transcript hashes, and source lease release. An OGG canary exposed a
+Plaud container with an additional private stream that Deepgram rejected;
+v0.39.2 preserves the verified original and creates a deterministic
+single-stream MP3 provider derivative before any provider reservation. v0.38.2
+also provides Cortex V1 with a committed byte-stable real
 legacy JSONL fixture, but live Transcript Ready delivery remains separately
 gated on Cortex review. The runtime includes provider-boundary usage accounting,
 hard economic limits, signed application sessions, CI, registry deployment,

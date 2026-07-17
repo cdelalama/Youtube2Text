@@ -1,4 +1,4 @@
-<!-- doc-version: 0.39.1 -->
+<!-- doc-version: 0.39.2 -->
 # LLM Work Handoff
 
 This file is the current operational snapshot. Historical detail belongs in
@@ -56,12 +56,27 @@ roadmap.
   transcript-store JSONL newline even though the wire contract requires compact
   JSON. Patch `0.39.1` fixes both and adds regression coverage. Deepgram was not
   called and the failed canary incurred no provider cost.
+- Media2Text `0.39.1` and Plaud Mirror `0.14.2` now complete a real MP3 canary
+  end to end. Intake `int_ead2ce026db741f6ed92c567ce6921d7fb9ed00be1a6ce529334d31e92ce9a91`
+  produced transcript
+  `trn_2f8ade4348ff1d915d302ccde5347d7ca8ceaaece28ec7bed4863301fbb3d5b7`;
+  Plaud persists the distinct source and transcript-record SHA-256 values and
+  released its pinned source lease after the terminal callback was replayed.
+- A separate OGG canary reached Deepgram but was rejected because the Plaud
+  container included an additional private stream. Patch `0.39.2` maps only
+  the first audio stream into a deterministic provider-only MP3 derivative,
+  preserves the hash-verified source bytes, and fails before provider execution
+  if normalization cannot complete.
+- The current Plaud backlog estimate before the OGG follow-up canary is 624
+  recordings, 608.0113 hours, and USD 335.62 at the configured Deepgram rate.
+  This exceeds Media2Text's 30-day hard limits and requires a separate operator
+  spend decision before bulk replay.
 
 ## Current Status
 
-- Version: 0.39.1 in source; patch validation and coordinated deployment are
+- Version: 0.39.2 in source; patch validation and coordinated deployment are
   active.
-- Current NAS runtime: `0.39.0`, healthy and authenticated. The Plaud facade is
+- Current NAS runtime: `0.39.1`, healthy and authenticated. The Plaud facade is
   reachable only on its three exact TLS machine routes; generic operator paths
   remain behind the web session boundary.
 - Home Infra/Infra Portal: service identity is `Media2Text`, technical id is
@@ -78,15 +93,14 @@ roadmap.
 
 ## Next Gates
 
-1. Publish and deploy `0.39.1`, requeue the failed canary's dead status events
-   once so Plaud receives its terminal failure and releases the artifact lease,
-   then verify compact HMAC delivery.
-2. Run one new real, low-cost Plaud audio canary. Verify durable admission,
-   authenticated bytes, exact hash/length, transcript materialization, signed
-   push, and matching pull state.
-3. Calculate total eligible Plaud backlog duration and worst-case provider cost.
-   Bulk replay remains blocked until that estimate receives separate operator
-   spend approval; use batches of 1, 5, and 25 after approval.
+1. Publish and deploy `0.39.2`, then run one short OGG canary to verify the
+   provider derivative, successful transcription, signed terminal state, pull
+   reconciliation, distinct hashes, and source lease release.
+2. Recalculate the remaining eligible Plaud backlog after the OGG canary.
+   Bulk replay remains blocked until the USD 335.62-class estimate receives a
+   separate operator spend approval; use batches of 1, 5, and 25 after approval.
+3. Reconcile the deployed Media2Text/Plaud versions, truthful degraded state,
+   route provenance, and source commits through Home Infra and Infra Portal.
 4. Keep Cortex live delivery disabled until Cortex reviews and freezes
    Transcript Ready v1. The committed 0.38.2 fixture remains its current input.
 5. Configure exact YouTube channel URLs disabled first, preview duration/cost,

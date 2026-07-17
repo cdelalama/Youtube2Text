@@ -3,6 +3,7 @@ import type { RunManager, RunRecord } from "../api/runManager.js";
 import type { AppConfig } from "../config/schema.js";
 import { logInfo, logWarn } from "../utils/logger.js";
 import { ArtifactFetchError, fetchIntakeArtifact } from "./artifactFetcher.js";
+import { prepareIntakeAudioForProvider } from "./intakeAudio.js";
 import { MediaJobStore, type IntakeRecord } from "./store.js";
 
 function parseEnvInt(name: string, fallback: number): number {
@@ -148,9 +149,25 @@ export class IntakeWorker {
       return;
     }
     const request = intake.request;
+    let providerAudioPath: string;
+    try {
+      providerAudioPath = await prepareIntakeAudioForProvider(
+        intake.localPath,
+        request.artifact.contentType
+      );
+    } catch (error) {
+      this.store.markIntakeFailed(
+        intake.intakeId,
+        owner,
+        "running",
+        "audio_normalization_failed",
+        error instanceof Error ? error.message : String(error)
+      );
+      return;
+    }
     const runRequest = {
       audioId: intake.intakeId,
-      audioPath: intake.localPath,
+      audioPath: providerAudioPath,
       audioTitle: request.title ?? request.artifact.filename ?? request.source.itemId,
       audioOriginalFilename: request.artifact.filename,
       intakeId: intake.intakeId,

@@ -5,6 +5,21 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.39.2] - 2026-07-17
+
+### Changed
+
+- Preserve the verified Plaud source artifact while preparing a deterministic
+  provider-only derivative for formats that require normalization.
+
+### Fixed
+
+- Normalize `audio/ogg` intake artifacts to a single-audio-stream 64 kbps MP3
+  before transcription. Plaud OGG files can contain an additional private
+  stream that Deepgram rejects as corrupt or unsupported; normalization now
+  fails before provider execution and economic reservation if FFmpeg cannot
+  produce a valid derivative.
+
 ## [0.39.1] - 2026-07-17
 
 ### Added

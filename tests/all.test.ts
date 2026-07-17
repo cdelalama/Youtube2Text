@@ -62,6 +62,7 @@ import "./videoResults.test.js";
 import "./transcriptStore.test.js";
 import "./mediaJobs.test.js";
 import "./artifactFetcher.test.js";
+import "./intakeAudio.test.js";
 import "./apiIntakes.test.js";
 import "./transcriptionIntakeCompatibility.test.js";
 import "./transcriptionContractPin.test.js";
