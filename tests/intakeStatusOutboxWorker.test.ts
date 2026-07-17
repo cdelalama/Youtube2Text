@@ -76,9 +76,11 @@ test("intake status outbox signs and delivers producer callbacks durably", async
     const timestamp = headers.get("x-transcription-timestamp");
     const body = String(sent?.body);
     assert.ok(timestamp);
+    assert.equal(body.endsWith("\n"), false);
+    const compactCanonicalBody = canonicalJson(JSON.parse(body)).replace(/\n$/, "");
     assert.equal(
       headers.get("x-transcription-signature"),
-      `sha256=${createHmac("sha256", secret).update(`${timestamp}.${canonicalJson(JSON.parse(body))}`).digest("hex")}`
+      `sha256=${createHmac("sha256", secret).update(`${timestamp}.${compactCanonicalBody}`).digest("hex")}`
     );
     const payload = JSON.parse(body);
     assert.equal(payload.schemaVersion, "transcription.intake-status.v1");

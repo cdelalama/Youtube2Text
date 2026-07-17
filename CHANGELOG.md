@@ -5,6 +5,20 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.39.1] - 2026-07-17
+
+### Added
+
+### Changed
+
+### Fixed
+- Probe FFmpeg tools with their supported `-version` flag so managed Docker
+  intakes can validate duration instead of falsely reporting that `ffprobe` is
+  missing.
+- Sign and send callback bodies as compact canonical JSON without the
+  transcript-store JSONL newline, matching the pinned Plaud Mirror wire
+  contract and preventing valid status events from being rejected with 401.
+
 ## [0.39.0] - 2026-07-17
 
 ### Added

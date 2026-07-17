@@ -14,6 +14,7 @@ import "./usageLedger.test.js";
 import "./pipelineUsage.test.js";
 import "./loadBalancer.test.js";
 import "./utilsFetch.test.js";
+import "./deps.test.js";
 import "./catalogCache.test.js";
 import "./catalogCacheTtl.test.js";
 import "./urlNormalization.test.js";

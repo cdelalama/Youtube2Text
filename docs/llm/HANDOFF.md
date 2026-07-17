@@ -1,4 +1,4 @@
-<!-- doc-version: 0.39.0 -->
+<!-- doc-version: 0.39.1 -->
 # LLM Work Handoff
 
 This file is the current operational snapshot. Historical detail belongs in
@@ -49,16 +49,26 @@ roadmap.
   auth, collection-aware identity, separate artifact bearer fetch, durable
   monotonic HMAC status callbacks, pull reconciliation, and a contract hash
   pin. It does not enable Cortex delivery or bulk replay.
+- The first production Plaud intake proved durable admission and exact
+  authenticated artifact transfer, then failed before the provider call. The
+  canary found two Media2Text defects: FFmpeg tools were probed with
+  `--version` instead of `-version`, and status signatures included the
+  transcript-store JSONL newline even though the wire contract requires compact
+  JSON. Patch `0.39.1` fixes both and adds regression coverage. Deepgram was not
+  called and the failed canary incurred no provider cost.
 
 ## Current Status
 
-- Version: 0.39.0 in source; validation and coordinated deployment are active.
-- Current NAS runtime: `0.38.1`, healthy and authenticated. Media pipeline
-  status was `ok` before this release; it does not yet expose the Plaud facade.
+- Version: 0.39.1 in source; patch validation and coordinated deployment are
+  active.
+- Current NAS runtime: `0.39.0`, healthy and authenticated. The Plaud facade is
+  reachable only on its three exact TLS machine routes; generic operator paths
+  remain behind the web session boundary.
 - Home Infra/Infra Portal: service identity is `Media2Text`, technical id is
   `y2t`, project id is `youtube2text`, application auth is satisfied, and the
-  deployed image is `0.38.1`. Its project contract and sanitized pipeline job
-  are registered and observed without warnings.
+  catalog still reports the prior deployed version until the final coordinated
+  reconciliation. Its project contract and sanitized pipeline job remain
+  registered.
 - Scheduler remains OFF. No YouTube channels are configured in the watchlist.
 - Production Deepgram and AssemblyAI credentials were verified during the
   `0.37.x` safety rollout. The OpenAI credential returns 401 and remains an
@@ -68,11 +78,12 @@ roadmap.
 
 ## Next Gates
 
-1. Publish and deploy `0.39.0`, then expose only the three exact profile routes
-   through the existing Home Infra TLS hostname.
-2. Run the Plaud-owned executable provider probe and one real, low-cost audio
-   canary. Verify durable admission, authenticated bytes, exact hash/length,
-   transcript materialization, signed push, and matching pull state.
+1. Publish and deploy `0.39.1`, requeue the failed canary's dead status events
+   once so Plaud receives its terminal failure and releases the artifact lease,
+   then verify compact HMAC delivery.
+2. Run one new real, low-cost Plaud audio canary. Verify durable admission,
+   authenticated bytes, exact hash/length, transcript materialization, signed
+   push, and matching pull state.
 3. Calculate total eligible Plaud backlog duration and worst-case provider cost.
    Bulk replay remains blocked until that estimate receives separate operator
    spend approval; use batches of 1, 5, and 25 after approval.

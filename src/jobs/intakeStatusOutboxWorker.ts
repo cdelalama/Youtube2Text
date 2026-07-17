@@ -82,7 +82,10 @@ export class IntakeStatusOutboxWorker {
       );
       return;
     }
-    const body = canonicalJson(row.payload);
+    const canonicalLine = canonicalJson(row.payload);
+    const body = canonicalLine.endsWith("\n")
+      ? canonicalLine.slice(0, -1)
+      : canonicalLine;
     const timestamp = new Date().toISOString();
     const signature = createHmac("sha256", profile.statusHmacSecret)
       .update(`${timestamp}.${body}`)

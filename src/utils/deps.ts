@@ -1,8 +1,15 @@
 import { execCommand } from "./exec.js";
 import { fileExists } from "./fs.js";
 
-async function tryCommand(cmd: string): Promise<boolean> {
-  const res = await execCommand(cmd, ["--version"]);
+function versionArgs(binaryName: string): string[] {
+  const normalized = binaryName.toLowerCase().replace(/\.exe$/, "");
+  return normalized === "ffmpeg" || normalized === "ffprobe"
+    ? ["-version"]
+    : ["--version"];
+}
+
+async function tryCommand(cmd: string, binaryName: string): Promise<boolean> {
+  const res = await execCommand(cmd, versionArgs(binaryName));
   return res.exitCode === 0;
 }
 
@@ -12,7 +19,10 @@ async function resolveBinary(
 ): Promise<string | undefined> {
   if (explicitPath) {
     try {
-      if (await fileExists(explicitPath) && (await tryCommand(explicitPath))) {
+      if (
+        (await fileExists(explicitPath)) &&
+        (await tryCommand(explicitPath, binaryName))
+      ) {
         return explicitPath;
       }
     } catch {
@@ -22,7 +32,7 @@ async function resolveBinary(
   const candidates = [binaryName, `${binaryName}.exe`];
   for (const candidate of candidates) {
     try {
-      if (await tryCommand(candidate)) return candidate;
+      if (await tryCommand(candidate, binaryName)) return candidate;
     } catch {
       // continue
     }
@@ -31,7 +41,7 @@ async function resolveBinary(
     const res = await execCommand("where.exe", [binaryName]);
     const firstLine = res.stdout.split(/\r?\n/)[0]?.trim();
     if (firstLine && (await fileExists(firstLine))) {
-      if (await tryCommand(firstLine)) return firstLine;
+      if (await tryCommand(firstLine, binaryName)) return firstLine;
     }
   } catch {
     // fall through
@@ -49,7 +59,10 @@ export async function resolveYtDlpCommand(
     undefined;
   if (envPath) {
     try {
-      if (await fileExists(envPath) && (await tryCommand(envPath))) {
+      if (
+        (await fileExists(envPath)) &&
+        (await tryCommand(envPath, "yt-dlp"))
+      ) {
         return envPath;
       }
     } catch {
@@ -68,7 +81,7 @@ export async function resolveYtDlpCommand(
     ]);
     const candidate = res.stdout.trim();
     if (candidate && (await fileExists(candidate))) {
-      if (await tryCommand(candidate)) return candidate;
+      if (await tryCommand(candidate, "yt-dlp")) return candidate;
     }
   } catch {
     // fall through
@@ -82,7 +95,7 @@ export async function resolveYtDlpCommand(
     ]);
     const candidate = res.stdout.trim();
     if (candidate && (await fileExists(candidate))) {
-      if (await tryCommand(candidate)) return candidate;
+      if (await tryCommand(candidate, "yt-dlp")) return candidate;
     }
   } catch {
     // fall through
