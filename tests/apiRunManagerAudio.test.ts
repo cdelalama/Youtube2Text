@@ -35,6 +35,8 @@ test("RunManager passes audio input to pipeline", async () => {
       durationSeconds: 12,
     },
     audioTitle: "My audio",
+    sourceCreatedAt: "2026-07-01T08:30:00.000Z",
+    sourceCreatedAtType: "recorded",
   });
   manager.startRun(record.runId, {
     audioId: "audio-123",
@@ -46,6 +48,8 @@ test("RunManager passes audio input to pipeline", async () => {
       durationSeconds: 12,
     },
     audioTitle: "My audio",
+    sourceCreatedAt: "2026-07-01T08:30:00.000Z",
+    sourceCreatedAtType: "recorded",
   });
 
   await new Promise<void>((resolve) => setTimeout(resolve, 10));
@@ -57,4 +61,6 @@ test("RunManager passes audio input to pipeline", async () => {
     contentType: "audio/ogg",
     durationSeconds: 12,
   });
+  assert.equal(seenInput?.sourceCreatedAt, "2026-07-01T08:30:00.000Z");
+  assert.equal(seenInput?.sourceCreatedAtType, "recorded");
 });

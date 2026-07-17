@@ -19,8 +19,10 @@ test("TranscriptReadyOutboxWorker signs and delivers a durable item event", asyn
   const dir = await mkdtemp(join(tmpdir(), "y2t-outbox-worker-"));
   const previousUrl = process.env.Y2T_TRANSCRIPT_READY_URL;
   const previousSecret = process.env.Y2T_TRANSCRIPT_READY_SECRET;
+  const previousKeyId = process.env.Y2T_TRANSCRIPT_READY_KEY_ID;
   process.env.Y2T_TRANSCRIPT_READY_URL = "https://cortex.example/hooks/media2text";
   process.env.Y2T_TRANSCRIPT_READY_SECRET = "outbox-secret-aaaaaaaaaaaaaaaaaaaaaaaa";
+  process.env.Y2T_TRANSCRIPT_READY_KEY_ID = "cortex-2026-07";
   const store = new MediaJobStore(dir);
   const transcriptId = `trn_${"a".repeat(64)}`;
   const stored = {
@@ -52,6 +54,7 @@ test("TranscriptReadyOutboxWorker signs and delivers a durable item event", asyn
     },
   } satisfies StoredTranscript;
   const event = store.enqueueTranscriptReady(stored);
+  assert.ok(event);
   let request: RequestInit | undefined;
   const worker = new TranscriptReadyOutboxWorker(store, {
     fetch: async (_url, init) => {
@@ -65,6 +68,8 @@ test("TranscriptReadyOutboxWorker signs and delivers a durable item event", asyn
     const headers = new Headers(request?.headers);
     assert.equal(headers.get("x-media2text-event"), "transcript.ready");
     assert.equal(headers.get("x-media2text-event-id"), event.eventId);
+    assert.equal(headers.get("x-media2text-key-id"), "cortex-2026-07");
+    assert.equal(headers.get("x-media2text-signature-version"), "hmac-sha256-v1");
     assert.match(headers.get("x-media2text-signature") ?? "", /^sha256=[a-f0-9]{64}$/);
     assert.equal(JSON.parse(String(request?.body)).transcript.transcriptId, transcriptId);
   } finally {
@@ -75,5 +80,7 @@ test("TranscriptReadyOutboxWorker signs and delivers a durable item event", asyn
     else process.env.Y2T_TRANSCRIPT_READY_URL = previousUrl;
     if (previousSecret === undefined) delete process.env.Y2T_TRANSCRIPT_READY_SECRET;
     else process.env.Y2T_TRANSCRIPT_READY_SECRET = previousSecret;
+    if (previousKeyId === undefined) delete process.env.Y2T_TRANSCRIPT_READY_KEY_ID;
+    else process.env.Y2T_TRANSCRIPT_READY_KEY_ID = previousKeyId;
   }
 });

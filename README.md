@@ -1,4 +1,4 @@
-<!-- doc-version: 0.39.3 -->
+<!-- doc-version: 0.40.0 -->
 # Media2Text
 
 Media2Text is the visible product name for the `youtube2text` engine: a
@@ -486,14 +486,16 @@ Media contracts:
 - `infra.contract.yml` is the project-owned Home Infra Protocol 0.9.0 contract.
   It declares the event-driven media sync job and its public sanitized status
   URL; Home Infra remains the private registry/consumer.
-- `docs/contracts/transcript-store.v1.schema.json` is implemented for every new transcript.
+- `docs/contracts/transcript-store.v1.schema.json` remains the immutable legacy
+  format. New transcripts use the provenance-complete
+  `docs/contracts/transcript-store.v2.schema.json`; both remain exactly readable.
 - `docs/contracts/media-intake.v1.schema.json` is the implemented internal
   intake domain. The exact Plaud Mirror Transcription Intake v1 compatibility
   profile is pinned under
   `docs/contracts/plaud-mirror-transcription-intake-v1/` to producer commit
   `d393a0cefa17dfc4788294ef9bb5e5a89ed0f6b4`.
-- `docs/contracts/transcript-ready.v1.schema.json` remains a draft until Cortex
-  reviews it. Plaud activation does not authorize Cortex delivery.
+- `docs/contracts/transcript-ready.v1.schema.json` is a revised draft awaiting
+  Cortex re-review. Plaud activation does not authorize Cortex delivery.
 - `Y2T_INTAKE_API_KEY` is a least-privilege producer credential accepted only
   by `POST /v1/intakes`. Artifact origins require an exact
   `Y2T_INTAKE_ARTIFACT_ALLOWED_ORIGINS` allowlist.
@@ -507,6 +509,11 @@ Media contracts:
 - Every completed item creates a durable `transcript.ready` outbox obligation.
   `Y2T_TRANSCRIPT_READY_URL` remains unset until Cortex approves the contract;
   pending obligations are retained rather than discarded.
+- Cortex pull reconciliation uses opaque cursors until `nextCursor` is null.
+  `Y2T_CORTEX_TRANSCRIPT_READ_KEY` is accepted only by transcript list/exact
+  `GET` routes. HMAC delivery requires an explicit
+  `Y2T_TRANSCRIPT_READY_KEY_ID`; see `docs/contracts/README.md` for replay and
+  rotation rules.
 - `npm run transcript:export-fixture -- <path>` exports and verifies the exact
   canonical bytes of the newest real Transcript Store record for consumer tests.
 - `fixtures/cortex-v1/ngAasdHcHxo/` contains one committed, byte-stable legacy

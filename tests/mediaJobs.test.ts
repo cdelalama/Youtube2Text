@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { DatabaseSync } from "node:sqlite";
 import {
   IntakeConflictError,
   MediaJobStore,
+  TranscriptCursorError,
   type IntakeRequestV1,
 } from "../src/jobs/store.js";
 import type { StoredTranscript } from "../src/transcripts/store.js";
@@ -23,6 +25,8 @@ function request(): IntakeRequestV1 {
       itemId: "item-1",
       collectionId: "recordings",
       artifactRevision: `sha256:${digest}`,
+      createdAt: "2026-07-01T08:30:00.000Z",
+      createdAtType: "recorded",
     },
     artifact: {
       url: "https://source.example/artifacts/item-1",
@@ -33,6 +37,44 @@ function request(): IntakeRequestV1 {
       filename: "item-1.mp3",
     },
     title: "Item 1",
+  };
+}
+
+function catalogTranscript(
+  index: number,
+  options?: { sourceItemId?: string; artifact?: string; materializedAt?: string }
+): StoredTranscript {
+  const transcriptHex = createHash("sha256").update(`transcript-${index}`).digest("hex");
+  const artifact = options?.artifact ?? createHash("sha256").update(`artifact-${index}`).digest("hex");
+  const transcriptId = `trn_${transcriptHex}`;
+  return {
+    created: true,
+    recordSha256: createHash("sha256").update(`record-${index}`).digest("hex"),
+    bytes: 123,
+    relativePath: `_transcripts/v1/${transcriptHex.slice(0, 2)}/${transcriptId}.json`,
+    record: {
+      schemaVersion: "media2text.transcript.v1",
+      transcriptId,
+      createdAt: options?.materializedAt ?? new Date(Date.UTC(2026, 0, 1, 0, 0, index)).toISOString(),
+      producer: { name: "Media2Text", technicalId: "youtube2text", version: "0.39.3" },
+      correlation: { runId: `run-${index}` },
+      source: {
+        kind: "intake",
+        authority: "plaud-mirror",
+        sourceItemId: options?.sourceItemId ?? `item-${index}`,
+        sourceCollectionId: "recordings",
+        title: `Item ${index}`,
+        artifactRevision: `sha256:${artifact}`,
+      },
+      artifact: { sha256: artifact, bytes: 10, durationSeconds: 3, contentType: "audio/mpeg" },
+      transcription: {
+        provider: "deepgram",
+        model: "nova-3",
+        payloadSha256: createHash("sha256").update(`payload-${index}`).digest("hex"),
+        payload: { id: `provider-${index}`, status: "completed", text: `text-${index}` },
+      },
+      representations: [],
+    },
   };
 }
 
@@ -178,6 +220,137 @@ test("MediaJobStore outbox is idempotent and recovers interrupted delivery", asy
       store.pruneTerminal({ nowMs: Date.now() + 366 * 86_400_000 }).outboxDeleted,
       1
     );
+  } finally {
+    store.close();
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("transcript catalog defines retranscription, source revision, and source-owned withdrawal", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "y2t-transcript-catalog-"));
+  const store = new MediaJobStore(dir);
+  const sourceItemId = "shared-item";
+  const artifactOne = "1".repeat(64);
+  try {
+    const first = catalogTranscript(1, {
+      sourceItemId,
+      artifact: artifactOne,
+      materializedAt: "2026-07-15T00:00:00.000Z",
+    });
+    const retranscription = catalogTranscript(2, {
+      sourceItemId,
+      artifact: artifactOne,
+      materializedAt: "2026-07-15T01:00:00.000Z",
+    });
+    const sourceRevision = catalogTranscript(3, {
+      sourceItemId,
+      artifact: "2".repeat(64),
+      materializedAt: "2026-07-15T02:00:00.000Z",
+    });
+    store.enqueueTranscriptReady(first);
+    store.enqueueTranscriptReady(retranscription);
+    const ready = store.enqueueTranscriptReady(sourceRevision);
+    assert.ok(ready);
+
+    assert.equal(store.getTranscriptCatalog(first.record.transcriptId)?.status, "superseded");
+    assert.equal(
+      store.getTranscriptCatalog(retranscription.record.transcriptId)?.revisionReason,
+      "retranscription"
+    );
+    assert.equal(store.getTranscriptCatalog(sourceRevision.record.transcriptId)?.revision, 3);
+    assert.equal(
+      store.getTranscriptCatalog(sourceRevision.record.transcriptId)?.revisionReason,
+      "source-revision"
+    );
+    assert.equal(ready.payload.lifecycle.supersedesTranscriptId, retranscription.record.transcriptId);
+
+    const withdrawn = store.recordSourceWithdrawal(sourceRevision, {
+      authority: "plaud-mirror",
+      sourceEventId: "plaud-delete-event-1",
+      occurredAt: "2026-07-15T03:00:00.000Z",
+      reason: "deleted at source",
+    });
+    assert.equal(withdrawn.eventType, "transcript.withdrawn");
+    assert.equal(store.getTranscriptCatalog(sourceRevision.record.transcriptId)?.status, "withdrawn");
+    assert.throws(
+      () =>
+        store.recordSourceWithdrawal(sourceRevision, {
+          authority: "other-source",
+          sourceEventId: "bad-event",
+          occurredAt: "2026-07-15T03:01:00.000Z",
+        }),
+      /authority/
+    );
+  } finally {
+    store.close();
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("transcript catalog cursor reconciles every record beyond 500", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "y2t-transcript-cursor-"));
+  const store = new MediaJobStore(dir);
+  try {
+    for (let index = 0; index < 503; index += 1) {
+      store.enqueueTranscriptReady(catalogTranscript(index));
+    }
+    const seen = new Set<string>();
+    let cursor: string | undefined;
+    do {
+      const page = store.listTranscriptCatalog({ limit: 200, cursor });
+      for (const item of page.items) seen.add(item.transcriptId);
+      cursor = page.nextCursor ?? undefined;
+    } while (cursor);
+    assert.equal(seen.size, 503);
+    assert.throws(
+      () => store.listTranscriptCatalog({ cursor: "not-a-valid-cursor" }),
+      TranscriptCursorError
+    );
+  } finally {
+    store.close();
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("MediaJobStore migrates the ready-only outbox constraint without losing rows", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "y2t-outbox-migration-"));
+  const jobsDir = join(dir, "_jobs");
+  await mkdir(jobsDir, { recursive: true });
+  const db = new DatabaseSync(join(jobsDir, "media2text.sqlite"));
+  db.exec(`
+    CREATE TABLE outbox (
+      event_id TEXT PRIMARY KEY,
+      event_type TEXT NOT NULL CHECK (event_type = 'transcript.ready'),
+      aggregate_id TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('pending','delivering','delivered','dead')),
+      attempt_count INTEGER NOT NULL DEFAULT 0,
+      next_attempt_at TEXT NOT NULL,
+      delivered_at TEXT,
+      last_error TEXT,
+      lease_owner TEXT,
+      lease_expires_at TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    INSERT INTO outbox (
+      event_id, event_type, aggregate_id, payload_json, status,
+      next_attempt_at, created_at, updated_at
+    ) VALUES ('evt_legacy', 'transcript.ready', 'trn_legacy', '{}', 'pending',
+      '2026-07-15T00:00:00.000Z', '2026-07-15T00:00:00.000Z', '2026-07-15T00:00:00.000Z');
+  `);
+  db.close();
+  const store = new MediaJobStore(dir);
+  try {
+    assert.equal(store.getOutbox("evt_legacy")?.eventType, "transcript.ready");
+    const current = catalogTranscript(700);
+    store.enqueueTranscriptReady(current);
+    const withdrawn = store.recordSourceWithdrawal(current, {
+      authority: "plaud-mirror",
+      sourceEventId: "source-delete-700",
+      occurredAt: "2026-07-15T03:00:00.000Z",
+    });
+    assert.equal(withdrawn.eventType, "transcript.withdrawn");
   } finally {
     store.close();
     await rm(dir, { recursive: true, force: true });

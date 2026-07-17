@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Media2Text API
-  version: 0.39.3
+  version: 0.40.0
   description: |
     Minimal local HTTP API for Media2Text, backed by the youtube2text engine.
     Notes:
@@ -147,11 +147,22 @@ paths:
   /v1/transcripts:
     get:
       operationId: listTranscriptRecords
-      summary: List immutable Transcript Store records
+      summary: Reconcile current transcript representations with an opaque cursor
+      security:
+        - ApiKeyAuth: []
+        - CortexTranscriptBearerAuth: []
       parameters:
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 500, default: 100 }
+        - name: cursor
+          in: query
+          description: Opaque cursor returned by the previous page.
+          schema: { type: string }
+        - name: includeSuperseded
+          in: query
+          description: Include historical superseded representations. Withdrawn tombstones are always included.
+          schema: { type: boolean, default: false }
       responses:
         "200":
           description: Transcript summaries
@@ -164,11 +175,19 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "400":
+          description: Invalid cursor or query parameter
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
 
   /v1/transcripts/{transcriptId}:
     get:
       operationId: getTranscriptRecord
       summary: Get one immutable Transcript Store record
+      security:
+        - ApiKeyAuth: []
+        - CortexTranscriptBearerAuth: []
       parameters:
         - $ref: "#/components/parameters/TranscriptId"
       responses:
@@ -182,7 +201,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TranscriptRecordV1"
+                oneOf:
+                  - $ref: "#/components/schemas/TranscriptRecordV1"
+                  - $ref: "#/components/schemas/TranscriptRecordV2"
         "401":
           description: Unauthorized
           content:
@@ -1180,6 +1201,11 @@ components:
       scheme: bearer
       bearerFormat: opaque
       description: Producer-scoped bearer for the pinned Plaud Mirror compatibility profile.
+    CortexTranscriptBearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+      description: Least-privilege Cortex machine credential accepted only by transcript list and exact-record GET operations.
   parameters:
     IntakeId:
       name: intakeId
@@ -1375,6 +1401,9 @@ components:
             itemId: { type: string }
             collectionId: { type: string }
             artifactRevision: { type: string, pattern: "^sha256:[a-f0-9]{64}$" }
+            createdAt:
+              oneOf: [{ type: string, format: date-time }, { type: "null" }]
+            createdAtType: { type: string, enum: [recorded, published, unknown] }
         artifact:
           type: object
           required: [url, sha256, bytes, contentType]
@@ -1443,6 +1472,28 @@ components:
         publishedAt: { type: string }
         artifactRevision: { type: string }
 
+    TranscriptSourceV2:
+      type: object
+      required: [kind, authority, sourceItemId, title, artifactRevision, createdAt, createdAtType, createdAtSuppliedBy, createdAtUnavailableReason]
+      additionalProperties: false
+      properties:
+        kind: { type: string, enum: [youtube, upload, intake] }
+        authority: { type: string }
+        sourceItemId: { type: string }
+        sourceCollectionId: { type: string }
+        canonicalUrl: { type: string }
+        title: { type: string }
+        publishedAt: { type: string }
+        artifactRevision: { type: string, pattern: "^sha256:[a-f0-9]{64}$" }
+        createdAt:
+          description: Original typed source time; Plaud recording createdAt is never replaced by processing time.
+          oneOf: [{ type: string, format: date-time }, { type: "null" }]
+        createdAtType: { type: string, enum: [recorded, published, unknown] }
+        createdAtSuppliedBy:
+          oneOf: [{ type: string }, { type: "null" }]
+        createdAtUnavailableReason:
+          oneOf: [{ type: string }, { type: "null" }]
+
     TranscriptRecordV1:
       type: object
       required: [schemaVersion, transcriptId, createdAt, producer, correlation, source, artifact, transcription, representations]
@@ -1462,26 +1513,162 @@ components:
         recordSha256: { type: string }
         recordBytes: { type: integer }
 
+    TranscriptModelProvenanceV2:
+      type: object
+      required: [name, nameEvidence, nameUnavailableReason, version, versionEvidence, versionUnavailableReason]
+      additionalProperties: false
+      properties:
+        name:
+          oneOf: [{ type: string }, { type: "null" }]
+        nameEvidence:
+          oneOf: [{ type: string }, { type: "null" }]
+        nameUnavailableReason:
+          oneOf: [{ type: string }, { type: "null" }]
+        version:
+          oneOf: [{ type: string }, { type: "null" }]
+        versionEvidence:
+          oneOf: [{ type: string }, { type: "null" }]
+        versionUnavailableReason:
+          oneOf: [{ type: string }, { type: "null" }]
+
+    TranscriptRecordV2:
+      type: object
+      required: [schemaVersion, transcriptId, materializedAt, producer, correlation, source, artifact, transcription, representations]
+      additionalProperties: false
+      properties:
+        schemaVersion: { type: string, const: media2text.transcript.v2 }
+        transcriptId: { type: string, pattern: "^trn_[a-f0-9]{64}$" }
+        materializedAt: { type: string, format: date-time }
+        producer:
+          type: object
+          required: [name, technicalId, version]
+          additionalProperties: false
+          properties:
+            name: { type: string, const: Media2Text }
+            technicalId: { type: string, const: youtube2text }
+            version: { type: string }
+        correlation:
+          type: object
+          required: [runId, intakeId]
+          additionalProperties: false
+          properties:
+            runId: { type: string }
+            intakeId:
+              oneOf: [{ type: string }, { type: "null" }]
+        source: { $ref: "#/components/schemas/TranscriptSourceV2" }
+        artifact:
+          type: object
+          required: [revision, sha256, bytes, durationSeconds, contentType]
+          additionalProperties: false
+          properties:
+            revision: { type: string, pattern: "^sha256:[a-f0-9]{64}$" }
+            sha256: { type: string, pattern: "^[a-f0-9]{64}$" }
+            bytes: { type: integer, minimum: 1 }
+            durationSeconds: { type: number, minimum: 0 }
+            contentType: { type: string, pattern: "^audio/" }
+        transcription:
+          type: object
+          required: [provider, providerTranscriptId, providerTranscriptIdEvidence, providerTranscriptIdUnavailableReason, model, languageCode, languageConfidence, payloadSha256, payload]
+          additionalProperties: false
+          properties:
+            provider: { type: string, enum: [assemblyai, deepgram, openai_whisper] }
+            providerTranscriptId:
+              oneOf: [{ type: string }, { type: "null" }]
+            providerTranscriptIdEvidence:
+              oneOf: [{ type: string }, { type: "null" }]
+            providerTranscriptIdUnavailableReason:
+              oneOf: [{ type: string }, { type: "null" }]
+            model: { $ref: "#/components/schemas/TranscriptModelProvenanceV2" }
+            languageCode:
+              oneOf: [{ type: string }, { type: "null" }]
+            languageConfidence:
+              oneOf: [{ type: number }, { type: "null" }]
+            payloadSha256: { type: string, pattern: "^[a-f0-9]{64}$" }
+            payload: { type: object, additionalProperties: true }
+        representations:
+          type: array
+          items:
+            type: object
+            required: [format, relativePath, sha256, bytes, createdAt, generator, derivedFrom]
+            additionalProperties: false
+            properties:
+              format: { type: string, enum: [provider-json, text, markdown, jsonl, csv] }
+              relativePath: { type: string }
+              legacyRelativePath: { type: string }
+              sha256: { type: string, pattern: "^[a-f0-9]{64}$" }
+              bytes: { type: integer, minimum: 0 }
+              createdAt: { type: string, format: date-time }
+              generator:
+                type: object
+                required: [name, version]
+                additionalProperties: false
+                properties:
+                  name: { type: string, const: Media2Text }
+                  version: { type: string }
+              derivedFrom:
+                type: object
+                required: [sourceArtifactRevision, transcriptPayloadSha256]
+                additionalProperties: false
+                properties:
+                  sourceArtifactRevision: { type: string, pattern: "^sha256:[a-f0-9]{64}$" }
+                  transcriptPayloadSha256: { type: string, pattern: "^[a-f0-9]{64}$" }
+
+    TranscriptLifecycleProjection:
+      type: object
+      required: [revision, revisionReason, status, current, supersedesTranscriptId, supersededByTranscriptId, withdrawal]
+      additionalProperties: false
+      properties:
+        revision: { type: integer, minimum: 1 }
+        revisionReason: { type: string, enum: [initial, retranscription, source-revision] }
+        status: { type: string, enum: [current, superseded, withdrawn] }
+        current: { type: boolean }
+        supersedesTranscriptId:
+          oneOf: [{ type: string }, { type: "null" }]
+        supersededByTranscriptId:
+          oneOf: [{ type: string }, { type: "null" }]
+        withdrawal:
+          oneOf:
+            - type: object
+              required: [sourceEventId, occurredAt]
+              properties:
+                sourceEventId: { type: string }
+                occurredAt: { type: string, format: date-time }
+                reason: { type: string }
+            - type: "null"
+
     TranscriptSummary:
       type: object
-      required: [transcriptId, createdAt, source, transcription, recordSha256, bytes, href]
+      required: [transcriptId, schemaVersion, materializedAt, source, transcription, lifecycle, recordSha256, bytes, href]
       properties:
         transcriptId: { type: string }
-        createdAt: { type: string, format: date-time }
-        source: { $ref: "#/components/schemas/TranscriptSourceV1" }
+        schemaVersion: { type: string, enum: [media2text.transcript.v1, media2text.transcript.v2] }
+        materializedAt: { type: string, format: date-time }
+        source:
+          oneOf:
+            - $ref: "#/components/schemas/TranscriptSourceV1"
+            - $ref: "#/components/schemas/TranscriptSourceV2"
         transcription: { type: object, additionalProperties: true }
+        lifecycle: { $ref: "#/components/schemas/TranscriptLifecycleProjection" }
         recordSha256: { type: string }
         bytes: { type: integer }
         href: { type: string }
 
     TranscriptListResponse:
       type: object
-      required: [schemaVersion, items]
+      required: [schemaVersion, items, page]
       properties:
         schemaVersion: { type: string, const: media2text.transcript-list.v1 }
         items:
           type: array
           items: { $ref: "#/components/schemas/TranscriptSummary" }
+        page:
+          type: object
+          required: [nextCursor, hasMore]
+          additionalProperties: false
+          properties:
+            nextCursor:
+              oneOf: [{ type: string }, { type: "null" }]
+            hasMore: { type: boolean }
 
     ErrorResponse:
       type: object

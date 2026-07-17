@@ -75,6 +75,8 @@ export type RunCreateRequest = {
   sourceAuthority?: string;
   sourceItemId?: string;
   sourceCollectionId?: string;
+  sourceCreatedAt?: string | null;
+  sourceCreatedAtType?: "recorded" | "published" | "unknown";
   canonicalUrl?: string;
   force?: boolean;
   callbackUrl?: string;
@@ -353,6 +355,8 @@ export class RunManager {
             sourceAuthority: req.sourceAuthority,
             sourceItemId: req.sourceItemId,
             sourceCollectionId: req.sourceCollectionId,
+            sourceCreatedAt: req.sourceCreatedAt,
+            sourceCreatedAtType: req.sourceCreatedAtType,
             canonicalUrl: req.canonicalUrl,
           }
         : (req.url as string);

@@ -1,7 +1,7 @@
-<!-- doc-version: 0.39.3 -->
+<!-- doc-version: 0.40.0 -->
 # Media2Text Architecture (youtube2text Engine)
 
-> Version: 0.39.3 (synced with package.json)
+> Version: 0.40.0 (synced with package.json)
 > Last Updated: 2026-07-17
 > Status: Safety foundation and Plaud compatibility facade deployed and live-verified; Cortex delivery, YouTube scheduler, and bulk replay remain gated
 > Authors: Claude + GPT-5.2 (viewpoints preserved)
@@ -75,9 +75,12 @@ Local-first artifacts on disk. Current layout:
 - `output/_uploads/<audioId>.json` + `audio/_uploads/<audioId>.<ext>` (uploaded audio staging)
 - `output/_usage/ledger.json` (atomic provider-call reservations and estimated cost)
 - `output/_transcripts/v1/<prefix>/<transcriptId>.json` plus
-  `<transcriptId>/transcript.*` (immutable canonical Transcript Store v1 records
-  and representation snapshots; legacy presentation paths remain compatibility references)
-- `output/_jobs/media2text.sqlite` (bounded intake, lease, idempotency, and durable outbox coordination state)
+  `<transcriptId>/transcript.*` (immutable legacy Transcript Store v1 records)
+- `output/_transcripts/v2/<prefix>/<transcriptId>.json` plus
+  `<transcriptId>/transcript.*` (new provenance-complete immutable records and
+  representation snapshots; source recording time is distinct from materialization time)
+- `output/_jobs/media2text.sqlite` (bounded intake, lease, idempotency, durable
+  outbox, and transcript current/superseded/withdrawn projection state)
 - `output/uploads/<basename>.*` + `audio/uploads/<basename>.<ext>` (processed local audio runs)
 
 Future multi-tenancy (Phase 2+) can wrap the same structure under a `user_id` prefix:

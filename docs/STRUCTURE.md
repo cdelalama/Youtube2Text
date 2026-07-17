@@ -52,8 +52,10 @@ youtube2text/
 - `src/formatters/` - derived artifacts (`.txt`, `.md`, `.jsonl`, optional `.csv`).
 - `src/storage/` - output layout, idempotency checks, processed-index scan, and persistence helpers.
 - `src/pipeline/` - the orchestrated pipeline (events, planning, run execution, JSONL event emitter).
-- `src/transcripts/` - canonical serialization, hashing, and immutable Transcript Store v1 records.
-- `src/jobs/` - bounded SQLite intake/lease/idempotency/outbox state plus artifact and delivery workers.
+- `src/transcripts/` - canonical serialization, hashing, legacy v1 reads, and
+  provenance-complete immutable Transcript Store v2 records.
+- `src/jobs/` - bounded SQLite intake/lease/idempotency/outbox state plus
+  transcript lifecycle projections, artifact workers, and delivery workers.
 - `src/utils/` - filesystem/exec/logging helpers (incl. audio splitting).
 - `docs/contracts/` - Media2Text-owned schemas/lifecycle plus byte-pinned
   producer compatibility profiles. The Plaud Mirror profile copy includes its

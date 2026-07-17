@@ -19,7 +19,7 @@ test("transcript API returns the exact bytes named by its integrity hash", async
   await writeFile(audioPath, "audio", "utf8");
   await writeFile(txtPath, "hello\n", "utf8");
   const stored = await new TranscriptStore(outputDir).write({
-    createdAt: "2026-07-15T00:00:00.000Z",
+    materializedAt: "2026-07-15T00:00:00.000Z",
     producerVersion: "0.38.0",
     runId: "run-1",
     source: {
@@ -29,6 +29,10 @@ test("transcript API returns the exact bytes named by its integrity hash", async
       sourceCollectionId: "channel-1",
       canonicalUrl: "https://www.youtube.com/watch?v=video-1",
       title: "Video 1",
+      createdAt: null,
+      createdAtType: "unknown",
+      createdAtSuppliedBy: null,
+      createdAtUnavailableReason: "YouTube listing did not provide an RFC3339 source time",
     },
     audioPath,
     durationSeconds: 2,
@@ -42,8 +46,10 @@ test("transcript API returns the exact bytes named by its integrity hash", async
   });
   const previousApiKey = process.env.Y2T_API_KEY;
   const previousWorker = process.env.Y2T_INTAKE_WORKER_ENABLED;
+  const previousCortexKey = process.env.Y2T_CORTEX_TRANSCRIPT_READ_KEY;
   process.env.Y2T_API_KEY = "operator-api-key-aaaaaaaaaaaaaaaaaaaaaaaa";
   process.env.Y2T_INTAKE_WORKER_ENABLED = "false";
+  process.env.Y2T_CORTEX_TRANSCRIPT_READ_KEY = "cortex-transcript-read-aaaaaaaaaaaaaaaa";
   const config = configSchema.parse({
     assemblyAiApiKey: "test",
     outputDir,
@@ -63,6 +69,8 @@ test("transcript API returns the exact bytes named by its integrity hash", async
     assert.equal(list.status, 200);
     const summary = ((await list.json()) as any).items[0];
     assert.equal(summary.recordSha256, stored.recordSha256);
+    assert.equal(summary.materializedAt, "2026-07-15T00:00:00.000Z");
+    assert.equal(summary.lifecycle.status, "current");
 
     const response = await fetch(`http://127.0.0.1:${port}${summary.href}`, { headers });
     const bytes = Buffer.from(await response.arrayBuffer());
@@ -71,6 +79,26 @@ test("transcript API returns the exact bytes named by its integrity hash", async
     assert.equal(response.headers.get("x-media2text-record-sha256"), digest);
     assert.equal(response.headers.get("etag"), `"sha256:${digest}"`);
     assert.equal(digest, stored.recordSha256);
+
+    const cortexHeaders = {
+      authorization: `Bearer ${process.env.Y2T_CORTEX_TRANSCRIPT_READ_KEY}`,
+    };
+    assert.equal(
+      (await fetch(`http://127.0.0.1:${port}/v1/transcripts`, { headers: cortexHeaders })).status,
+      200
+    );
+    assert.equal(
+      (await fetch(`http://127.0.0.1:${port}${summary.href}`, { headers: cortexHeaders })).status,
+      200
+    );
+    assert.equal(
+      (await fetch(`http://127.0.0.1:${port}/metrics`, { headers: cortexHeaders })).status,
+      401
+    );
+    assert.equal(
+      (await fetch(`http://127.0.0.1:${port}/v1/transcripts?cursor=invalid`, { headers: cortexHeaders })).status,
+      400
+    );
 
     const status = await fetch(`http://127.0.0.1:${port}/status/media-pipeline`);
     assert.equal(status.status, 200);
@@ -86,5 +114,7 @@ test("transcript API returns the exact bytes named by its integrity hash", async
     else process.env.Y2T_API_KEY = previousApiKey;
     if (previousWorker === undefined) delete process.env.Y2T_INTAKE_WORKER_ENABLED;
     else process.env.Y2T_INTAKE_WORKER_ENABLED = previousWorker;
+    if (previousCortexKey === undefined) delete process.env.Y2T_CORTEX_TRANSCRIPT_READ_KEY;
+    else process.env.Y2T_CORTEX_TRANSCRIPT_READ_KEY = previousCortexKey;
   }
 });

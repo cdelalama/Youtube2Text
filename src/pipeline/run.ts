@@ -13,6 +13,7 @@ import type { YoutubeListing } from "../youtube/index.js";
 import { getListingWithCatalogCache } from "../youtube/catalogCache.js";
 import { createTranscriptionProvider } from "../transcription/index.js";
 import type { TranscriptionProvider } from "../transcription/index.js";
+import type { TranscriptJson } from "../transcription/types.js";
 import { formatTxt, formatCsv, formatMd, formatJsonl } from "../formatters/index.js";
 import {
   getOutputPaths,
@@ -69,6 +70,8 @@ export type AudioRunInput = {
   sourceAuthority?: string;
   sourceItemId?: string;
   sourceCollectionId?: string;
+  sourceCreatedAt?: string | null;
+  sourceCreatedAtType?: "recorded" | "published" | "unknown";
   canonicalUrl?: string;
 };
 
@@ -86,10 +89,33 @@ async function ensureAudioPath(sourcePath: string, destPath: string): Promise<st
   return destPath;
 }
 
-function providerModel(config: AppConfig): string {
-  if (config.sttProvider === "deepgram") return config.deepgramModel;
-  if (config.sttProvider === "openai_whisper") return config.openaiWhisperModel;
-  return "assemblyai-default";
+function providerModel(config: AppConfig, transcript: TranscriptJson) {
+  if (config.sttProvider === "deepgram") {
+    return {
+      name: config.deepgramModel,
+      nameEvidence: "media2text-config",
+      nameUnavailableReason: null,
+    };
+  }
+  if (config.sttProvider === "openai_whisper") {
+    return {
+      name: config.openaiWhisperModel,
+      nameEvidence: "media2text-config",
+      nameUnavailableReason: null,
+    };
+  }
+  if (typeof transcript.speech_model === "string" && transcript.speech_model) {
+    return {
+      name: transcript.speech_model,
+      nameEvidence: "provider-response.speech_model",
+      nameUnavailableReason: null,
+    };
+  }
+  return {
+    name: null,
+    nameEvidence: null,
+    nameUnavailableReason: "AssemblyAI response did not report speech_model",
+  };
 }
 
 function audioContentType(path: string): string {
@@ -706,9 +732,9 @@ export async function runPipeline(
             await saveTranscriptJsonl(paths.jsonlPath, jsonl);
             if (csv !== undefined) await saveTranscriptCsv(paths.csvPath, csv);
 
-            const createdAt = nowIso();
+            const materializedAt = nowIso();
             const storedTranscript = await transcriptStore.write({
-              createdAt,
+              materializedAt,
               producerVersion,
               runId: usageRunId,
               intakeId: audioInput?.intakeId,
@@ -722,13 +748,23 @@ export async function runPipeline(
                 canonicalUrl: audioInput ? audioInput.canonicalUrl : video.url,
                 title: video.title,
                 publishedAt: video.uploadDate,
+                createdAt: audioInput?.sourceCreatedAt ?? null,
+                createdAtType: audioInput?.sourceCreatedAtType ?? "unknown",
+                createdAtSuppliedBy:
+                  audioInput?.sourceCreatedAt === undefined || audioInput.sourceCreatedAt === null
+                    ? null
+                    : audioInput.sourceAuthority ?? "media2text.upload",
+                createdAtUnavailableReason:
+                  audioInput?.sourceCreatedAt === undefined || audioInput.sourceCreatedAt === null
+                    ? "source did not supply a typed recording time"
+                    : null,
               },
               audioPath,
               sourceArtifact: audioInput?.sourceArtifact,
               durationSeconds: itemAudioSeconds,
               contentType: audioContentType(audioPath),
               provider: config.sttProvider,
-              model: providerModel(config),
+              model: providerModel(config, transcript),
               transcript,
               languageCode: finalLanguageCode,
               languageConfidence: finalLanguageConfidence,
@@ -775,7 +811,7 @@ export async function runPipeline(
               transcriptId: storedTranscript.record.transcriptId,
               transcriptRecordSha256: storedTranscript.recordSha256,
               transcriptSchemaVersion: TRANSCRIPT_SCHEMA_VERSION,
-              createdAt,
+              createdAt: materializedAt,
             });
 
             stageForError = "format";

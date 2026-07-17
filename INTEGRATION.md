@@ -181,7 +181,7 @@ real recording.
 ### 3c) Transcript Store and completion
 
 Each successful item writes a canonical immutable record under
-`output/_transcripts/v1/` and returns its identity in `video:done` and
+`output/_transcripts/v2/` and returns its identity in `video:done` and
 `run.videoResults[]`.
 
 ```bash
@@ -191,11 +191,18 @@ curl -sS -H "X-API-Key: $Y2T_API_KEY" \
   http://127.0.0.1:8787/v1/transcripts/<TRANSCRIPT_ID>
 ```
 
+The list response returns `page.nextCursor` and `page.hasMore`; consumers must
+follow the opaque cursor until it is null. Cortex may use
+`Authorization: Bearer $Y2T_CORTEX_TRANSCRIPT_READ_KEY` on only these two GET
+operations. That credential is rejected everywhere else.
+
 The individual response body is the exact canonical byte sequence named by
 `ETag` and `X-Media2Text-Record-SHA256`. Every record also inserts one durable
 `transcript.ready` event. When `Y2T_TRANSCRIPT_READY_URL` is configured, the
-outbox delivers it with `X-Media2Text-Event-Id`, timestamp, and HMAC signature.
-The contract is at-least-once; consumers persist idempotency before ACK.
+outbox delivers it with event id, timestamp, key id, signature version, and HMAC
+signature. The contract is at-least-once; consumers enforce the 300-second
+replay window and persist idempotency before ACK. Active/previous key rotation
+is specified in `docs/contracts/README.md`.
 
 ## Error responses (common)
 

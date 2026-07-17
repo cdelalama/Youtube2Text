@@ -41,6 +41,7 @@ type DeepgramResults = {
 
 type DeepgramResponse = {
   results?: DeepgramResults;
+  metadata?: Record<string, unknown>;
 };
 
 function normalizeDeepgramLanguage(code?: string): string | undefined {
@@ -159,13 +160,17 @@ export class DeepgramProvider implements TranscriptionProvider {
       results.channels?.[0]?.alternatives?.[0]?.transcript?.trim() ??
       utterances.map((u) => u.text ?? "").join(" ").trim();
 
+    const providerRequestId =
+      typeof data.metadata?.request_id === "string" ? data.metadata.request_id : null;
     return {
-      id: `deepgram-${randomUUID()}`,
+      id: providerRequestId ?? `deepgram-${randomUUID()}`,
+      provider_transcript_id: providerRequestId,
       status: "completed",
       text: transcript.length > 0 ? transcript : undefined,
       utterances,
       language_code: results.detected_language ?? manualLanguage,
       provider: "deepgram",
+      provider_metadata: data.metadata,
       sourceFile: fileName,
     };
   }

@@ -51,7 +51,7 @@ export type VideoMeta = {
   languageConfidence?: number;
   transcriptId?: string;
   transcriptRecordSha256?: string;
-  transcriptSchemaVersion?: "media2text.transcript.v1";
+  transcriptSchemaVersion?: "media2text.transcript.v1" | "media2text.transcript.v2";
   createdAt: string;
 };
 

@@ -5,6 +5,26 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.40.0] - 2026-07-17
+
+### Added
+
+- Add Transcript Store v2 with typed source recording time and exact provider,
+  model-version, run, source-artifact, and representation provenance.
+- Add cursor-complete transcript reconciliation, revision/current/tombstone
+  projections, and a least-privilege Cortex transcript reader credential.
+
+### Changed
+
+- Revise Transcript Ready v1 after Cortex review with retranscription,
+  supersession, source-owned withdrawal, HMAC replay-window, and key-rotation
+  semantics. Delivery remains disabled pending consumer re-review.
+
+### Fixed
+
+- Preserve Plaud `createdAt` through admission and transcription instead of
+  dropping it and exposing only Media2Text processing time.
+
 ## [0.39.3] - 2026-07-17
 
 ### Fixed

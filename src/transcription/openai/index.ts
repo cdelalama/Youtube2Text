@@ -114,6 +114,7 @@ export class OpenAiWhisperProvider implements TranscriptionProvider {
 
     return {
       id: `openai-${Date.now()}`,
+      provider_transcript_id: null,
       status: "completed",
       text: text.length > 0 ? text : undefined,
       utterances,

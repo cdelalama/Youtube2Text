@@ -3,7 +3,7 @@ import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { StoredTranscript } from "../transcripts/store.js";
-import { canonicalJson } from "../transcripts/store.js";
+import { canonicalJson, transcriptMaterializedAt } from "../transcripts/store.js";
 import { transcriptionStatusEvent } from "./transcriptionProfile.js";
 
 export type IntakeStatus =
@@ -25,6 +25,8 @@ export type IntakeRequestV1 = {
     itemId: string;
     collectionId?: string;
     artifactRevision: string;
+    createdAt?: string | null;
+    createdAtType?: "recorded" | "published" | "unknown";
   };
   artifact: {
     url: string;
@@ -61,9 +63,9 @@ export type IntakeRecord = {
 
 export type OutboxRecord = {
   eventId: string;
-  eventType: "transcript.ready";
+  eventType: TranscriptEventType;
   aggregateId: string;
-  payload: TranscriptReadyEventV1;
+  payload: TranscriptEventV1;
   status: "pending" | "delivering" | "delivered" | "dead";
   attemptCount: number;
   nextAttemptAt: string;
@@ -93,25 +95,80 @@ export type IntakeStatusOutboxRecord = {
   updatedAt: string;
 };
 
-export type TranscriptReadyEventV1 = {
+export type TranscriptEventType =
+  | "transcript.ready"
+  | "transcript.withdrawn";
+
+export type TranscriptLifecycleStatus = "current" | "superseded" | "withdrawn";
+export type TranscriptRevisionReason = "initial" | "retranscription" | "source-revision";
+
+export type TranscriptCatalogEntry = {
+  transcriptId: string;
+  sourceAuthority: string;
+  sourceCollectionId?: string;
+  sourceItemId: string;
+  artifactRevision: string;
+  schemaVersion: "media2text.transcript.v1" | "media2text.transcript.v2";
+  recordSha256: string;
+  recordBytes: number;
+  materializedAt: string;
+  revision: number;
+  revisionReason: TranscriptRevisionReason;
+  status: TranscriptLifecycleStatus;
+  supersedesTranscriptId?: string;
+  supersededByTranscriptId?: string;
+  withdrawal?: {
+    sourceEventId: string;
+    occurredAt: string;
+    reason?: string;
+  };
+};
+
+type TranscriptEventBaseV1 = {
   schemaVersion: "media2text.transcript-ready.v1";
-  eventType: "transcript.ready";
+  eventType: TranscriptEventType;
   eventId: string;
   idempotencyKey: string;
   occurredAt: string;
   correlation: {
     runId: string;
-    intakeId?: string;
+    intakeId?: string | null;
   };
   source: StoredTranscript["record"]["source"];
   transcript: {
     transcriptId: string;
     recordSha256: string;
     recordBytes: number;
-    schemaVersion: "media2text.transcript.v1";
+    schemaVersion: "media2text.transcript.v1" | "media2text.transcript.v2";
     href: string;
   };
+  lifecycle: {
+    revision: number;
+    revisionReason: TranscriptRevisionReason;
+    status: TranscriptLifecycleStatus;
+    current: boolean;
+    supersedesTranscriptId: string | null;
+    supersededByTranscriptId: string | null;
+  };
 };
+
+export type TranscriptReadyEventV1 = TranscriptEventBaseV1 & {
+  eventType: "transcript.ready";
+};
+
+export type TranscriptWithdrawnEventV1 = TranscriptEventBaseV1 & {
+  eventType: "transcript.withdrawn";
+  sourceLifecycle: {
+    authority: string;
+    sourceEventId: string;
+    occurredAt: string;
+    reason: string | null;
+  };
+};
+
+export type TranscriptEventV1 =
+  | TranscriptReadyEventV1
+  | TranscriptWithdrawnEventV1;
 
 type IntakeRow = {
   intake_id: string;
@@ -133,7 +190,7 @@ type IntakeRow = {
 
 type OutboxRow = {
   event_id: string;
-  event_type: "transcript.ready";
+  event_type: TranscriptEventType;
   aggregate_id: string;
   payload_json: string;
   status: OutboxRecord["status"];
@@ -145,6 +202,26 @@ type OutboxRow = {
   lease_expires_at: string | null;
   created_at: string;
   updated_at: string;
+};
+
+type TranscriptCatalogRow = {
+  transcript_id: string;
+  source_authority: string;
+  source_collection_id: string;
+  source_item_id: string;
+  artifact_revision: string;
+  schema_version: TranscriptCatalogEntry["schemaVersion"];
+  record_sha256: string;
+  record_bytes: number;
+  materialized_at: string;
+  revision: number;
+  revision_reason: TranscriptRevisionReason;
+  status: TranscriptLifecycleStatus;
+  supersedes_transcript_id: string | null;
+  superseded_by_transcript_id: string | null;
+  withdrawal_event_id: string | null;
+  withdrawn_at: string | null;
+  withdrawal_reason: string | null;
 };
 
 type IntakeStatusOutboxRow = {
@@ -209,7 +286,7 @@ function mapOutbox(row: OutboxRow): OutboxRecord {
     eventId: row.event_id,
     eventType: row.event_type,
     aggregateId: row.aggregate_id,
-    payload: JSON.parse(row.payload_json) as TranscriptReadyEventV1,
+    payload: JSON.parse(row.payload_json) as TranscriptEventV1,
     status: row.status,
     attemptCount: row.attempt_count,
     nextAttemptAt: row.next_attempt_at,
@@ -220,6 +297,64 @@ function mapOutbox(row: OutboxRow): OutboxRecord {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+function mapTranscriptCatalog(row: TranscriptCatalogRow): TranscriptCatalogEntry {
+  return {
+    transcriptId: row.transcript_id,
+    sourceAuthority: row.source_authority,
+    sourceCollectionId: row.source_collection_id || undefined,
+    sourceItemId: row.source_item_id,
+    artifactRevision: row.artifact_revision,
+    schemaVersion: row.schema_version,
+    recordSha256: row.record_sha256,
+    recordBytes: row.record_bytes,
+    materializedAt: row.materialized_at,
+    revision: row.revision,
+    revisionReason: row.revision_reason,
+    status: row.status,
+    supersedesTranscriptId: row.supersedes_transcript_id ?? undefined,
+    supersededByTranscriptId: row.superseded_by_transcript_id ?? undefined,
+    withdrawal:
+      row.withdrawal_event_id && row.withdrawn_at
+        ? {
+            sourceEventId: row.withdrawal_event_id,
+            occurredAt: row.withdrawn_at,
+            reason: row.withdrawal_reason ?? undefined,
+          }
+        : undefined,
+  };
+}
+
+export class TranscriptCursorError extends Error {
+  constructor(message = "Invalid transcript cursor") {
+    super(message);
+    this.name = "TranscriptCursorError";
+  }
+}
+
+function encodeTranscriptCursor(row: TranscriptCatalogEntry): string {
+  return Buffer.from(
+    JSON.stringify({ v: 1, materializedAt: row.materializedAt, transcriptId: row.transcriptId })
+  ).toString("base64url");
+}
+
+function decodeTranscriptCursor(cursor: string): { materializedAt: string; transcriptId: string } {
+  try {
+    const parsed = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")) as Record<string, unknown>;
+    if (
+      parsed.v !== 1 ||
+      typeof parsed.materializedAt !== "string" ||
+      !Number.isFinite(Date.parse(parsed.materializedAt)) ||
+      typeof parsed.transcriptId !== "string" ||
+      !/^trn_[a-f0-9]{64}$/.test(parsed.transcriptId)
+    ) {
+      throw new Error("invalid fields");
+    }
+    return { materializedAt: parsed.materializedAt, transcriptId: parsed.transcriptId };
+  } catch {
+    throw new TranscriptCursorError();
+  }
 }
 
 function mapIntakeStatusOutbox(row: IntakeStatusOutboxRow): IntakeStatusOutboxRecord {
@@ -290,7 +425,7 @@ export class MediaJobStore {
 
       CREATE TABLE IF NOT EXISTS outbox (
         event_id TEXT PRIMARY KEY,
-        event_type TEXT NOT NULL CHECK (event_type = 'transcript.ready'),
+        event_type TEXT NOT NULL CHECK (event_type IN ('transcript.ready','transcript.withdrawn')),
         aggregate_id TEXT NOT NULL,
         payload_json TEXT NOT NULL,
         status TEXT NOT NULL CHECK (status IN ('pending','delivering','delivered','dead')),
@@ -326,7 +461,60 @@ export class MediaJobStore {
       );
       CREATE INDEX IF NOT EXISTS idx_intake_status_outbox_delivery
         ON intake_status_outbox(status, next_attempt_at, lease_expires_at);
+
+      CREATE TABLE IF NOT EXISTS transcript_catalog (
+        transcript_id TEXT PRIMARY KEY,
+        source_authority TEXT NOT NULL,
+        source_collection_id TEXT NOT NULL DEFAULT '',
+        source_item_id TEXT NOT NULL,
+        artifact_revision TEXT NOT NULL,
+        schema_version TEXT NOT NULL CHECK (schema_version IN ('media2text.transcript.v1','media2text.transcript.v2')),
+        record_sha256 TEXT NOT NULL,
+        record_bytes INTEGER NOT NULL,
+        materialized_at TEXT NOT NULL,
+        revision INTEGER NOT NULL,
+        revision_reason TEXT NOT NULL CHECK (revision_reason IN ('initial','retranscription','source-revision')),
+        status TEXT NOT NULL CHECK (status IN ('current','superseded','withdrawn')),
+        supersedes_transcript_id TEXT,
+        superseded_by_transcript_id TEXT,
+        withdrawal_event_id TEXT,
+        withdrawn_at TEXT,
+        withdrawal_reason TEXT,
+        UNIQUE(source_authority, source_collection_id, source_item_id, revision)
+      );
+      CREATE INDEX IF NOT EXISTS idx_transcript_catalog_page
+        ON transcript_catalog(materialized_at DESC, transcript_id DESC);
+      CREATE INDEX IF NOT EXISTS idx_transcript_catalog_source
+        ON transcript_catalog(source_authority, source_collection_id, source_item_id, revision DESC);
     `);
+
+    const outboxDefinition = this.db
+      .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'outbox'")
+      .get() as { sql?: string } | undefined;
+    if (outboxDefinition?.sql?.includes("event_type = 'transcript.ready'")) {
+      this.db.exec(`
+        ALTER TABLE outbox RENAME TO outbox_legacy_ready_only;
+        CREATE TABLE outbox (
+          event_id TEXT PRIMARY KEY,
+          event_type TEXT NOT NULL CHECK (event_type IN ('transcript.ready','transcript.withdrawn')),
+          aggregate_id TEXT NOT NULL,
+          payload_json TEXT NOT NULL,
+          status TEXT NOT NULL CHECK (status IN ('pending','delivering','delivered','dead')),
+          attempt_count INTEGER NOT NULL DEFAULT 0,
+          next_attempt_at TEXT NOT NULL,
+          delivered_at TEXT,
+          last_error TEXT,
+          lease_owner TEXT,
+          lease_expires_at TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        INSERT INTO outbox SELECT * FROM outbox_legacy_ready_only;
+        DROP TABLE outbox_legacy_ready_only;
+        CREATE INDEX idx_outbox_delivery
+          ON outbox(status, next_attempt_at, lease_expires_at);
+      `);
+    }
 
     const statusOutboxColumns = this.db
       .prepare("PRAGMA table_info(intake_status_outbox)")
@@ -804,40 +992,232 @@ export class MediaJobStore {
   enqueueTranscriptReady(
     stored: StoredTranscript,
     now = new Date().toISOString()
-  ): OutboxRecord {
-    const eventId = `evt_${sha256(`transcript.ready:${stored.record.transcriptId}`)}`;
-    const event: TranscriptReadyEventV1 = {
-      schemaVersion: "media2text.transcript-ready.v1",
-      eventType: "transcript.ready",
-      eventId,
-      idempotencyKey: `transcript.ready:${stored.record.transcriptId}`,
-      occurredAt: stored.record.createdAt,
-      correlation: stored.record.correlation,
-      source: stored.record.source,
-      transcript: {
-        transcriptId: stored.record.transcriptId,
-        recordSha256: stored.recordSha256,
-        recordBytes: stored.bytes,
-        schemaVersion: "media2text.transcript.v1",
-        href: `/v1/transcripts/${stored.record.transcriptId}`,
-      },
-    };
+  ): OutboxRecord | undefined {
+    const transcriptId = stored.record.transcriptId;
+    const existingCatalog = this.getTranscriptCatalog(transcriptId);
+    if (existingCatalog) {
+      return this.getOutbox(`evt_${sha256(`transcript.ready:${transcriptId}`)}`)!;
+    }
+    const source = stored.record.source;
+    const collectionId = source.sourceCollectionId ?? "";
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      const previousRow = this.db
+        .prepare(
+          `SELECT * FROM transcript_catalog
+           WHERE source_authority = ? AND source_collection_id = ? AND source_item_id = ?
+           ORDER BY revision DESC LIMIT 1`
+        )
+        .get(source.authority, collectionId, source.sourceItemId) as TranscriptCatalogRow | undefined;
+      const previous = previousRow ? mapTranscriptCatalog(previousRow) : undefined;
+      const revision = (previous?.revision ?? 0) + 1;
+      const revisionReason: TranscriptRevisionReason = !previous
+        ? "initial"
+        : previous.artifactRevision === source.artifactRevision
+          ? "retranscription"
+          : "source-revision";
+      if (previous?.status === "current") {
+        this.db
+          .prepare(
+            `UPDATE transcript_catalog
+             SET status = 'superseded', superseded_by_transcript_id = ?
+             WHERE transcript_id = ? AND status = 'current'`
+          )
+          .run(transcriptId, previous.transcriptId);
+      }
+      const materializedAt = transcriptMaterializedAt(stored.record);
+      this.db
+        .prepare(
+          `INSERT INTO transcript_catalog (
+             transcript_id, source_authority, source_collection_id, source_item_id,
+             artifact_revision, schema_version, record_sha256, record_bytes,
+             materialized_at, revision, revision_reason, status, supersedes_transcript_id
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'current', ?)`
+        )
+        .run(
+          transcriptId,
+          source.authority,
+          collectionId,
+          source.sourceItemId,
+          source.artifactRevision,
+          stored.record.schemaVersion,
+          stored.recordSha256,
+          stored.bytes,
+          materializedAt,
+          revision,
+          revisionReason,
+          previous?.transcriptId ?? null
+        );
+      const eventId = `evt_${sha256(`transcript.ready:${transcriptId}`)}`;
+      const event: TranscriptReadyEventV1 = {
+        schemaVersion: "media2text.transcript-ready.v1",
+        eventType: "transcript.ready",
+        eventId,
+        idempotencyKey: `transcript.ready:${transcriptId}`,
+        occurredAt: materializedAt,
+        correlation: stored.record.correlation,
+        source,
+        transcript: {
+          transcriptId,
+          recordSha256: stored.recordSha256,
+          recordBytes: stored.bytes,
+          schemaVersion: stored.record.schemaVersion,
+          href: `/v1/transcripts/${transcriptId}`,
+        },
+        lifecycle: {
+          revision,
+          revisionReason,
+          status: "current",
+          current: true,
+          supersedesTranscriptId: previous?.transcriptId ?? null,
+          supersededByTranscriptId: null,
+        },
+      };
+      this.insertTranscriptEvent(event, transcriptId, now);
+      this.db.exec("COMMIT");
+      return this.getOutbox(eventId)!;
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
+  }
+
+  private insertTranscriptEvent(
+    event: TranscriptEventV1,
+    aggregateId: string,
+    now: string
+  ): void {
     this.db
       .prepare(
         `INSERT OR IGNORE INTO outbox (
            event_id, event_type, aggregate_id, payload_json, status,
            attempt_count, next_attempt_at, created_at, updated_at
-         ) VALUES (?, 'transcript.ready', ?, ?, 'pending', 0, ?, ?, ?)`
+         ) VALUES (?, ?, ?, ?, 'pending', 0, ?, ?, ?)
+         ON CONFLICT(event_id) DO UPDATE SET
+           event_type = excluded.event_type,
+           payload_json = excluded.payload_json,
+           updated_at = excluded.updated_at
+         WHERE outbox.status IN ('pending','dead')`
       )
       .run(
-        eventId,
-        stored.record.transcriptId,
+        event.eventId,
+        event.eventType,
+        aggregateId,
         canonicalJson(event),
         now,
         now,
         now
       );
-    return this.getOutbox(eventId)!;
+  }
+
+  getTranscriptCatalog(transcriptId: string): TranscriptCatalogEntry | undefined {
+    const row = this.db
+      .prepare("SELECT * FROM transcript_catalog WHERE transcript_id = ?")
+      .get(transcriptId) as TranscriptCatalogRow | undefined;
+    return row ? mapTranscriptCatalog(row) : undefined;
+  }
+
+  listTranscriptCatalog(options?: {
+    limit?: number;
+    cursor?: string;
+    includeSuperseded?: boolean;
+  }): { items: TranscriptCatalogEntry[]; nextCursor: string | null; hasMore: boolean } {
+    const limit = Math.max(1, Math.min(500, Math.trunc(options?.limit ?? 100)));
+    const cursor = options?.cursor ? decodeTranscriptCursor(options.cursor) : undefined;
+    const clauses = [options?.includeSuperseded ? "1 = 1" : "status IN ('current','withdrawn')"];
+    const params: Array<string | number> = [];
+    if (cursor) {
+      clauses.push("(materialized_at < ? OR (materialized_at = ? AND transcript_id < ?))");
+      params.push(cursor.materializedAt, cursor.materializedAt, cursor.transcriptId);
+    }
+    params.push(limit + 1);
+    const rows = this.db
+      .prepare(
+        `SELECT * FROM transcript_catalog WHERE ${clauses.join(" AND ")}
+         ORDER BY materialized_at DESC, transcript_id DESC LIMIT ?`
+      )
+      .all(...params) as unknown as TranscriptCatalogRow[];
+    const hasMore = rows.length > limit;
+    const items = rows.slice(0, limit).map(mapTranscriptCatalog);
+    return {
+      items,
+      hasMore,
+      nextCursor: hasMore && items.length > 0 ? encodeTranscriptCursor(items[items.length - 1]!) : null,
+    };
+  }
+
+  recordSourceWithdrawal(
+    stored: StoredTranscript,
+    assertion: { authority: string; sourceEventId: string; occurredAt: string; reason?: string },
+    now = new Date().toISOString()
+  ): OutboxRecord {
+    if (assertion.authority !== stored.record.source.authority) {
+      throw new Error("Source lifecycle authority does not match transcript authority");
+    }
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      const row = this.db
+        .prepare("SELECT * FROM transcript_catalog WHERE transcript_id = ?")
+        .get(stored.record.transcriptId) as TranscriptCatalogRow | undefined;
+      if (!row) throw new Error("Transcript must be registered before withdrawal");
+      const catalog = mapTranscriptCatalog(row);
+      if (catalog.status === "superseded") {
+        throw new Error("Only the current source representation can be withdrawn");
+      }
+      if (catalog.status === "withdrawn" && catalog.withdrawal?.sourceEventId !== assertion.sourceEventId) {
+        throw new Error("Transcript already withdrawn by a different source event");
+      }
+      this.db
+        .prepare(
+          `UPDATE transcript_catalog SET status = 'withdrawn', withdrawal_event_id = ?,
+             withdrawn_at = ?, withdrawal_reason = ? WHERE transcript_id = ?`
+        )
+        .run(
+          assertion.sourceEventId,
+          assertion.occurredAt,
+          assertion.reason ?? null,
+          stored.record.transcriptId
+        );
+      const eventId = `evt_${sha256(
+        `transcript.withdrawn:${assertion.sourceEventId}:${stored.record.transcriptId}`
+      )}`;
+      const event: TranscriptWithdrawnEventV1 = {
+        schemaVersion: "media2text.transcript-ready.v1",
+        eventType: "transcript.withdrawn",
+        eventId,
+        idempotencyKey: `transcript.withdrawn:${assertion.sourceEventId}:${stored.record.transcriptId}`,
+        occurredAt: assertion.occurredAt,
+        correlation: stored.record.correlation,
+        source: stored.record.source,
+        transcript: {
+          transcriptId: stored.record.transcriptId,
+          recordSha256: stored.recordSha256,
+          recordBytes: stored.bytes,
+          schemaVersion: stored.record.schemaVersion,
+          href: `/v1/transcripts/${stored.record.transcriptId}`,
+        },
+        lifecycle: {
+          revision: catalog.revision,
+          revisionReason: catalog.revisionReason,
+          status: "withdrawn",
+          current: false,
+          supersedesTranscriptId: catalog.supersedesTranscriptId ?? null,
+          supersededByTranscriptId: null,
+        },
+        sourceLifecycle: {
+          authority: assertion.authority,
+          sourceEventId: assertion.sourceEventId,
+          occurredAt: assertion.occurredAt,
+          reason: assertion.reason ?? null,
+        },
+      };
+      this.insertTranscriptEvent(event, stored.record.transcriptId, now);
+      this.db.exec("COMMIT");
+      return this.getOutbox(eventId)!;
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
   }
 
   getOutbox(eventId: string): OutboxRecord | undefined {

@@ -168,6 +168,13 @@ place and must not be satisfied with a synthetic artifact.
 Patch `0.38.1` adds the project-owned Home Infra Protocol 0.9.0 contract and a
 canonical-host public status route so Home Infra can register the deployed job
 without embedding a private API address in the public project contract.
+
+Progress (2026-07-17, Cortex re-review): source `0.40.0` adds Transcript Store
+v2, preserves source recording time and exact provenance, removes the 500-row
+pull ceiling with opaque cursors, defines retranscription/source-revision/
+tombstone projections, and adds scoped Cortex read auth plus HMAC rotation
+semantics. Transcript Ready v1 and Store v2 remain revised drafts; live delivery
+and deployment are still gated on Cortex acceptance and frozen hashes.
 Patch `0.38.2` publishes the exact Cortex evidence fixture. Source release
 `0.39.0` implements the producer-reviewed, commit-pinned Plaud Mirror
 compatibility profile; NAS deployment and live verification remain the current
@@ -197,6 +204,10 @@ Media2Text transcript while push and pull status agree.
 Owner: the active Cortex session after Transcript Ready v1 is frozen.
 
 - Consume the frozen Transcript Ready contract rather than Media2Text internals.
+- Re-review the Media2Text 0.40.0 draft first: Store v2 distinguishes source
+  recording time from materialization, pull is cursor-complete, lifecycle is a
+  projection with source-owned tombstones, and Cortex receives a read-only
+  transcript credential. Do not enable delivery until both sides freeze hashes.
 - Require HMAC/authentication and persist inbox/idempotency state before ACK.
 - Replace process-local queue and deduplication with durable jobs.
 - Keep general-content ingestion separate from MED and multi-principal policy

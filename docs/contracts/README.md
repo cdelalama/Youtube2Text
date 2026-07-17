@@ -8,8 +8,9 @@ Contracts move through these states and never skip consumer review:
 
 | Contract | Owner | Consumer | State |
 |---|---|---|---|
-| Transcript Store v1 | Media2Text | Cortex and operator tools | implemented; live verification pending |
-| Transcript Ready v1 | Media2Text | Cortex | draft; Cortex review required |
+| Transcript Store v1 | Media2Text | Cortex and operator tools | implemented legacy; immutable records remain readable |
+| Transcript Store v2 | Media2Text | Cortex and operator tools | draft implemented producer side; Cortex re-review required |
+| Transcript Ready v1 | Media2Text | Cortex | revised draft; Cortex re-review required |
 | Media Intake v1 | Media2Text | internal/legacy adapters | implemented internal domain |
 | Plaud Mirror Transcription Intake v1 Compatibility Profile | Plaud Mirror | Media2Text | operator-ratified and frozen at producer commit `d393a0c`; implemented; live verification pending |
 
@@ -48,13 +49,71 @@ for a future neutral Content Intake extraction.
 
 - Every completed Transcript Store record creates one deterministic durable
   `transcript.ready` outbox row before the pipeline emits `video:done`.
+- New records use `media2text.transcript.v2`. Existing v1 records remain
+  byte-identical and retrievable; Media2Text never invents missing provenance
+  while projecting them into the list feed.
+- `materializedAt` is Media2Text processing time. `source.createdAt` is the
+  original typed source time. For Plaud it is the exact producer-supplied
+  recording `createdAt`, tagged `recorded`; it is never replaced by
+  `materializedAt`. A missing source time is `null` with an explicit reason.
+- Provider, configured model name, provider-reported model version and evidence
+  path, run id, source artifact revision/hash/bytes/MIME/duration, and every
+  generated representation hash/bytes/generator/derivation are preserved. A
+  provider that does not report one unambiguous model version produces `null`
+  plus `versionUnavailableReason`; Media2Text does not infer a version.
 - Delivery is at-least-once, signed with HMAC-SHA256 over
   `${timestamp}.${canonicalBody}` and uses a fixed operator-configured target.
 - Cortex must persist inbox/idempotency state before acknowledging the event.
 - `GET /v1/transcripts` and `GET /v1/transcripts/{transcriptId}` are the pull
   reconciliation path. Pull is recovery, not the primary completion path.
+- List reconciliation is cursor-based and has no 500-record total ceiling.
+  Pages contain at most 500 items, sort by `(materializedAt, transcriptId)`
+  descending, and return an opaque `nextCursor` plus `hasMore`. A consumer must
+  follow cursors until `nextCursor` is `null`; new records inserted during a
+  traversal do not displace older records behind the cursor.
+- `Y2T_CORTEX_TRANSCRIPT_READ_KEY` is a separate least-privilege bearer accepted
+  only by the transcript list and exact-record GET operations. It cannot read
+  metrics, settings, intakes, runs, or any write route. The operator API key
+  remains valid for the same two GET operations.
 - A missing target URL does not discard events. Rows remain pending until the
   contract is frozen and the target is configured.
+
+## Revision And Source Lifecycle Semantics
+
+- The immutable transcript record is evidence, not mutable lifecycle state.
+  `current`, `superseded`, and `withdrawn` are catalog/list/event projections so
+  an older record never needs to be rewritten.
+- Identity is `(source.authority, sourceCollectionId or empty, sourceItemId)`.
+  The first transcript is revision 1 with reason `initial`.
+- A new transcript for the same source identity and the same artifact revision
+  is a `retranscription`; a different artifact revision is a `source-revision`.
+  Both create a new immutable transcript id, increment revision, mark the prior
+  projection `superseded`, and link both directions. An identical transcript id
+  is idempotent and creates no revision.
+- Default pull returns the latest projection for every source, including
+  withdrawn tombstones. `includeSuperseded=true` adds historical records. Exact
+  retrieval remains available for superseded and withdrawn transcript ids.
+- Media2Text never decides that source media was deleted. It records withdrawal
+  only from an authenticated lifecycle assertion made by the matching source
+  authority. The resulting `transcript.withdrawn` event and pull tombstone carry
+  that source event id/time/reason; transcript evidence is retained. The inbound
+  source-lifecycle wire contract is not implemented in this slice and must be
+  reviewed with its producer before any live withdrawal signal is accepted.
+
+## HMAC Verification And Rotation
+
+- Each delivery includes `X-Media2Text-Event`, `X-Media2Text-Event-Id`,
+  `X-Media2Text-Timestamp`, `X-Media2Text-Key-Id`,
+  `X-Media2Text-Signature-Version: hmac-sha256-v1`, and
+  `X-Media2Text-Signature: sha256=<hex>`.
+- The receiver rejects timestamps more than 300 seconds in the past or future,
+  verifies the key selected by `Key-Id`, verifies HMAC over the exact canonical
+  body, and then atomically deduplicates `eventId` before returning success.
+- Rotation is active/previous: provision the new key and key id at Cortex,
+  retain the previous verification key for at least the 300-second replay
+  window plus the maximum in-flight request timeout, then switch the producer
+  active key. Retries are signed afresh with the currently active producer key.
+  Unknown or retired key ids fail closed. Secrets never appear in event bodies.
 
 ## Error Semantics
 

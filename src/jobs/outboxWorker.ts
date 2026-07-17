@@ -21,10 +21,18 @@ function targetUrl(): URL | undefined {
 export function validateOutboxConfig(): void {
   targetUrl();
   const secret = process.env.Y2T_TRANSCRIPT_READY_SECRET?.trim();
-  if (process.env.Y2T_TRANSCRIPT_READY_URL && (!secret || secret.length < 32)) {
-    throw new Error(
-      "Y2T_TRANSCRIPT_READY_SECRET with at least 32 characters is required when Y2T_TRANSCRIPT_READY_URL is set"
-    );
+  const keyId = process.env.Y2T_TRANSCRIPT_READY_KEY_ID?.trim();
+  if (process.env.Y2T_TRANSCRIPT_READY_URL) {
+    if (!secret || secret.length < 32) {
+      throw new Error(
+        "Y2T_TRANSCRIPT_READY_SECRET with at least 32 characters is required when Y2T_TRANSCRIPT_READY_URL is set"
+      );
+    }
+    if (!keyId || !/^[A-Za-z0-9._:-]{1,128}$/.test(keyId)) {
+      throw new Error(
+        "Y2T_TRANSCRIPT_READY_KEY_ID is required when Y2T_TRANSCRIPT_READY_URL is set"
+      );
+    }
   }
 }
 
@@ -81,6 +89,7 @@ export class TranscriptReadyOutboxWorker {
   private async deliver(row: OutboxRecord, owner: string): Promise<void> {
     const url = targetUrl();
     const secret = process.env.Y2T_TRANSCRIPT_READY_SECRET!.trim();
+    const keyId = process.env.Y2T_TRANSCRIPT_READY_KEY_ID!.trim();
     if (!url) return;
     const body = canonicalJson(row.payload);
     const timestamp = new Date().toISOString();
@@ -102,6 +111,8 @@ export class TranscriptReadyOutboxWorker {
           "x-media2text-event": row.eventType,
           "x-media2text-event-id": row.eventId,
           "x-media2text-timestamp": timestamp,
+          "x-media2text-key-id": keyId,
+          "x-media2text-signature-version": "hmac-sha256-v1",
           "x-media2text-signature": `sha256=${signature}`,
         },
         body,

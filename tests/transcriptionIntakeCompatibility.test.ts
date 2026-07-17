@@ -6,6 +6,10 @@ import test from "node:test";
 import { startApiServer } from "../src/api/server.js";
 import { configSchema } from "../src/config/schema.js";
 import { getBuildVersion } from "../src/utils/version.js";
+import {
+  adaptTranscriptionIntake,
+  transcriptionIntakeRequestSchema,
+} from "../src/jobs/transcriptionProfile.js";
 
 async function listen(server: any): Promise<number> {
   if (!server.listening) await new Promise<void>((resolve) => server.once("listening", resolve));
@@ -73,6 +77,10 @@ test("Plaud compatibility facade scopes auth, identity, admission, and pull stat
     title: "Item 1",
     createdAt: "2026-07-17T00:00:00.000Z",
   };
+
+  const adapted = adaptTranscriptionIntake(transcriptionIntakeRequestSchema.parse(request));
+  assert.equal(adapted.source.createdAt, request.createdAt);
+  assert.equal(adapted.source.createdAtType, "recorded");
 
   try {
     assert.equal((await fetch(`http://127.0.0.1:${port}/v1/intake-capabilities`)).status, 401);

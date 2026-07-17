@@ -52,7 +52,12 @@ import { canonicalJson, TranscriptStore } from "../transcripts/store.js";
 import { sha256File } from "../transcripts/store.js";
 import { getBuildVersion } from "../utils/version.js";
 import { hasValidIntakeKey, validateIntakeAuthConfig } from "./intakeAuth.js";
-import { IntakeConflictError, MediaJobStore, type IntakeRecord } from "../jobs/store.js";
+import {
+  IntakeConflictError,
+  MediaJobStore,
+  TranscriptCursorError,
+  type IntakeRecord,
+} from "../jobs/store.js";
 import { IntakeWorker } from "../jobs/intakeWorker.js";
 import {
   TranscriptReadyOutboxWorker,
@@ -68,6 +73,10 @@ import {
   transcriptionProfileForRequest,
   validateTranscriptionProfiles,
 } from "../jobs/transcriptionProfile.js";
+import {
+  hasValidTranscriptReaderKey,
+  validateTranscriptReaderAuthConfig,
+} from "./transcriptAuth.js";
 
 type ServerOptions = {
   port: number;
@@ -255,6 +264,7 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
   validateIntakeAuthConfig();
   validateTranscriptionProfiles();
   validateOutboxConfig();
+  validateTranscriptReaderAuthConfig();
 
   const planRunFn = opts.deps?.planRun ?? planRun;
   const fetchChannelMetadataFn = opts.deps?.fetchChannelMetadata ?? fetchChannelMetadata;
@@ -301,7 +311,7 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
   });
   const transcriptStore = new TranscriptStore(config.outputDir);
   const mediaJobStore = new MediaJobStore(config.outputDir);
-  for (const transcript of await transcriptStore.list(500)) {
+  for (const transcript of (await transcriptStore.listAll()).reverse()) {
     mediaJobStore.enqueueTranscriptReady(transcript);
   }
   mediaJobStore.pruneTerminal({
@@ -606,9 +616,15 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
         isIntakeAdmission ||
         (req.method === "GET" && seg.length === 3 && seg[0] === "v1" && seg[1] === "intakes"))
     );
+    const isTranscriptRead =
+      req.method === "GET" &&
+      seg[0] === "v1" &&
+      seg[1] === "transcripts" &&
+      (seg.length === 2 || seg.length === 3);
     if (
       !(isIntakeAdmission && hasValidIntakeKey(req)) &&
       !isTranscriptionProfileRequest &&
+      !(isTranscriptRead && hasValidTranscriptReaderKey(req)) &&
       !requireApiKey(req, res)
     ) return;
 
@@ -789,23 +805,83 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
           badRequest(res, "limit must be a positive number");
           return;
         }
-        const records = await transcriptStore.list(parsedLimit);
+        const rawCursor = Array.isArray(parsed.query.cursor)
+          ? parsed.query.cursor[0]
+          : parsed.query.cursor;
+        const rawIncludeSuperseded = Array.isArray(parsed.query.includeSuperseded)
+          ? parsed.query.includeSuperseded[0]
+          : parsed.query.includeSuperseded;
+        if (
+          rawIncludeSuperseded !== undefined &&
+          rawIncludeSuperseded !== "true" &&
+          rawIncludeSuperseded !== "false"
+        ) {
+          badRequest(res, "includeSuperseded must be true or false");
+          return;
+        }
+        let page;
+        try {
+          page = mediaJobStore.listTranscriptCatalog({
+            limit: parsedLimit,
+            cursor: rawCursor,
+            includeSuperseded: rawIncludeSuperseded === "true",
+          });
+        } catch (error) {
+          if (error instanceof TranscriptCursorError) {
+            badRequest(res, "cursor is invalid or unsupported");
+            return;
+          }
+          throw error;
+        }
+        const records = await Promise.all(
+          page.items.map(async (catalog) => ({ catalog, stored: await transcriptStore.read(catalog.transcriptId) }))
+        );
         json(res, 200, {
           schemaVersion: "media2text.transcript-list.v1",
-          items: records.map(({ record, recordSha256, bytes }) => ({
-            transcriptId: record.transcriptId,
-            createdAt: record.createdAt,
-            source: record.source,
-            transcription: {
-              provider: record.transcription.provider,
-              model: record.transcription.model,
-              languageCode: record.transcription.languageCode,
-              payloadSha256: record.transcription.payloadSha256,
-            },
-            recordSha256,
-            bytes,
-            href: `/v1/transcripts/${record.transcriptId}`,
-          })),
+          items: records.flatMap(({ catalog, stored }) =>
+            stored
+              ? [
+                  {
+                    transcriptId: stored.record.transcriptId,
+                    schemaVersion: stored.record.schemaVersion,
+                    materializedAt: catalog.materializedAt,
+                    source: stored.record.source,
+                    transcription:
+                      stored.record.schemaVersion === "media2text.transcript.v2"
+                        ? {
+                            provider: stored.record.transcription.provider,
+                            model: stored.record.transcription.model,
+                            languageCode: stored.record.transcription.languageCode,
+                            payloadSha256: stored.record.transcription.payloadSha256,
+                          }
+                        : {
+                            provider: stored.record.transcription.provider,
+                            model: {
+                              name: stored.record.transcription.model,
+                              version: null,
+                              versionEvidence: null,
+                              versionUnavailableReason: "legacy v1 record did not preserve model version",
+                            },
+                            languageCode: stored.record.transcription.languageCode ?? null,
+                            payloadSha256: stored.record.transcription.payloadSha256,
+                          },
+                    lifecycle: {
+                      revision: catalog.revision,
+                      revisionReason: catalog.revisionReason,
+                      status: catalog.status,
+                      current: catalog.status === "current",
+                      supersedesTranscriptId: catalog.supersedesTranscriptId ?? null,
+                      supersededByTranscriptId: catalog.supersededByTranscriptId ?? null,
+                      withdrawal: catalog.withdrawal ?? null,
+                    },
+                    recordSha256: stored.recordSha256,
+                    bytes: stored.bytes,
+                    href: `/v1/transcripts/${stored.record.transcriptId}`,
+                  },
+                ]
+              : []
+          ),
+          page: { nextCursor: page.nextCursor, hasMore: page.hasMore },
         });
         return;
       }

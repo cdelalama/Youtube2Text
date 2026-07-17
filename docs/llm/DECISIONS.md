@@ -447,3 +447,41 @@ Implications:
   owns this content contract or transports audio.
 - Transcript Ready v1 remains a separate Media2Text-to-Cortex contract and is
   not activated by Plaud compatibility.
+
+## D-022 - Transcript evidence is immutable; lifecycle is a projection
+
+Decision:
+- Preserve every existing Transcript Store v1 record byte-for-byte and write
+  new records as `media2text.transcript.v2` with source recording time distinct
+  from Media2Text materialization time.
+- Keep exact evidence in immutable records: producer, run/intake correlation,
+  source artifact, provider response, configured model and provider-reported
+  version evidence, and every generated representation derivation.
+- Keep `current`, `superseded`, and `withdrawn` in a transactional catalog and
+  event/list projection. A new transcript for the same source/artifact is a
+  retranscription; a changed source artifact is a source revision.
+- Media2Text records a withdrawal only from an authenticated assertion by the
+  matching source authority. It emits a tombstone but retains transcript
+  evidence and never becomes owner of source deletion policy.
+- Cortex pull uses complete opaque-cursor traversal and a dedicated bearer that
+  authorizes only transcript list and exact-record retrieval.
+- Transcript delivery HMAC names its key id, uses a 300-second replay window,
+  and rotates through active/previous verifier keys. Live delivery stays off
+  until consumer review, operator ratification, and frozen hashes.
+
+Rationale:
+- Mutable `current` state cannot be embedded truthfully in an immutable record.
+  Separating evidence from projection preserves auditability while allowing
+  retranscription, source revisions, and tombstones to reconcile cleanly.
+- A v2 record is required because v1 cannot gain missing source/model/
+  representation provenance without rewriting historical bytes.
+- Cursor traversal and a read-only credential close the two recovery/security
+  gaps identified by Cortex without exposing the operator API.
+
+Implications:
+- Exact retrieval supports both v1 and v2 indefinitely; legacy unknowns remain
+  explicit and are never inferred.
+- The source-lifecycle inbound wire contract remains a separate producer review
+  gate. This decision defines Media2Text propagation semantics but does not
+  authorize a Plaud contract change or backlog replay.
+- `Y2T_TRANSCRIPT_READY_URL` remains unset for this release.

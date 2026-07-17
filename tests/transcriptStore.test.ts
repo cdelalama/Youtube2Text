@@ -30,16 +30,20 @@ test("TranscriptStore preserves admitted source identity for provider derivative
   try {
     const store = new TranscriptStore(outputDir);
     const input = {
-      createdAt: "2026-07-17T00:00:00.000Z",
+      materializedAt: "2026-07-17T00:00:00.000Z",
       producerVersion: "0.39.3",
       runId: "run-ogg",
-      intakeId: "intake-ogg",
+      intakeId: `int_${"d".repeat(64)}`,
       source: {
         kind: "intake" as const,
         authority: "plaud-mirror",
         sourceItemId: "recording-1",
         sourceCollectionId: "workspace-1",
         title: "OGG fixture",
+        createdAt: "2026-07-01T08:30:00.000Z",
+        createdAtType: "recorded" as const,
+        createdAtSuppliedBy: "plaud-mirror",
+        createdAtUnavailableReason: null,
       },
       audioPath: providerPath,
       sourceArtifact: {
@@ -52,7 +56,16 @@ test("TranscriptStore preserves admitted source identity for provider derivative
       contentType: "audio/mpeg",
       provider: "deepgram" as const,
       model: "nova-3",
-      transcript: { id: "provider-ogg", status: "completed", text: "hello" },
+      transcript: {
+        id: "provider-ogg",
+        status: "completed",
+        text: "hello",
+        provider_metadata: {
+          model_info: {
+            "model-id": { name: "nova-3", version: "2026-06-01" },
+          },
+        },
+      },
       representations: [
         { format: "text" as const, absolutePath: txtPath, content: "hello\n" },
       ],
@@ -67,6 +80,17 @@ test("TranscriptStore preserves admitted source identity for provider derivative
     assert.equal(stored.record.artifact.bytes, Buffer.byteLength("original-ogg-bytes"));
     assert.equal(stored.record.artifact.contentType, "audio/ogg");
     assert.equal(stored.record.artifact.durationSeconds, 7.58);
+    assert.equal(stored.record.schemaVersion, "media2text.transcript.v2");
+    assert.equal(stored.record.source.createdAt, "2026-07-01T08:30:00.000Z");
+    assert.equal(stored.record.source.createdAtType, "recorded");
+    assert.equal(stored.record.materializedAt, "2026-07-17T00:00:00.000Z");
+    assert.equal(stored.record.transcription.model.name, "nova-3");
+    assert.equal(stored.record.transcription.model.version, "2026-06-01");
+    assert.match(stored.record.transcription.model.versionEvidence ?? "", /model_info/);
+    assert.equal(
+      stored.record.representations[0]?.derivedFrom.sourceArtifactRevision,
+      stored.record.source.artifactRevision
+    );
     await assert.rejects(
       store.write({
         ...input,
@@ -93,7 +117,7 @@ test("TranscriptStore writes immutable, byte-stable records", async () => {
 
   const store = new TranscriptStore(outputDir);
   const input = {
-    createdAt: "2026-07-15T00:00:00.000Z",
+    materializedAt: "2026-07-15T00:00:00.000Z",
     producerVersion: "0.38.0",
     runId: "run-1",
     source: {
@@ -101,6 +125,10 @@ test("TranscriptStore writes immutable, byte-stable records", async () => {
       authority: "test",
       sourceItemId: "item-1",
       title: "Real fixture",
+      createdAt: null,
+      createdAtType: "unknown" as const,
+      createdAtSuppliedBy: null,
+      createdAtUnavailableReason: "source did not supply a typed recording time",
     },
     audioPath,
     durationSeconds: 12.5,
@@ -118,20 +146,20 @@ test("TranscriptStore writes immutable, byte-stable records", async () => {
     const first = await store.write(input);
     const second = await store.write({
       ...input,
-      createdAt: "2026-07-16T00:00:00.000Z",
+      materializedAt: "2026-07-16T00:00:00.000Z",
       runId: "run-2",
     });
     assert.equal(first.created, true);
     assert.equal(second.created, false);
     assert.equal(second.record.transcriptId, first.record.transcriptId);
-    assert.equal(second.record.createdAt, first.record.createdAt);
+    assert.equal(second.record.materializedAt, first.record.materializedAt);
     assert.equal(second.recordSha256, first.recordSha256);
     assert.match(first.record.transcriptId, /^trn_[a-f0-9]{64}$/);
     assert.match(first.record.source.artifactRevision, /^sha256:[a-f0-9]{64}$/);
     assert.equal(first.record.transcription.payload.text, "hello");
     assert.match(
       first.record.representations[0]?.relativePath ?? "",
-      /^_transcripts\/v1\/[a-f0-9]{2}\/trn_[a-f0-9]{64}\/transcript\.txt$/
+      /^_transcripts\/v2\/[a-f0-9]{2}\/trn_[a-f0-9]{64}\/transcript\.txt$/
     );
     assert.equal(first.record.representations[0]?.legacyRelativePath, "uploads/item.txt");
     assert.equal(

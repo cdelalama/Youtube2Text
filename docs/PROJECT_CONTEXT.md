@@ -1,4 +1,4 @@
-<!-- doc-version: 0.39.3 -->
+<!-- doc-version: 0.40.0 -->
 # Project Context - Media2Text
 
 ## Vision
@@ -53,6 +53,13 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
 ## Current Status (2026-07-17)
+v0.40.0 stable in source revises the producer contracts after Cortex requested changes:
+new Transcript Store v2 records preserve typed source recording time, exact
+provider/model/run/artifact/representation provenance, cursor-complete pull,
+revision/current/tombstone projection semantics, scoped Cortex read auth, and
+HMAC replay/rotation behavior. Live Cortex delivery remains disabled and the
+NAS remains on v0.39.3 pending consumer re-review and a separate deploy gate.
+
 v0.39.3 stable and deployed from `3cf1539` implements the commit-pinned Plaud Mirror
 Transcription Intake v1 compatibility profile as an additive facade over the
 existing Media2Text job domain. It adds producer-scoped bearer authentication,

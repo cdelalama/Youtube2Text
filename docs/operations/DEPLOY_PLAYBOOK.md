@@ -37,6 +37,9 @@ It does not replace the CLI: the CLI remains fully operational and can be run se
   `intakeBearer`, `artifactBearer`, and `statusHmacSecret` values, plus exact
   HTTPS `artifactOrigins` and `callbackOrigins`. Keep the entire value in
   Doppler; never commit it or print it in logs.
+- `Y2T_CORTEX_TRANSCRIPT_READ_KEY` (optional least-privilege Cortex bearer; at
+  least 32 characters). It authorizes only transcript listing and exact-record
+  retrieval and must differ from intake, operator, and HMAC credentials.
 
 ## Strongly recommended (servers)
 
@@ -104,8 +107,9 @@ It does not replace the CLI: the CLI remains fully operational and can be run se
 - `Y2T_INTAKE_STATUS_OUTBOX_INTERVAL_MS` (default 1000)
 - `Y2T_INTAKE_STATUS_OUTBOX_MAX_ATTEMPTS` (default 20)
 - `Y2T_INTAKE_STATUS_OUTBOX_TIMEOUT_MS` (default 10000)
-- `Y2T_TRANSCRIPT_READY_URL` and `Y2T_TRANSCRIPT_READY_SECRET` (fixed
-  downstream endpoint and HMAC secret). Leave both unset until the consumer has
+- `Y2T_TRANSCRIPT_READY_URL`, `Y2T_TRANSCRIPT_READY_SECRET`, and
+  `Y2T_TRANSCRIPT_READY_KEY_ID` (fixed downstream endpoint, active HMAC secret,
+  and non-secret key selector). Leave delivery unset until the consumer has
   reviewed the contract and the operator has ratified a version plus commit SHA.
  
 docker-compose defaults:
@@ -154,7 +158,8 @@ Non-secret defaults:
     must not grant operator access.
 11) Every configured intake artifact origin is HTTPS and explicitly approved.
 12) `Y2T_TRANSCRIPT_READY_URL` remains empty until its contract is frozen. If
-    configured, require a separate random `Y2T_TRANSCRIPT_READY_SECRET`.
+    configured, require a separate random `Y2T_TRANSCRIPT_READY_SECRET`, an
+    explicit key id, and Cortex active/previous verification keys during rotation.
 13) For every transcription profile, verify the admission bearer, artifact
     bearer, and callback HMAC secret are distinct and at least 32 characters.
 14) Route only the exact machine endpoints through the public TLS proxy; do not
@@ -183,7 +188,7 @@ Terminate TLS in a reverse proxy (Caddy/Nginx/Traefik) and forward:
 - Producer capabilities and reconciliation: `GET /v1/intake-capabilities` and
   `GET /v1/intakes/{id}` with that producer's admission bearer
 - Immutable transcript reconciliation: `GET /v1/transcripts` (authenticated
-  operator API)
+  operator API or transcript-only Cortex bearer; cursor traversal required)
 
 The persistent usage ledger lives under `output/_usage/ledger.json`, inside the
 existing output volume. Do not delete or edit it during routine deploys. Failed
@@ -197,7 +202,9 @@ Media Contracts state lives in the existing output volume:
 - `output/_jobs/media2text.sqlite` is the bounded coordination database for
   intake leases and durable per-item delivery obligations.
 - `output/_transcripts/v1/` contains immutable canonical transcript records and
-  representation snapshots.
+  representation snapshots from the legacy schema.
+- `output/_transcripts/v2/` contains provenance-complete records and immutable
+  representation snapshots created from 0.40.0 onward.
 
 Back up both paths with the output volume. Do not copy the SQLite file while it
 is being modified; use a SQLite-aware backup or stop the API first. Routine
@@ -241,6 +248,7 @@ doppler run -- docker compose up --build -d
    - `Y2T_WEB_AUTH_SECRET`
    - `Y2T_WEB_AUTH_PASSPHRASE`
    - `Y2T_INTAKE_API_KEY`
+   - `Y2T_CORTEX_TRANSCRIPT_READ_KEY` (only after Cortex consumer review)
    - `Y2T_CORS_ORIGINS` (recommended)
 3) Run: `docker compose up --build -d`
 4) Verify:
@@ -318,6 +326,8 @@ fallback, not the normal deployment path. NAS builds remain prohibited.
       without an operator session
 - [ ] `/v1/intakes` and `/v1/transcripts` reject unauthenticated requests and
       return reconciliation data with the operator API key
+- [ ] The Cortex transcript bearer lists/fetches transcripts but receives 401
+      from `/metrics`, settings, runs, intakes, and every write route
 - [ ] `Y2T_TRANSCRIPT_READY_URL` is unset unless the reviewed contract version
       and producer/consumer commit SHAs are recorded
 

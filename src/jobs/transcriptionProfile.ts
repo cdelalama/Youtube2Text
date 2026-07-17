@@ -139,7 +139,11 @@ export function adaptTranscriptionIntake(request: TranscriptionIntakeRequest): I
     eventId: request.eventId,
     idempotencyKey: request.idempotencyKey,
     correlationId: request.correlationId,
-    source: request.source,
+    source: {
+      ...request.source,
+      createdAt: request.createdAt,
+      createdAtType: request.createdAt === null ? "unknown" : "recorded",
+    },
     artifact: {
       url: request.artifact.url,
       sha256: request.artifact.sha256,

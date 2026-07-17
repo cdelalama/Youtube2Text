@@ -84,7 +84,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List immutable Transcript Store records */
+        /** Reconcile current transcript representations with an opaque cursor */
         get: operations["listTranscriptRecords"];
         put?: never;
         post?: never;
@@ -767,6 +767,9 @@ export interface components {
                 itemId: string;
                 collectionId?: string;
                 artifactRevision: string;
+                createdAt?: string | null;
+                /** @enum {string} */
+                createdAtType?: "recorded" | "published" | "unknown";
             };
             artifact: {
                 /** Format: uri */
@@ -831,6 +834,23 @@ export interface components {
             publishedAt?: string;
             artifactRevision: string;
         };
+        TranscriptSourceV2: {
+            /** @enum {string} */
+            kind: "youtube" | "upload" | "intake";
+            authority: string;
+            sourceItemId: string;
+            sourceCollectionId?: string;
+            canonicalUrl?: string;
+            title: string;
+            publishedAt?: string;
+            artifactRevision: string;
+            /** @description Original typed source time; Plaud recording createdAt is never replaced by processing time. */
+            createdAt: string | null;
+            /** @enum {string} */
+            createdAtType: "recorded" | "published" | "unknown";
+            createdAtSuppliedBy: string | null;
+            createdAtUnavailableReason: string | null;
+        };
         TranscriptRecordV1: {
             /** @constant */
             schemaVersion: "media2text.transcript.v1";
@@ -856,14 +876,100 @@ export interface components {
             recordSha256?: string;
             recordBytes?: number;
         };
-        TranscriptSummary: {
+        TranscriptModelProvenanceV2: {
+            name: string | null;
+            nameEvidence: string | null;
+            nameUnavailableReason: string | null;
+            version: string | null;
+            versionEvidence: string | null;
+            versionUnavailableReason: string | null;
+        };
+        TranscriptRecordV2: {
+            /** @constant */
+            schemaVersion: "media2text.transcript.v2";
             transcriptId: string;
             /** Format: date-time */
-            createdAt: string;
-            source: components["schemas"]["TranscriptSourceV1"];
+            materializedAt: string;
+            producer: {
+                /** @constant */
+                name: "Media2Text";
+                /** @constant */
+                technicalId: "youtube2text";
+                version: string;
+            };
+            correlation: {
+                runId: string;
+                intakeId: string | null;
+            };
+            source: components["schemas"]["TranscriptSourceV2"];
+            artifact: {
+                revision: string;
+                sha256: string;
+                bytes: number;
+                durationSeconds: number;
+                contentType: string;
+            };
+            transcription: {
+                /** @enum {string} */
+                provider: "assemblyai" | "deepgram" | "openai_whisper";
+                providerTranscriptId: string | null;
+                providerTranscriptIdEvidence: string | null;
+                providerTranscriptIdUnavailableReason: string | null;
+                model: components["schemas"]["TranscriptModelProvenanceV2"];
+                languageCode: string | null;
+                languageConfidence: number | null;
+                payloadSha256: string;
+                payload: {
+                    [key: string]: unknown;
+                };
+            };
+            representations: {
+                /** @enum {string} */
+                format: "provider-json" | "text" | "markdown" | "jsonl" | "csv";
+                relativePath: string;
+                legacyRelativePath?: string;
+                sha256: string;
+                bytes: number;
+                /** Format: date-time */
+                createdAt: string;
+                generator: {
+                    /** @constant */
+                    name: "Media2Text";
+                    version: string;
+                };
+                derivedFrom: {
+                    sourceArtifactRevision: string;
+                    transcriptPayloadSha256: string;
+                };
+            }[];
+        };
+        TranscriptLifecycleProjection: {
+            revision: number;
+            /** @enum {string} */
+            revisionReason: "initial" | "retranscription" | "source-revision";
+            /** @enum {string} */
+            status: "current" | "superseded" | "withdrawn";
+            current: boolean;
+            supersedesTranscriptId: string | null;
+            supersededByTranscriptId: string | null;
+            withdrawal: {
+                sourceEventId: string;
+                /** Format: date-time */
+                occurredAt: string;
+                reason?: string;
+            } | null;
+        };
+        TranscriptSummary: {
+            transcriptId: string;
+            /** @enum {string} */
+            schemaVersion: "media2text.transcript.v1" | "media2text.transcript.v2";
+            /** Format: date-time */
+            materializedAt: string;
+            source: components["schemas"]["TranscriptSourceV1"] | components["schemas"]["TranscriptSourceV2"];
             transcription: {
                 [key: string]: unknown;
             };
+            lifecycle: components["schemas"]["TranscriptLifecycleProjection"];
             recordSha256: string;
             bytes: number;
             href: string;
@@ -872,6 +978,10 @@ export interface components {
             /** @constant */
             schemaVersion: "media2text.transcript-list.v1";
             items: components["schemas"]["TranscriptSummary"][];
+            page: {
+                nextCursor: string | null;
+                hasMore: boolean;
+            };
         };
         ErrorResponse: {
             error: string;
@@ -1630,6 +1740,10 @@ export interface operations {
         parameters: {
             query?: {
                 limit?: number;
+                /** @description Opaque cursor returned by the previous page. */
+                cursor?: string;
+                /** @description Include historical superseded representations. Withdrawn tombstones are always included. */
+                includeSuperseded?: boolean;
             };
             header?: never;
             path?: never;
@@ -1644,6 +1758,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TranscriptListResponse"];
+                };
+            };
+            /** @description Invalid cursor or query parameter */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Unauthorized */
@@ -1676,7 +1799,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TranscriptRecordV1"];
+                    "application/json": components["schemas"]["TranscriptRecordV1"] | components["schemas"]["TranscriptRecordV2"];
                 };
             };
             /** @description Unauthorized */

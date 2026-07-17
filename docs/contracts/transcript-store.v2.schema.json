@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://media2text.local/contracts/transcript-store.v2.schema.json",
+  "title": "Media2Text Transcript Store v2",
+  "description": "Immutable transcript evidence. Mutable current/superseded/withdrawn state is intentionally outside this record and is exposed by the transcript list projection and Transcript Ready events.",
+  "x-contract-status": "draft-consumer-review-required",
+  "type": "object",
+  "required": ["schemaVersion", "transcriptId", "materializedAt", "producer", "correlation", "source", "artifact", "transcription", "representations"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": "media2text.transcript.v2" },
+    "transcriptId": { "type": "string", "pattern": "^trn_[a-f0-9]{64}$" },
+    "materializedAt": { "type": "string", "format": "date-time" },
+    "producer": { "$ref": "#/$defs/producer" },
+    "correlation": { "$ref": "#/$defs/correlation" },
+    "source": { "$ref": "#/$defs/source" },
+    "artifact": { "$ref": "#/$defs/artifact" },
+    "transcription": { "$ref": "#/$defs/transcription" },
+    "representations": { "type": "array", "items": { "$ref": "#/$defs/representation" } }
+  },
+  "$defs": {
+    "producer": {
+      "type": "object",
+      "required": ["name", "technicalId", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "Media2Text" },
+        "technicalId": { "const": "youtube2text" },
+        "version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "correlation": {
+      "type": "object",
+      "required": ["runId", "intakeId"],
+      "additionalProperties": false,
+      "properties": {
+        "runId": { "type": "string", "minLength": 1 },
+        "intakeId": {
+          "oneOf": [
+            { "type": "string", "pattern": "^int_[a-f0-9]{64}$" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "required": ["kind", "authority", "sourceItemId", "title", "artifactRevision", "createdAt", "createdAtType", "createdAtSuppliedBy", "createdAtUnavailableReason"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["youtube", "upload", "intake"] },
+        "authority": { "type": "string", "minLength": 1 },
+        "sourceItemId": { "type": "string", "minLength": 1 },
+        "sourceCollectionId": { "type": "string", "minLength": 1 },
+        "canonicalUrl": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "publishedAt": { "type": "string", "minLength": 1 },
+        "artifactRevision": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "createdAt": {
+          "description": "Original source time exactly as supplied by the source. Plaud recording createdAt is stored here and is never replaced by processing time.",
+          "oneOf": [{ "type": "string", "format": "date-time" }, { "type": "null" }]
+        },
+        "createdAtType": { "enum": ["recorded", "published", "unknown"] },
+        "createdAtSuppliedBy": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+        "createdAtUnavailableReason": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "required": ["revision", "sha256", "bytes", "durationSeconds", "contentType"],
+      "additionalProperties": false,
+      "properties": {
+        "revision": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "bytes": { "type": "integer", "minimum": 1 },
+        "durationSeconds": { "type": "number", "minimum": 0 },
+        "contentType": { "type": "string", "pattern": "^audio/" }
+      }
+    },
+    "transcription": {
+      "type": "object",
+      "required": ["provider", "providerTranscriptId", "providerTranscriptIdEvidence", "providerTranscriptIdUnavailableReason", "model", "languageCode", "languageConfidence", "payloadSha256", "payload"],
+      "additionalProperties": false,
+      "properties": {
+        "provider": { "enum": ["assemblyai", "deepgram", "openai_whisper"] },
+        "providerTranscriptId": { "oneOf": [{ "type": "string" }, { "type": "null" }] },
+        "providerTranscriptIdEvidence": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+        "providerTranscriptIdUnavailableReason": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+        "model": {
+          "type": "object",
+          "required": ["name", "nameEvidence", "nameUnavailableReason", "version", "versionEvidence", "versionUnavailableReason"],
+          "additionalProperties": false,
+          "properties": {
+            "name": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+            "nameEvidence": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+            "nameUnavailableReason": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+            "version": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+            "versionEvidence": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+            "versionUnavailableReason": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] }
+          }
+        },
+        "languageCode": { "oneOf": [{ "type": "string" }, { "type": "null" }] },
+        "languageConfidence": { "oneOf": [{ "type": "number" }, { "type": "null" }] },
+        "payloadSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "payload": { "type": "object" }
+      }
+    },
+    "representation": {
+      "type": "object",
+      "required": ["format", "relativePath", "sha256", "bytes", "createdAt", "generator", "derivedFrom"],
+      "additionalProperties": false,
+      "properties": {
+        "format": { "enum": ["provider-json", "text", "markdown", "jsonl", "csv"] },
+        "relativePath": { "type": "string", "minLength": 1 },
+        "legacyRelativePath": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "generator": {
+          "type": "object",
+          "required": ["name", "version"],
+          "additionalProperties": false,
+          "properties": {
+            "name": { "const": "Media2Text" },
+            "version": { "type": "string", "minLength": 1 }
+          }
+        },
+        "derivedFrom": {
+          "type": "object",
+          "required": ["sourceArtifactRevision", "transcriptPayloadSha256"],
+          "additionalProperties": false,
+          "properties": {
+            "sourceArtifactRevision": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+            "transcriptPayloadSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          }
+        }
+      }
+    }
+  }
+}

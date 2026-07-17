@@ -1064,11 +1064,11 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
   function renderApiOutput() {
     return (
       <section className="m2t-page">
-        <PageIntro title={t(lang, "API y salida", "API & output")} text={t(lang, "La API actual sirve runs, biblioteca, eventos y artefactos. El feed estable para Cortex queda marcado como roadmap.", "The current API serves runs, library, events, and artifacts. The stable Cortex feed is marked as roadmap.")} />
+        <PageIntro title={t(lang, "API y salida", "API & output")} text={t(lang, "La API sirve runs, biblioteca, eventos, artefactos y reconciliacion de transcripciones. La entrega Cortex sigue desactivada pendiente de revision.", "The API serves runs, library, events, artifacts, and transcript reconciliation. Cortex delivery remains disabled pending review.")} />
         <div className="m2t-flow"><span>ENTRADA<br /><em>YouTube · audio</em></span><span>MEDIA2TEXT<br /><em>engine y2t</em></span><span>SALIDA<br /><em>artifacts · webhooks</em></span></div>
         <div className="m2t-two-col">
-          <RoadmapPanel title={t(lang, "Feed de salida (PULL)", "Output feed (PULL)")} lines={["GET /v1/transcripts?since=...&format=jsonl", t(lang, "Contrato estable para Cortex pendiente", "Stable Cortex contract pending")]} state="TODAVIA NO IMPLEMENTADO" />
-          <RoadmapPanel title={t(lang, "Webhooks de salida (PUSH)", "Output webhooks (PUSH)")} lines={["transcript.created", t(lang, "Outbox durable pendiente", "Durable outbox pending")]} state="TODAVIA NO IMPLEMENTADO" />
+          <RoadmapPanel title={t(lang, "Feed de salida (PULL)", "Output feed (PULL)")} lines={["GET /v1/transcripts?cursor=...", t(lang, "Cursor completo y credencial Cortex acotada", "Complete cursor and scoped Cortex credential")]} state="PARCIAL" />
+          <RoadmapPanel title={t(lang, "Webhooks de salida (PUSH)", "Output webhooks (PUSH)")} lines={["transcript.ready · transcript.withdrawn", t(lang, "Outbox durable; entrega desactivada", "Durable outbox; delivery disabled")]} state="PARCIAL" />
         </div>
         <div className="m2t-endpoints">
           <Endpoint method="GET" path="/runs" state="LIVE" />

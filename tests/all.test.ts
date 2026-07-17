@@ -60,6 +60,7 @@ import "./apiRequestTimeout.test.js";
 import "./apiLibraryDelete.test.js";
 import "./videoResults.test.js";
 import "./transcriptStore.test.js";
+import "./transcriptContracts.test.js";
 import "./mediaJobs.test.js";
 import "./artifactFetcher.test.js";
 import "./intakeAudio.test.js";

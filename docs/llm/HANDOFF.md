@@ -1,4 +1,4 @@
-<!-- doc-version: 0.39.3 -->
+<!-- doc-version: 0.40.0 -->
 # LLM Work Handoff
 
 This file is the current operational snapshot. Historical detail belongs in
@@ -92,11 +92,29 @@ roadmap.
   USD 335.62 at the configured Deepgram rate.
   This exceeds Media2Text's 30-day hard limits and requires a separate operator
   spend decision before bulk replay.
+- 2026-07-17 audit APPROVED the b423d21..9d234fa slice: contract pin verified
+  byte-for-byte against plaud-mirror `d393a0ce` (five schema SHA-256 matches),
+  203/203 tests and all validators reproduced green, defect fixes confirmed in
+  code, sibling repo states and catalog image 0.39.3 confirmed, live public
+  status truthful. Observation: live counts have moved past the recorded
+  evidence (3 intake jobs in review and 4 pending transcript obligations vs the
+  documented 2 and 3) — post-deploy live Plaud activity; the next session should
+  identify the third failed intake before treating retained failures as fully
+  documented.
+- Release `0.40.0` addresses Cortex's REQUEST CHANGES without enabling delivery:
+  Plaud `createdAt` now reaches provenance-complete Transcript Store v2 records;
+  v1 bytes remain untouched; SQLite projects retranscription/source revision,
+  current/superseded/withdrawn state; pull reconciliation follows opaque cursors
+  beyond 500; Cortex has a two-route read-only bearer; and HMAC delivery names
+  its key id with a 300-second replay window and active/previous rotation rules.
+  Transcript Ready v1 and Store v2 remain drafts pending Cortex re-review. The
+  source-lifecycle inbound wire contract is explicitly not implemented, Cortex
+  delivery remains unset, and no Plaud backlog item was replayed.
 
 ## Current Status
 
-- Version: 0.39.3 in source and on the NAS from `3cf1539`; release validation,
-  deployment verification, and the final OGG canary pass.
+- Version: 0.40.0 in source; NAS remains on 0.39.3 from `3cf1539`. The contract
+  revision is not deployed and has not activated Cortex delivery.
 - Current NAS runtime: `0.39.3`, healthy and authenticated. The Plaud facade is
   reachable only on its three exact TLS machine routes; generic operator paths
   remain behind the web session boundary.
@@ -106,11 +124,11 @@ roadmap.
   release `bb350ea` is synchronized; Infra Portal 0.20.3 mounts exact source
   commits with no provenance warnings. Its project contract and sanitized
   pipeline job remain registered.
-- Live pipeline status remains truthfully `degraded/warning`: two failed intake
-  canaries are retained for review, source-status delivery has zero pending,
-  and three Transcript Ready obligations remain pending because Cortex delivery
-  is intentionally disabled. Usage is 0.587333 audio minutes and estimated USD
-  0.005403 across four Deepgram reservations (one failed), with none pending.
+- Live pipeline status remains truthfully `degraded/warning`: the latest audit
+  observed three failed intake jobs retained for review and four Transcript
+  Ready obligations pending because Cortex delivery is intentionally disabled.
+  The third failure still needs identification before the failure set is fully
+  documented; do not reuse the older 2/3 counts as current truth.
 - Scheduler remains OFF. No YouTube channels are configured in the watchlist.
 - Production Deepgram and AssemblyAI credentials were verified during the
   `0.37.x` safety rollout. The OpenAI credential returns 401 and remains an
@@ -129,16 +147,16 @@ roadmap.
 3. ~~Reconcile deployed Media2Text/Plaud versions, truthful degraded state,
    route provenance, and source commits through Home Infra/Infra Portal.~~ Done
    through synchronized Home Infra 0.7.6 and Portal 0.20.3.
-4. Keep Cortex live delivery disabled until Cortex reviews and freezes
-   Transcript Ready v1. The committed 0.38.2 fixture remains its current input.
+4. Send the committed 0.40.0 contract hashes and producer SHA to Cortex for
+   consumer re-review. Keep live delivery disabled until Cortex accepts, the
+   operator ratifies, and both producer/consumer SHAs are frozen.
 5. Configure exact YouTube channel URLs disabled first, preview duration/cost,
    obtain operator cost approval, then canary at concurrency 1.
 
 ## Do Not Touch
 
-- Cross-repo edits require explicit operator scope. This session has that scope
-  only for Plaud Mirror and Home Infra coordination; Cortex and Home Infra
-  Protocol remain untouched.
+- Cross-repo edits require explicit operator scope. This session is
+  Media2Text-only; Cortex, Plaud Mirror, Home Infra, and Protocol remain untouched.
 - Do not globally rename `youtube2text` to `media2text` or introduce
   `MEDIA2TEXT_`/`M2T_` env prefixes.
 - Do not rename Docker images, Doppler project/config, NAS paths,

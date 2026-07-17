@@ -180,6 +180,8 @@ export class IntakeWorker {
       sourceAuthority: request.source.authority,
       sourceItemId: request.source.itemId,
       sourceCollectionId: request.source.collectionId,
+      sourceCreatedAt: request.source.createdAt,
+      sourceCreatedAtType: request.source.createdAtType,
       force: false,
     };
     const run = this.manager.createRun(runRequest);

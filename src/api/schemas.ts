@@ -249,6 +249,8 @@ export const intakeCreateSchema = z
         itemId: stableId,
         collectionId: stableId.optional(),
         artifactRevision: z.string().regex(/^sha256:[a-f0-9]{64}$/),
+        createdAt: z.string().datetime({ offset: true }).nullable().optional(),
+        createdAtType: z.enum(["recorded", "published", "unknown"]).optional(),
       })
       .strict(),
     artifact: z
