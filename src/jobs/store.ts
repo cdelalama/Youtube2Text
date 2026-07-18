@@ -154,10 +154,19 @@ type TranscriptEventBaseV1 = {
 
 export type TranscriptReadyEventV1 = TranscriptEventBaseV1 & {
   eventType: "transcript.ready";
+  lifecycle: TranscriptEventBaseV1["lifecycle"] & {
+    status: "current";
+    current: true;
+  };
+  sourceLifecycle?: never;
 };
 
 export type TranscriptWithdrawnEventV1 = TranscriptEventBaseV1 & {
   eventType: "transcript.withdrawn";
+  lifecycle: TranscriptEventBaseV1["lifecycle"] & {
+    status: "withdrawn";
+    current: false;
+  };
   sourceLifecycle: {
     authority: string;
     sourceEventId: string;

@@ -2,20 +2,24 @@
 
 ## Lifecycle
 
-Contracts move through these states and never skip consumer review:
+Operational contract records move through these states and never skip consumer
+review:
 
 `draft -> consumer-reviewed -> operator-ratified -> frozen (version + commit SHA) -> implemented -> live-verified -> superseded`
 
 | Contract | Owner | Consumer | State |
 |---|---|---|---|
 | Transcript Store v1 | Media2Text | Cortex and operator tools | implemented legacy; immutable records remain readable |
-| Transcript Store v2 | Media2Text | Cortex and operator tools | draft implemented producer side; Cortex re-review required |
-| Transcript Ready v1 | Media2Text | Cortex | revised draft; Cortex re-review required |
+| Transcript Store v2 | Media2Text | Cortex and operator tools | implemented producer side; external consumer pin required before live use |
+| Transcript Ready v1 | Media2Text | Cortex | implemented producer side; external consumer pin required before live use |
 | Media Intake v1 | Media2Text | internal/legacy adapters | implemented internal domain |
 | Plaud Mirror Transcription Intake v1 Compatibility Profile | Plaud Mirror | Media2Text | operator-ratified and frozen at producer commit `d393a0c`; implemented; live verification pending |
 
-The JSON Schema files are machine-readable. This document adds transport and
-failure semantics that JSON Schema cannot express.
+The JSON Schema files are immutable machine-readable contract candidates. They
+do not self-declare mutable review or freeze status. Each consumer records that
+state externally by pinning the producer version and commit plus the SHA-256 of
+every reviewed artifact. This document adds transport and failure semantics
+that JSON Schema cannot express.
 
 ## Intake Semantics
 
@@ -49,6 +53,11 @@ for a future neutral Content Intake extraction.
 
 - Every completed Transcript Store record creates one deterministic durable
   `transcript.ready` outbox row before the pipeline emits `video:done`.
+- `transcript.ready` requires lifecycle `status=current` and `current=true` and
+  forbids `sourceLifecycle`. `transcript.withdrawn` requires lifecycle
+  `status=withdrawn` and `current=false` plus the authenticated
+  `sourceLifecycle` assertion. The Draft 2020-12 schema rejects every crossed
+  combination.
 - New records use `media2text.transcript.v2`. Existing v1 records remain
   byte-identical and retrievable; Media2Text never invents missing provenance
   while projecting them into the list feed.

@@ -1,4 +1,4 @@
-<!-- doc-version: 0.40.0 -->
+<!-- doc-version: 0.40.1 -->
 # Project Context - Media2Text
 
 ## Vision
@@ -52,13 +52,15 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Storage | Persist outputs + idempotency | TBD | Layout: `output/<channel_title_slug>__<channel_id>/<basename>.*`. |
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
-## Current Status (2026-07-17)
-v0.40.0 stable in source revises the producer contracts after Cortex requested changes:
-new Transcript Store v2 records preserve typed source recording time, exact
-provider/model/run/artifact/representation provenance, cursor-complete pull,
-revision/current/tombstone projection semantics, scoped Cortex read auth, and
-HMAC replay/rotation behavior. Live Cortex delivery remains disabled and the
-NAS remains on v0.39.3 pending consumer re-review and a separate deploy gate.
+## Current Status (2026-07-18)
+v0.40.1 stable in source preserves the v0.40.0 provenance, cursor, lifecycle,
+scoped-read, and HMAC revisions while closing the post-ratification schema gap
+found by Cortex. Transcript Ready v1 now mechanically couples ready events to
+`current/true` without source lifecycle evidence and withdrawal events to
+`withdrawn/false` with that evidence required. Mutable consumer review and
+freeze state is external to immutable schema bytes and pinned by commit plus
+SHA-256. Live Cortex delivery remains disabled and the NAS remains on v0.39.3
+pending Cortex re-review of v0.40.1 and a separate deploy gate.
 
 v0.39.3 stable and deployed from `3cf1539` implements the commit-pinned Plaud Mirror
 Transcription Intake v1 compatibility profile as an additive facade over the

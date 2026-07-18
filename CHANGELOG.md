@@ -5,6 +5,25 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.40.1] - 2026-07-18
+
+### Added
+
+- Add Draft 2020-12 contract validation tests for valid and contradictory
+  Transcript Ready event variants.
+
+### Changed
+
+- Track mutable consumer review and freeze state through external commit and
+  SHA-256 pins instead of embedding it in immutable schema bytes.
+
+### Fixed
+
+- Couple `transcript.ready` to `current/true` without `sourceLifecycle`, and
+  `transcript.withdrawn` to `withdrawn/false` with required source lifecycle
+  evidence. Valid producer events are unchanged; contradictory payloads now
+  fail schema validation.
+
 ## [0.40.0] - 2026-07-17
 
 ### Added

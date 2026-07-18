@@ -1,11 +1,11 @@
-<!-- doc-version: 0.40.0 -->
+<!-- doc-version: 0.40.1 -->
 # LLM Work Handoff
 
 This file is the current operational snapshot. Historical detail belongs in
 `HISTORY.md`, `HANDOFF_ARCHIVE.md`, `DECISIONS.md`, and the cross-project
 roadmap.
 
-- Last Updated: 2026-07-17
+- Last Updated: 2026-07-18
 
 ## Open work
 
@@ -24,7 +24,8 @@ roadmap.
   Transcription Intake v1 Compatibility Profile is operator-ratified, copied
   byte-for-byte, and pinned to producer `0.14.1` commit
   `d393a0cefa17dfc4788294ef9bb5e5a89ed0f6b4`; D-021 records the adapter
-  boundary. Transcript Ready v1 remains draft pending Cortex review.
+  boundary. The corrected Transcript Ready v1 candidate in 0.40.1 awaits a
+  replacement Cortex commit/hash pin before live use.
 - The outbox persists every new item even when
   `Y2T_TRANSCRIPT_READY_URL` is unset. Pull reconciliation is available at
   `/v1/transcripts`.
@@ -110,11 +111,34 @@ roadmap.
   Transcript Ready v1 and Store v2 remain drafts pending Cortex re-review. The
   source-lifecycle inbound wire contract is explicitly not implemented, Cortex
   delivery remains unset, and no Plaud backlog item was replayed.
+- 2026-07-18 audit APPROVED commit `7cd5fe7` (0.40.0): all five published
+  contract hashes recomputed identical, 208/208 tests reproduced, Cortex read
+  key verified scoped to exactly the two GET transcript routes with timing-safe
+  comparison and forced distinctness from operator/intake keys, outbox migration
+  proven data-preserving by a real old-schema test, withdrawal verified
+  source-event-keyed with no inbound HTTP route (correctly deferred), v1 schema
+  change is metadata-only (`implemented-legacy`), CI green, NAS untouched at
+  0.39.3. Not reproduced locally: Docker smoke. At audit time the live third
+  failed intake from 2026-07-17 remained unidentified.
+- Cortex accepted and pinned 0.40.0 at consumer commit `ace98a4`, then its
+  post-ratification adversarial review found that the Transcript Ready schema
+  allowed event/lifecycle contradictions that the producer does not emit.
+  Patch `0.40.1` makes `transcript.ready` exclusively `current/true` without
+  `sourceLifecycle`, makes `transcript.withdrawn` exclusively
+  `withdrawn/false` with `sourceLifecycle` required, and proves crossed variants
+  fail actual Draft 2020-12 validation. Mutable review/freeze state now lives in
+  external producer/consumer commit and hash pins rather than schema bytes.
+  The 0.40.0 consumer pin remains historical evidence and must be replaced
+  before live use. Delivery, deployment, replay, and spend remain untouched.
+  Validation: 210/210 tests, focused post-Ajv-update contract tests 4/4, TypeScript
+  and Next.js production builds, OpenAPI lint/type regeneration without drift,
+  Docker smoke, Cortex fixture integrity, version/naming sync, DocKit 10/10,
+  diff check, and npm audit with zero vulnerabilities.
 
 ## Current Status
 
-- Version: 0.40.0 in source; NAS remains on 0.39.3 from `3cf1539`. The contract
-  revision is not deployed and has not activated Cortex delivery.
+- Version: 0.40.1 in source; NAS remains on 0.39.3 from `3cf1539`. The contract
+  correction is not deployed and has not activated Cortex delivery.
 - Current NAS runtime: `0.39.3`, healthy and authenticated. The Plaud facade is
   reachable only on its three exact TLS machine routes; generic operator paths
   remain behind the web session boundary.
@@ -127,8 +151,10 @@ roadmap.
 - Live pipeline status remains truthfully `degraded/warning`: the latest audit
   observed three failed intake jobs retained for review and four Transcript
   Ready obligations pending because Cortex delivery is intentionally disabled.
-  The third failure still needs identification before the failure set is fully
-  documented; do not reuse the older 2/3 counts as current truth.
+  A subsequent cross-project review identified the set as two retained
+  historical canaries plus the 211.51-minute item blocked by the 180-minute
+  economic policy; the policy block did not invoke the provider. Do not reuse
+  the older 2/3 counts as current truth.
 - Scheduler remains OFF. No YouTube channels are configured in the watchlist.
 - Production Deepgram and AssemblyAI credentials were verified during the
   `0.37.x` safety rollout. The OpenAI credential returns 401 and remains an
@@ -147,9 +173,9 @@ roadmap.
 3. ~~Reconcile deployed Media2Text/Plaud versions, truthful degraded state,
    route provenance, and source commits through Home Infra/Infra Portal.~~ Done
    through synchronized Home Infra 0.7.6 and Portal 0.20.3.
-4. Send the committed 0.40.0 contract hashes and producer SHA to Cortex for
-   consumer re-review. Keep live delivery disabled until Cortex accepts, the
-   operator ratifies, and both producer/consumer SHAs are frozen.
+4. Send the committed 0.40.1 contract hashes and producer SHA to Cortex for a
+   bounded re-review that replaces the historical 0.40.0 pin at `ace98a4`.
+   Keep live delivery disabled until Cortex accepts and publishes its new pin.
 5. Configure exact YouTube channel URLs disabled first, preview duration/cost,
    obtain operator cost approval, then canary at concurrency 1.
 

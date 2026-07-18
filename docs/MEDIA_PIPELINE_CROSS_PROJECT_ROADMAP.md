@@ -173,8 +173,13 @@ Progress (2026-07-17, Cortex re-review): source `0.40.0` adds Transcript Store
 v2, preserves source recording time and exact provenance, removes the 500-row
 pull ceiling with opaque cursors, defines retranscription/source-revision/
 tombstone projections, and adds scoped Cortex read auth plus HMAC rotation
-semantics. Transcript Ready v1 and Store v2 remain revised drafts; live delivery
-and deployment are still gated on Cortex acceptance and frozen hashes.
+semantics. Cortex accepted and pinned that candidate at consumer commit
+`ace98a4`, then a post-ratification adversarial review found that the event
+schema allowed contradictory event/lifecycle combinations even though the
+producer never emitted them. Source `0.40.1` makes those variants mutually
+exclusive under Draft 2020-12 validation and removes mutable review labels from
+the immutable schema bytes. Cortex must replace its historical 0.40.0 pin with
+the 0.40.1 hashes; live delivery and deployment remain separately gated.
 Patch `0.38.2` publishes the exact Cortex evidence fixture. Source release
 `0.39.0` implements the producer-reviewed, commit-pinned Plaud Mirror
 compatibility profile; NAS deployment and live verification remain the current

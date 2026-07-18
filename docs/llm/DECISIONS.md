@@ -485,3 +485,29 @@ Implications:
   gate. This decision defines Media2Text propagation semantics but does not
   authorize a Plaud contract change or backlog replay.
 - `Y2T_TRANSCRIPT_READY_URL` remains unset for this release.
+
+## D-023 - Event variants are mechanical; acceptance is externally pinned
+
+Decision:
+- Model Transcript Ready v1 as two mutually exclusive Draft 2020-12 branches.
+  `transcript.ready` is always lifecycle `current/true` and cannot carry
+  `sourceLifecycle`; `transcript.withdrawn` is always lifecycle
+  `withdrawn/false` and must carry the authenticated source assertion.
+- Mirror the same invariant in TypeScript event types and prove valid plus
+  contradictory combinations with executable schema validation.
+- Keep mutable consumer review, ratification, and freeze state outside immutable
+  schema bytes. Consumers pin the producer version/commit and exact SHA-256
+  artifact set in their own durable record.
+
+Rationale:
+- A schema that accepts crossed event and lifecycle states shifts correctness to
+  prose even when the current producer happens to emit coherent payloads.
+- Embedding `draft` or `accepted` in immutable bytes creates a self-reference:
+  recording acceptance changes the bytes and invalidates the accepted hash.
+
+Implications:
+- The valid 0.40.0 wire payloads remain compatible; 0.40.1 only rejects states
+  that contradict the event meaning.
+- Cortex commit `ace98a4` remains historical acceptance evidence for 0.40.0 but
+  cannot authorize live use. Cortex must publish a replacement 0.40.1 pin.
+- Delivery, deployment, Plaud replay, and provider spend remain separate gates.

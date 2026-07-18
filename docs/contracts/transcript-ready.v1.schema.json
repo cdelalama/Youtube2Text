@@ -2,8 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://media2text.local/contracts/transcript-ready.v1.schema.json",
   "title": "Media2Text Transcript Ready v1",
-  "description": "Draft producer-owned event contract for immutable transcript availability and source-authority withdrawals. Delivery is at-least-once.",
-  "x-contract-status": "draft-consumer-re-review-required",
+  "description": "Producer-owned event contract for immutable transcript availability and source-authority withdrawals. Delivery is at-least-once. Mutable review and freeze state is recorded externally by producer commit and SHA-256 pins, not embedded in these immutable schema bytes.",
   "type": "object",
   "required": ["schemaVersion", "eventType", "eventId", "idempotencyKey", "occurredAt", "correlation", "source", "transcript", "lifecycle"],
   "additionalProperties": false,
@@ -70,11 +69,30 @@
       }
     }
   },
-  "allOf": [
+  "oneOf": [
     {
-      "if": { "properties": { "eventType": { "const": "transcript.withdrawn" } } },
-      "then": { "required": ["sourceLifecycle"] },
-      "else": { "not": { "required": ["sourceLifecycle"] } }
+      "properties": {
+        "eventType": { "const": "transcript.ready" },
+        "lifecycle": {
+          "properties": {
+            "status": { "const": "current" },
+            "current": { "const": true }
+          }
+        }
+      },
+      "not": { "required": ["sourceLifecycle"] }
+    },
+    {
+      "properties": {
+        "eventType": { "const": "transcript.withdrawn" },
+        "lifecycle": {
+          "properties": {
+            "status": { "const": "withdrawn" },
+            "current": { "const": false }
+          }
+        }
+      },
+      "required": ["sourceLifecycle"]
     }
   ]
 }

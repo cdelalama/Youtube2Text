@@ -1,7 +1,7 @@
-<!-- doc-version: 0.40.0 -->
+<!-- doc-version: 0.40.1 -->
 # Media2Text Architecture (youtube2text Engine)
 
-> Version: 0.40.0 (synced with package.json)
+> Version: 0.40.1 (synced with package.json)
 > Last Updated: 2026-07-17
 > Status: Safety foundation and Plaud compatibility facade deployed and live-verified; Cortex delivery, YouTube scheduler, and bulk replay remain gated
 > Authors: Claude + GPT-5.2 (viewpoints preserved)

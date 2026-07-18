@@ -1,4 +1,4 @@
-<!-- doc-version: 0.40.0 -->
+<!-- doc-version: 0.40.1 -->
 # LLM Start Guide - Media2Text
 
 ## Read This First (Mandatory)
@@ -50,16 +50,14 @@ Recommended reading order:
 ## Current Focus (Snapshot)
 
 Source of truth: docs/llm/HANDOFF.md.
-- Last Updated: 2026-07-17
-- Working on: Media2Text 0.39.3 is deployed and its additive Plaud Mirror
-  Transcription Intake v1 compatibility facade is live-verified.
-- Status: a provenance-correct real OGG canary passed durable admission,
-  authenticated source fetch, provider-only normalization, Deepgram,
-  immutable Transcript Store materialization, signed terminal callback, pull
-  reconciliation, distinct source/transcript hashes, and source lease release.
-  Home Infra 0.7.6 and Infra Portal 0.20.3 are synchronized. Transcript Ready
-  delivery to Cortex, the scheduler, and the remaining 622-item replay remain
-  disabled behind their separate contract and estimated USD 335.62 cost gates.
+- Last Updated: 2026-07-18
+- Working on: Media2Text 0.40.1 hardens the producer-owned Transcript Ready v1
+  schema after Cortex's post-ratification adversarial review.
+- Status: valid emitted events are unchanged, contradictory event/lifecycle
+  combinations now fail Draft 2020-12 validation, and mutable acceptance is
+  externally pinned by producer/consumer commits plus contract hashes. NAS
+  remains on 0.39.3; Cortex delivery, the scheduler, and the 622-item replay
+  remain disabled behind separate review and USD 335.62 cost gates.
 
 Keep this section synchronized with the "Current Status" block in docs/llm/HANDOFF.md.
 
