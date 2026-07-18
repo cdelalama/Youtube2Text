@@ -7,6 +7,34 @@ roadmap.
 
 - Last Updated: 2026-07-18
 
+## Restart Checkpoint - 2026-07-18
+
+- Safe source checkpoint: `main` and `origin/main` were clean and equal at
+  `fa20597200a82056da2dfd113216146d74f4a5c1`, Media2Text `0.40.1`, immediately
+  before the operator's planned machine shutdown.
+- Runtime was deliberately not changed: NAS remains on `0.39.3` from `3cf1539`.
+  Cortex delivery URL/credentials, scheduler, Plaud replay, pending-event
+  emission, and provider spend remain disabled or unapproved.
+- Horizontal gate: Cortex commit `ace98a4` is historical acceptance evidence
+  for 0.40.0 only. Cortex must re-review 0.40.1 and publish a replacement
+  consumer pin before this contract can be used live. Cortex Slice 4 may proceed
+  independently; no Media2Text action depends on it.
+- Latest sanitized live observation at `2026-07-18T13:21:02.691Z` remained
+  truthful `degraded/warning`: 3 intake jobs require review, 0 Transcript Ready
+  deliveries completed / 4 pending, and 21 source-status deliveries completed /
+  0 pending.
+- Resume sequence: read the mandatory onboarding chain, run `git fetch origin`,
+  verify `HEAD == origin/main` and a clean worktree, then inspect Cortex's
+  re-review response. If Cortex accepts, record its exact consumer SHA and pin;
+  otherwise address only its concrete contract findings. Do not deploy or
+  activate delivery as part of the pin-recording step.
+- Frozen 0.40.1 review inputs:
+  - `docs/contracts/README.md`: `58b5ee254c9757e2f115a46df8e10eedb9384f537952130e11ab0a2842914076`
+  - `docs/contracts/transcript-store.v1.schema.json`: `225fd511e2b1aa2abf7437bbd98bdb73f305aa84d25bdf6469889ff9774fd52d`
+  - `docs/contracts/transcript-store.v2.schema.json`: `303e31cc279182b91564ba1528410457725556b538b32670304f83553523e543`
+  - `docs/contracts/transcript-ready.v1.schema.json`: `2112c0e24573fcb0b03385793921e8698aa6ce0d07a462a26b1e7cbd10c75021`
+  - `openapi.yaml`: `07f553ba6874172899bf8ebfc761c69553c8161a3284ed4d19eb33b93dd2f279`
+
 ## Open work
 
 - Operator issued GO for the complete roadmap in
