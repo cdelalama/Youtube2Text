@@ -2,13 +2,17 @@
 
 Status: operator-ratified execution and session-dispatch artifact.
 
-Execution checkpoint (2026-07-17): the Media2Text safety foundation, Transcript
+Execution checkpoint (2026-07-19): the Media2Text safety foundation, Transcript
 Store, Home Infra status producer, Plaud compatibility facade, registry deploy,
 and real MP3/OGG canaries are complete in deployed 0.39.3. Home Infra 0.7.6 is
-synchronized. The remaining Plaud replay (622 items, 608.0074 hours, estimated
-USD 335.62), live Transcript Ready delivery to Cortex, and YouTube scheduler
-remain independently gated. Stage descriptions below retain their original
-ratified baseline numbers as execution history, not current runtime claims.
+synchronized. Cortex consumer commit `73a3d11` ACCEPTED the exact Media2Text
+0.40.1 five-artifact pin at `fa205972`, and the operator ratified it. Returning
+Media2Text's durable acknowledgement for Cortex's final-frozen record remains
+the next horizontal gate. The Plaud replay (622 items, 608.0074 hours,
+estimated USD 335.62), live Transcript Ready delivery, deployment, credentials,
+and YouTube scheduler remain independently gated. Stage descriptions below
+retain their original ratified baseline numbers as execution history, not
+current runtime claims.
 
 This document assigns work across Media2Text, Home Infra, Plaud Mirror, and
 Cortex. It does not authorize one repository to edit another. Each project must
@@ -17,12 +21,12 @@ load its own onboarding and validate its own current state before acting.
 ## Current Scope Decision
 
 Cortex V1 has operator GO and proceeds in its own repository and session.
-Media2Text must not edit Cortex or adopt Cortex internals. The live integration
-remains gated on consumer review and a versioned, commit-pinned Transcript Ready
-contract, but Media2Text is authorized to build the safety foundation,
-provenance, Transcript Store, a real byte-stable fixture/export, and its side of
-the contract. The only independent Cortex prerequisite recorded here is
-containment of its development PostgreSQL exposure and default credential.
+Media2Text must not edit Cortex or adopt Cortex internals. Consumer review and
+operator ratification of the exact versioned, commit-pinned Transcript Ready
+contract are complete; Cortex's final-frozen acknowledgement, consumer
+implementation, deployment, credentials, and a bounded canary remain separate
+live-integration gates. The only independent Cortex prerequisite recorded here
+is containment of its development PostgreSQL exposure and default credential.
 
 ## Non-Negotiable Boundaries
 
@@ -180,6 +184,13 @@ producer never emitted them. Source `0.40.1` makes those variants mutually
 exclusive under Draft 2020-12 validation and removes mutable review labels from
 the immutable schema bytes. Cortex must replace its historical 0.40.0 pin with
 the 0.40.1 hashes; live delivery and deployment remain separately gated.
+Progress (2026-07-19, exact pin): Cortex consumer commit `73a3d11` independently
+recomputed and ACCEPTED the five Media2Text `fa205972` artifacts, and the
+operator ratified that exact pin. Media2Text's docs-only acknowledgement must
+now be returned so Cortex can record operator-ratified/final-frozen state. This
+does not authorize deployment, credentials, delivery, pending obligations,
+source-data processing, replay, backfill, provider spend, or Plaud contract
+changes.
 Patch `0.38.2` publishes the exact Cortex evidence fixture. Source release
 `0.39.0` implements the producer-reviewed, commit-pinned Plaud Mirror
 compatibility profile; NAS deployment and live verification remain the current
@@ -206,13 +217,12 @@ Media2Text transcript while push and pull status agree.
 
 ### Stage 5 - Cortex Adapter (Separate Track, Integration Gated)
 
-Owner: the active Cortex session after Transcript Ready v1 is frozen.
+Owner: the active Cortex session after Transcript Ready v1 is final-frozen.
 
 - Consume the frozen Transcript Ready contract rather than Media2Text internals.
-- Re-review the Media2Text 0.40.0 draft first: Store v2 distinguishes source
-  recording time from materialization, pull is cursor-complete, lifecycle is a
-  projection with source-owned tombstones, and Cortex receives a read-only
-  transcript credential. Do not enable delivery until both sides freeze hashes.
+- Use only the exact operator-ratified Media2Text 0.40.1 `fa205972` pin accepted
+  by Cortex `73a3d11`; record Media2Text's acknowledgement before marking it
+  final-frozen. Do not enable delivery until that durable record is complete.
 - Require HMAC/authentication and persist inbox/idempotency state before ACK.
 - Replace process-local queue and deduplication with durable jobs.
 - Keep general-content ingestion separate from MED and multi-principal policy

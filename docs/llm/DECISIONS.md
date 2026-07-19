@@ -498,6 +498,15 @@ Decision:
 - Keep mutable consumer review, ratification, and freeze state outside immutable
   schema bytes. Consumers pin the producer version/commit and exact SHA-256
   artifact set in their own durable record.
+- The operator ratified the replacement Transcript Ready v1 pin on 2026-07-19:
+  Media2Text `0.40.1` producer commit
+  `fa20597200a82056da2dfd113216146d74f4a5c1`, Cortex consumer ACCEPT commit
+  `73a3d11fa5a6046d97b3f09e54202016f9816c46`, and these exact artifacts:
+  - `docs/contracts/README.md`: `58b5ee254c9757e2f115a46df8e10eedb9384f537952130e11ab0a2842914076`
+  - `docs/contracts/transcript-store.v1.schema.json`: `225fd511e2b1aa2abf7437bbd98bdb73f305aa84d25bdf6469889ff9774fd52d`
+  - `docs/contracts/transcript-store.v2.schema.json`: `303e31cc279182b91564ba1528410457725556b538b32670304f83553523e543`
+  - `docs/contracts/transcript-ready.v1.schema.json`: `2112c0e24573fcb0b03385793921e8698aa6ce0d07a462a26b1e7cbd10c75021`
+  - `openapi.yaml`: `07f553ba6874172899bf8ebfc761c69553c8161a3284ed4d19eb33b93dd2f279`
 
 Rationale:
 - A schema that accepts crossed event and lifecycle states shifts correctness to
@@ -509,5 +518,10 @@ Implications:
 - The valid 0.40.0 wire payloads remain compatible; 0.40.1 only rejects states
   that contradict the event meaning.
 - Cortex commit `ace98a4` remains historical acceptance evidence for 0.40.0 but
-  cannot authorize live use. Cortex must publish a replacement 0.40.1 pin.
+  cannot authorize live use. Cortex `73a3d11` replaces it as the 0.40.1
+  consumer ACCEPT, and the operator ratified that exact pin. Cortex must record
+  Media2Text's published acknowledgement before marking it final-frozen.
+- `docs/contracts/README.md` contains known stale Plaud live-verification prose,
+  but it is part of the ratified five-artifact pin. Preserve it byte-for-byte;
+  correction requires a future contract version and a new consumer review.
 - Delivery, deployment, Plaud replay, and provider spend remain separate gates.

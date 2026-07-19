@@ -5,7 +5,35 @@ This file is the current operational snapshot. Historical detail belongs in
 `HISTORY.md`, `HANDOFF_ARCHIVE.md`, `DECISIONS.md`, and the cross-project
 roadmap.
 
-- Last Updated: 2026-07-18
+- Last Updated: 2026-07-19
+
+## Ratification Checkpoint - 2026-07-19
+
+- The operator ratified the exact Transcript Ready v1 replacement pin produced
+  by Media2Text `0.40.1` commit
+  `fa20597200a82056da2dfd113216146d74f4a5c1` and independently ACCEPTED by
+  Cortex consumer commit `73a3d11fa5a6046d97b3f09e54202016f9816c46`.
+- The ratified five-artifact set is:
+  - `docs/contracts/README.md`: `58b5ee254c9757e2f115a46df8e10eedb9384f537952130e11ab0a2842914076`
+  - `docs/contracts/transcript-store.v1.schema.json`: `225fd511e2b1aa2abf7437bbd98bdb73f305aa84d25bdf6469889ff9774fd52d`
+  - `docs/contracts/transcript-store.v2.schema.json`: `303e31cc279182b91564ba1528410457725556b538b32670304f83553523e543`
+  - `docs/contracts/transcript-ready.v1.schema.json`: `2112c0e24573fcb0b03385793921e8698aa6ce0d07a462a26b1e7cbd10c75021`
+  - `openapi.yaml`: `07f553ba6874172899bf8ebfc761c69553c8161a3284ed4d19eb33b93dd2f279`
+- Read-only verification proved that current Media2Text HEAD preserves all five
+  files byte-for-byte from `fa205972`; the working-tree SHA-256 values match the
+  ratified set. Cortex independently passed the producer's focused 4/4 tests
+  and a 24-case matrix in which only the two coherent event variants validate.
+- This documentation slice is Media2Text's durable acknowledgement. Return its
+  published commit to Cortex so Cortex can mark the pin operator-ratified and
+  final-frozen in its own durable record.
+- Ratification is not runtime authority. Do not deploy 0.40.1, configure
+  `Y2T_TRANSCRIPT_READY_URL` or credentials, deliver pending obligations,
+  process source data, replay/backfill, incur provider spend, or change the
+  Plaud-to-Media2Text source-lifecycle contract under this acknowledgement.
+- Known frozen-document debt: `docs/contracts/README.md` still describes the
+  Plaud compatibility profile's live verification as pending. Preserve those
+  ratified bytes; correct the prose only in a future contract version followed
+  by a new consumer review and pin.
 
 ## Restart Checkpoint - 2026-07-18
 
@@ -52,8 +80,9 @@ roadmap.
   Transcription Intake v1 Compatibility Profile is operator-ratified, copied
   byte-for-byte, and pinned to producer `0.14.1` commit
   `d393a0cefa17dfc4788294ef9bb5e5a89ed0f6b4`; D-021 records the adapter
-  boundary. The corrected Transcript Ready v1 candidate in 0.40.1 awaits a
-  replacement Cortex commit/hash pin before live use.
+  boundary. Transcript Ready v1 at Media2Text `fa205972` has Cortex consumer
+  ACCEPT at `73a3d11` and exact operator ratification. Cortex's final-frozen
+  acknowledgement remains pending before any separately authorized live use.
 - The outbox persists every new item even when
   `Y2T_TRANSCRIPT_READY_URL` is unset. Pull reconciliation is available at
   `/v1/transcripts`.
@@ -167,6 +196,10 @@ roadmap.
 
 - Version: 0.40.1 in source; NAS remains on 0.39.3 from `3cf1539`. The contract
   correction is not deployed and has not activated Cortex delivery.
+- Transcript Ready v1 is operator-ratified at the exact Media2Text `fa205972`
+  five-artifact pin after Cortex consumer ACCEPT `73a3d11`. This docs-only
+  slice records the producer acknowledgement; Cortex must still record the
+  returned acknowledgement commit as final-frozen. No runtime authority follows.
 - Current NAS runtime: `0.39.3`, healthy and authenticated. The Plaud facade is
   reachable only on its three exact TLS machine routes; generic operator paths
   remain behind the web session boundary.
@@ -201,9 +234,11 @@ roadmap.
 3. ~~Reconcile deployed Media2Text/Plaud versions, truthful degraded state,
    route provenance, and source commits through Home Infra/Infra Portal.~~ Done
    through synchronized Home Infra 0.7.6 and Portal 0.20.3.
-4. Send the committed 0.40.1 contract hashes and producer SHA to Cortex for a
-   bounded re-review that replaces the historical 0.40.0 pin at `ace98a4`.
-   Keep live delivery disabled until Cortex accepts and publishes its new pin.
+4. ~~Send the committed 0.40.1 contract hashes and producer SHA to Cortex for a
+   bounded re-review that replaces the historical 0.40.0 pin at `ace98a4`.~~
+   Done: Cortex consumer ACCEPT is `73a3d11`, and the operator ratified the exact
+   pin. Return this published Media2Text acknowledgement commit to Cortex so it
+   can record operator-ratified/final-frozen state. Keep live delivery disabled.
 5. Configure exact YouTube channel URLs disabled first, preview duration/cost,
    obtain operator cost approval, then canary at concurrency 1.
 
