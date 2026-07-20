@@ -9,7 +9,8 @@ synchronized. Cortex consumer commit `73a3d11` ACCEPTED the exact Media2Text
 0.40.1 five-artifact pin at `fa205972`, the operator ratified it, Media2Text
 published durable acknowledgement `b90ebf7`, and Cortex recorded the pin as
 final-frozen at `6aa96e5`. Do not dispatch that horizontal gate again. The Plaud
-replay (622 items, 608.0074 hours, estimated USD 335.62), live Transcript Ready
+replay (622 items, 608.0074 hours; USD 335.62 is a Plaud-local estimate using
+its configured Deepgram rate as of 2026-07-18, not a Media2Text quote), live Transcript Ready
 delivery, deployment, credentials, and YouTube scheduler remain independently
 gated. Stage descriptions below retain their original ratified baseline numbers
 as execution history, not current runtime claims.
@@ -222,6 +223,31 @@ Owners: Plaud Mirror and Media2Text.
 Gate: deploy both releases, pass the Plaud provider probe across the public TLS
 boundary, and process one operator-approved recording into exactly one immutable
 Media2Text transcript while push and pull status agree.
+
+### Stage 4B - Bilateral Connection Provisioning (Design Ratified, Code Gated)
+
+Owners: Media2Text for receiver profiles; Plaud Mirror for destinations.
+
+- Plaud Mirror D-026 and Media2Text D-024 separate connection provisioning from
+  content transport and from the independent Media2Text-to-Cortex hop.
+- Media2Text replaces environment-as-live-authority with an encrypted mutable
+  producer-profile store, authenticated admin API/UI, audited rotation and
+  revocation, and one-time environment seeding when the store is empty.
+- V1 uses two operator-carried sensitive bundles: a Plaud request containing
+  artifact access and a Media2Text grant containing intake access plus status
+  signing. Import binds unique ids, expiry, request identity, and exact contract
+  hashes and rejects re-import. Operator custody is the V1 trust bootstrap; no
+  bundle-signing PKI is introduced.
+- The canonical operator experience, state dimensions, disconnection model,
+  cost authority, eight-wave sequence, and five-day joint freeze are owned by
+  Plaud Mirror's `docs/design/CONNECTIONS_OPERATOR_EXPERIENCE.md`. Media2Text
+  keeps only this owned implementation projection to prevent roadmap drift.
+
+Gate: separately approve exact request/grant schemas and the threat/failure
+matrix before runtime code. Then ship the runtime profile control plane and
+bundle lifecycle through an honest `0.41.x`/`0.42.x` split if required. No
+profile deployment, secret change, canary, replay, or spend is authorized by
+this stage entry.
 
 ### Stage 5 - Cortex Adapter (Separate Track, Integration Gated)
 

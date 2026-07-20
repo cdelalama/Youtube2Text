@@ -7,6 +7,30 @@ roadmap.
 
 - Last Updated: 2026-07-20
 
+## Connections Program Ratification - 2026-07-20
+
+- D-024 records the receiver-owned half of the operator-ratified bilateral
+  connection model. The Plaud content wire contract remains frozen and Cortex
+  remains a separate downstream hop.
+- Media2Text's first real provisioning slice must replace environment-as-live-
+  authority with an encrypted mutable runtime profile store and authenticated
+  admin API/UI. `Y2T_TRANSCRIPTION_INTAKE_PROFILES_JSON` becomes a seed used
+  only when that store is empty. A Doppler-writing CLI is not the primary UX.
+- V1 uses a Plaud request bundle carrying the artifact bearer and a Media2Text
+  grant bundle carrying the intake bearer plus status HMAC secret. Both are
+  sensitive. Import enforces expiry, consumed-id rejection, request binding,
+  and exact contract hashes. Operator custody is the V1 trust bootstrap; no
+  signing PKI or false offline single-use guarantee is claimed.
+- An honest `0.41.x` runtime-store/admin slice and `0.42.x` bundle slice are
+  pre-authorized as a roadmap split, not as implementation or deployment GO.
+- Plaud Mirror's `docs/design/CONNECTIONS_OPERATOR_EXPERIENCE.md` is the
+  canonical full brief. This repo owns D-024 and its roadmap consequences rather
+  than copying that document. Home Infra stays observation-only and ForgeOS
+  may discover the owning artifacts.
+- Wave 1 changed documentation only. NAS remains 0.39.3; source remains 0.40.1;
+  no profile, secret, provider call, Cortex delivery, replay, scheduler, or
+  deployment was changed.
+
 ## Final-Freeze Reconciliation - 2026-07-20
 
 - Media2Text `0.40.1` producer acknowledgement commit
@@ -24,12 +48,10 @@ roadmap.
   and Cortex delivery, deployment of 0.40.1, credentials, pending obligations,
   source-data processing, replay/backfill, provider spend, scheduler activation,
   and Plaud source-lifecycle changes remain disabled or separately gated.
-- The next product-facing slice is the operator-led connections UX brainstorm.
-  It may distinguish contract readiness, connection configuration, delivery
-  state, and pending obligations, but must not present disabled backend behavior
-  as live or change the frozen wire contract implicitly.
-- Session owner/focus: operator plus Media2Text design session; planning and UX
-  shaping only until the operator approves a separate implementation brief.
+- The next product-facing program is the now-ratified connections roadmap. Only
+  its documentation baseline is authorized; runtime implementation retains a
+  separate gate and must not present disabled behavior as live or change the
+  frozen wire contract implicitly.
 
 ## Ratification Checkpoint - 2026-07-19
 
@@ -171,9 +193,10 @@ roadmap.
   Plaud received terminal status and released the source lease. The immutable
   provenance-incorrect 0.39.2 record remains retained as explicit audit
   evidence and is not presented as correct.
-- The current Plaud backlog estimate is 622 recordings, 608.0074 hours, and
-  USD 335.62 at the configured Deepgram rate.
-  This exceeds Media2Text's 30-day hard limits and requires a separate operator
+- The current Plaud backlog scope is 622 recordings and 608.0074 hours. USD
+  335.62 is Plaud's local estimate using its configured Deepgram rate as of
+  2026-07-18, not a Media2Text quote. This exceeds Media2Text's 30-day hard
+  limits and requires a fresh receiver quotation plus a separate operator
   spend decision before bulk replay.
 - 2026-07-17 audit APPROVED the b423d21..9d234fa slice: contract pin verified
   byte-for-byte against plaud-mirror `d393a0ce` (five schema SHA-256 matches),
@@ -254,9 +277,11 @@ roadmap.
 1. ~~Publish/deploy `0.39.3` and prove one provenance-correct OGG canary.~~ Done
    2026-07-17; source, provider derivative, transcript, callback, pull, and lease
    boundaries pass.
-2. Bulk replay remains blocked until the 622-item / 608.0074-hour / estimated
-   USD 335.62 envelope receives separate operator spend approval; use bounded
-   batches of 1, 5, and 25 after approval and respect the live hard caps.
+2. Bulk replay remains blocked for 622 items / 608.0074 hours. USD 335.62 is a
+   Plaud-local estimate using its configured Deepgram rate as of 2026-07-18,
+   not a Media2Text quotation. Produce a fresh receiver-owned quote before
+   separate operator spend approval; then use bounded batches of 1, 5, and 25
+   and respect live hard caps.
 3. ~~Reconcile deployed Media2Text/Plaud versions, truthful degraded state,
    route provenance, and source commits through Home Infra/Infra Portal.~~ Done
    through synchronized Home Infra 0.7.6 and Portal 0.20.3.
@@ -266,13 +291,16 @@ roadmap.
    pin, Media2Text published acknowledgement `b90ebf7`, and Cortex recorded the
    final freeze at `6aa96e5`. Do not dispatch this gate again; keep live delivery
    disabled pending separate authority.
-5. Configure exact YouTube channel URLs disabled first, preview duration/cost,
+5. Request separate authority for the D-024 runtime-profile/bundle design and
+   implementation. Do not start `0.41.x`/`0.42.x` from this handoff alone.
+6. Configure exact YouTube channel URLs disabled first, preview duration/cost,
    obtain operator cost approval, then canary at concurrency 1.
 
 ## Do Not Touch
 
-- Cross-repo edits require explicit operator scope. This session is
-  Media2Text-only; Cortex, Plaud Mirror, Home Infra, and Protocol remain untouched.
+- Cross-repo edits require explicit operator scope. The 2026-07-20 Wave 1
+  documentation session had that scope; future implementation sessions return
+  to repo-local ownership unless the operator explicitly broadens them.
 - Do not globally rename `youtube2text` to `media2text` or introduce
   `MEDIA2TEXT_`/`M2T_` env prefixes.
 - Do not rename Docker images, Doppler project/config, NAS paths,

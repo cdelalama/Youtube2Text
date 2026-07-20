@@ -526,3 +526,59 @@ Implications:
   but it is part of the ratified five-artifact pin. Preserve it byte-for-byte;
   correction requires a future contract version and a new consumer review.
 - Delivery, deployment, Plaud replay, and provider spend remain separate gates.
+
+## D-024 - Producer-profile provisioning is a runtime bilateral control plane
+
+Decision:
+- Keep Plaud-to-Media2Text connection setup separate from both the frozen Plaud
+  content contract and Transcript Ready delivery to Cortex. Media2Text owns its
+  producer profiles; Plaud owns its destinations. Neither hop inherits the
+  other's health or credentials.
+- Make encrypted mutable runtime storage plus an application-authenticated
+  admin API/UI the first real provisioning path. The current
+  `Y2T_TRANSCRIPTION_INTAKE_PROFILES_JSON` value becomes a one-time seed that
+  imports only when the store is empty; it is not the runtime source of truth
+  after migration. Adding, rotating, or revoking a profile must not require a
+  container recreate.
+- V1 pairing uses two sensitive portable bundles under operator custody. Plaud
+  exports a request with producer/route/contract metadata and its artifact
+  bearer. Media2Text imports it, creates the runtime profile, and exports a
+  grant with receiver/capability/limit metadata, its intake bearer, and its
+  status HMAC secret. Plaud imports the grant, tests, and then enables.
+- Bind bundles to unique ids, issue/expiry times, the request id, and exact
+  contract version/hashes. Persist consumed ids and reject expiry, re-import,
+  request mismatch, and contract mismatch. A canonical-content hash detects
+  accidental corruption only; V1 does not invent an issuer-signing PKI or
+  claim strong offline single-use/revocation.
+- Keep a Doppler-writing CLI, if any, as break-glass tooling rather than the
+  primary operator experience. Online authenticated redemption, in-band
+  artifact provisioning, and per-lease tokens remain deferred together.
+
+Rationale:
+- The current environment JSON makes every profile change and rotation a
+  deployment operation. A prettier Plaud wizard cannot remove that friction or
+  make partial pairing truthful while the receiver has no runtime control
+  plane.
+- The three existing connection secrets have opposite directions: Media2Text
+  issues admission and status-signing secrets, while Plaud issues artifact
+  access. Two bundles make the bilateral exchange explicit without requiring
+  an online pairing service before a second real service pair justifies it.
+- Home Infra Protocol explicitly does not own signup, provider selection,
+  credentials, or action-plane authorization. Generalizing this workflow now
+  would repeat the premature-extraction error avoided by the Plaud compatibility
+  profile.
+
+Implications:
+- An honest implementation may split into `0.41.x` for the encrypted runtime
+  profile store, seed migration, admin, audit, rotation, and revocation, then
+  `0.42.x` for request import, grant export, and bundle lifecycle. Neither
+  version is authorized or promised by this decision alone.
+- Media2Text owns provider price, provider choice, retry allowance, and hard
+  economic caps. Plaud owns item count, duration, bytes, selected scope, and
+  duplicate-destination risk. USD 335.62 remains a Plaud-local estimate using
+  its configured Deepgram rate as of 2026-07-18, not a Media2Text quotation.
+- The canonical full operator brief and eight-wave program live in Plaud Mirror
+  at `docs/design/CONNECTIONS_OPERATOR_EXPERIENCE.md`; this repository records
+  only its owned control-plane consequences. ForgeOS may link to that artifact,
+  and Home Infra may record deployed versions/digests and sanitized health, but
+  neither becomes the pairing authority.
