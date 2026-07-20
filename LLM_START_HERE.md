@@ -50,14 +50,16 @@ Recommended reading order:
 ## Current Focus (Snapshot)
 
 Source of truth: docs/llm/HANDOFF.md.
-- Last Updated: 2026-07-19
-- Working on: recording the durable Media2Text acknowledgement of the exact
-  operator-ratified Transcript Ready v1 pin after Cortex consumer ACCEPT.
-- Status: Media2Text 0.40.1 commit `fa205972` and Cortex commit `73a3d11` bind
-  the five unchanged contract artifacts to the operator-ratified pin. Cortex's
-  final-frozen record remains the next horizontal gate. NAS remains on 0.39.3;
-  Cortex delivery, deployment, credentials, pending obligations, the scheduler,
-  and the 622-item replay remain disabled behind separate gates.
+- Last Updated: 2026-07-20
+- Working on: reconciling Media2Text's active coordination state after Cortex
+  completed the final freeze, then returning to the operator-led connections UX
+  brainstorm without changing runtime or wire contracts.
+- Status: Media2Text producer acknowledgement `b90ebf7` and Cortex final-freeze
+  commit `6aa96e5` make the exact 0.40.1 five-artifact pin operator-ratified,
+  producer-acknowledged, and final-frozen. Do not dispatch that gate again. NAS
+  remains on 0.39.3; Cortex delivery, deployment, credentials, pending
+  obligations, the scheduler, and the 622-item replay remain disabled behind
+  separate gates.
 
 Keep this section synchronized with the "Current Status" block in docs/llm/HANDOFF.md.
 

@@ -5,7 +5,31 @@ This file is the current operational snapshot. Historical detail belongs in
 `HISTORY.md`, `HANDOFF_ARCHIVE.md`, `DECISIONS.md`, and the cross-project
 roadmap.
 
-- Last Updated: 2026-07-19
+- Last Updated: 2026-07-20
+
+## Final-Freeze Reconciliation - 2026-07-20
+
+- Media2Text `0.40.1` producer acknowledgement commit
+  `b90ebf74dad9e07e8a7727946cdf4d3da5da8016` is clean, published, and preserves
+  all five operator-ratified contract artifacts byte-for-byte.
+- Cortex commit `6aa96e53fa857e629c679c9d9db9860ae1e92df5` (`Freeze ratified
+  Media2Text 0.40.1 pin`) is clean and published. Cortex durably records the
+  exact pin as consumer-accepted, operator-ratified, producer-acknowledged, and
+  final-frozen.
+- This closes the horizontal final-freeze gate and supersedes the pending
+  dispatch instructions in the dated 2026-07-19 Ratification Checkpoint and
+  2026-07-18 Restart Checkpoint below. Preserve those checkpoints as execution
+  history; do not send the acknowledgement prompt to Cortex again.
+- Final freeze is not runtime authority. Media2Text remains deployed at 0.39.3,
+  and Cortex delivery, deployment of 0.40.1, credentials, pending obligations,
+  source-data processing, replay/backfill, provider spend, scheduler activation,
+  and Plaud source-lifecycle changes remain disabled or separately gated.
+- The next product-facing slice is the operator-led connections UX brainstorm.
+  It may distinguish contract readiness, connection configuration, delivery
+  state, and pending obligations, but must not present disabled backend behavior
+  as live or change the frozen wire contract implicitly.
+- Session owner/focus: operator plus Media2Text design session; planning and UX
+  shaping only until the operator approves a separate implementation brief.
 
 ## Ratification Checkpoint - 2026-07-19
 
@@ -81,8 +105,9 @@ roadmap.
   byte-for-byte, and pinned to producer `0.14.1` commit
   `d393a0cefa17dfc4788294ef9bb5e5a89ed0f6b4`; D-021 records the adapter
   boundary. Transcript Ready v1 at Media2Text `fa205972` has Cortex consumer
-  ACCEPT at `73a3d11` and exact operator ratification. Cortex's final-frozen
-  acknowledgement remains pending before any separately authorized live use.
+  ACCEPT at `73a3d11`, exact operator ratification, Media2Text acknowledgement
+  at `b90ebf7`, and Cortex final-freeze at `6aa96e5`. Separately authorized live
+  use remains pending.
 - The outbox persists every new item even when
   `Y2T_TRANSCRIPT_READY_URL` is unset. Pull reconciliation is available at
   `/v1/transcripts`.
@@ -165,9 +190,10 @@ roadmap.
   current/superseded/withdrawn state; pull reconciliation follows opaque cursors
   beyond 500; Cortex has a two-route read-only bearer; and HMAC delivery names
   its key id with a 300-second replay window and active/previous rotation rules.
-  Transcript Ready v1 and Store v2 remain drafts pending Cortex re-review. The
-  source-lifecycle inbound wire contract is explicitly not implemented, Cortex
-  delivery remains unset, and no Plaud backlog item was replayed.
+  At that release point, Transcript Ready v1 and Store v2 remained drafts
+  pending Cortex re-review. The source-lifecycle inbound wire contract is
+  explicitly not implemented, Cortex delivery remains unset, and no Plaud
+  backlog item was replayed.
 - 2026-07-18 audit APPROVED commit `7cd5fe7` (0.40.0): all five published
   contract hashes recomputed identical, 208/208 tests reproduced, Cortex read
   key verified scoped to exactly the two GET transcript routes with timing-safe
@@ -197,9 +223,9 @@ roadmap.
 - Version: 0.40.1 in source; NAS remains on 0.39.3 from `3cf1539`. The contract
   correction is not deployed and has not activated Cortex delivery.
 - Transcript Ready v1 is operator-ratified at the exact Media2Text `fa205972`
-  five-artifact pin after Cortex consumer ACCEPT `73a3d11`. This docs-only
-  slice records the producer acknowledgement; Cortex must still record the
-  returned acknowledgement commit as final-frozen. No runtime authority follows.
+  five-artifact pin after Cortex consumer ACCEPT `73a3d11`. Media2Text recorded
+  producer acknowledgement at `b90ebf7`, and Cortex recorded the pin
+  final-frozen at `6aa96e5`. No runtime authority follows.
 - Current NAS runtime: `0.39.3`, healthy and authenticated. The Plaud facade is
   reachable only on its three exact TLS machine routes; generic operator paths
   remain behind the web session boundary.
@@ -236,9 +262,10 @@ roadmap.
    through synchronized Home Infra 0.7.6 and Portal 0.20.3.
 4. ~~Send the committed 0.40.1 contract hashes and producer SHA to Cortex for a
    bounded re-review that replaces the historical 0.40.0 pin at `ace98a4`.~~
-   Done: Cortex consumer ACCEPT is `73a3d11`, and the operator ratified the exact
-   pin. Return this published Media2Text acknowledgement commit to Cortex so it
-   can record operator-ratified/final-frozen state. Keep live delivery disabled.
+   Done: Cortex consumer ACCEPT is `73a3d11`, the operator ratified the exact
+   pin, Media2Text published acknowledgement `b90ebf7`, and Cortex recorded the
+   final freeze at `6aa96e5`. Do not dispatch this gate again; keep live delivery
+   disabled pending separate authority.
 5. Configure exact YouTube channel URLs disabled first, preview duration/cost,
    obtain operator cost approval, then canary at concurrency 1.
 

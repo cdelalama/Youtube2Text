@@ -52,15 +52,17 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Storage | Persist outputs + idempotency | TBD | Layout: `output/<channel_title_slug>__<channel_id>/<basename>.*`. |
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
-## Current Status (2026-07-18)
+## Current Status (2026-07-20)
 v0.40.1 stable in source preserves the v0.40.0 provenance, cursor, lifecycle,
 scoped-read, and HMAC revisions while closing the post-ratification schema gap
 found by Cortex. Transcript Ready v1 now mechanically couples ready events to
 `current/true` without source lifecycle evidence and withdrawal events to
 `withdrawn/false` with that evidence required. Mutable consumer review and
 freeze state is external to immutable schema bytes and pinned by commit plus
-SHA-256. Live Cortex delivery remains disabled and the NAS remains on v0.39.3
-pending Cortex re-review of v0.40.1 and a separate deploy gate.
+SHA-256. Media2Text acknowledged the exact pin at `b90ebf7`, and Cortex recorded
+it as operator-ratified, producer-acknowledged, and final-frozen at `6aa96e5`.
+Live Cortex delivery remains disabled and the NAS remains on v0.39.3 behind a
+separate deploy gate.
 
 v0.39.3 stable and deployed from `3cf1539` implements the commit-pinned Plaud Mirror
 Transcription Intake v1 compatibility profile as an additive facade over the

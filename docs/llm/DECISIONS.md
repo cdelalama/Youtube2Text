@@ -519,8 +519,9 @@ Implications:
   that contradict the event meaning.
 - Cortex commit `ace98a4` remains historical acceptance evidence for 0.40.0 but
   cannot authorize live use. Cortex `73a3d11` replaces it as the 0.40.1
-  consumer ACCEPT, and the operator ratified that exact pin. Cortex must record
-  Media2Text's published acknowledgement before marking it final-frozen.
+  consumer ACCEPT, the operator ratified that exact pin, Media2Text published
+  durable acknowledgement `b90ebf7`, and Cortex recorded it as final-frozen at
+  `6aa96e5`. That completed record does not authorize live delivery.
 - `docs/contracts/README.md` contains known stale Plaud live-verification prose,
   but it is part of the ratified five-artifact pin. Preserve it byte-for-byte;
   correction requires a future contract version and a new consumer review.
