@@ -4,8 +4,10 @@ Status: operator-ratified execution and session-dispatch artifact.
 
 Execution checkpoint (2026-07-20): the Media2Text safety foundation, Transcript
 Store, Home Infra status producer, Plaud compatibility facade, registry deploy,
-and real MP3/OGG canaries are complete in deployed 0.39.3. Home Infra 0.7.6 is
-synchronized. Cortex consumer commit `73a3d11` ACCEPTED the exact Media2Text
+and real MP3/OGG canaries are complete in deployed 0.39.3. Home Infra 0.7.11
+release `6055b63` is synchronized with Plaud contract source `781825e`,
+Media2Text contract source `9c4efeb`, and no Portal provenance warnings.
+Cortex consumer commit `73a3d11` ACCEPTED the exact Media2Text
 0.40.1 five-artifact pin at `fa205972`, the operator ratified it, Media2Text
 published durable acknowledgement `b90ebf7`, and Cortex recorded the pin as
 final-frozen at `6aa96e5`. Do not dispatch that horizontal gate again. The Plaud

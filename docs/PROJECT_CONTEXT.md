@@ -91,9 +91,10 @@ legacy JSONL fixture, but live Transcript Ready delivery remains separately
 gated on Cortex review. The runtime includes provider-boundary usage accounting,
 hard economic limits, signed application sessions, CI, registry deployment,
 Transcript Store v1, bounded SQLite coordination, and sanitized Home Infra
-status. Home Infra 0.7.6 release `bb350ea` is synchronized and Infra Portal
-0.20.3 reports exact source provenance plus the truthful `degraded/warning`
-state caused by two retained failed canaries and three pending Transcript Ready
+status. Home Infra 0.7.11 release `6055b63` is synchronized and Infra Portal
+0.20.3 reports Plaud contract source `781825e`, Media2Text contract source
+`9c4efeb`, no provenance warnings, and the truthful `degraded/warning` state
+caused by three retained intake jobs and four pending Transcript Ready
 obligations. The deployed runtime currently has
 the Media2Text operator console splitting `Estado` and `Nueva captura`,
 English-mode activity table headers fixed on the `Status` screen, and explicit

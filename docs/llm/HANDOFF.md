@@ -254,10 +254,11 @@ roadmap.
   remain behind the web session boundary.
 - Home Infra/Infra Portal: service identity is `Media2Text`, technical id is
   `y2t`, project id is `youtube2text`, and the catalog reports image 0.39.3
-  with application auth satisfied. Home Infra 0.7.6
-  release `bb350ea` is synchronized; Infra Portal 0.20.3 mounts exact source
-  commits with no provenance warnings. Its project contract and sanitized
-  pipeline job remain registered.
+  with application auth satisfied. Home Infra 0.7.11 release `6055b63` is
+  synchronized; Infra Portal 0.20.3 provenance reports Plaud contract source
+  `781825e`, Media2Text contract source `9c4efeb`, and no warnings. Runtime
+  truth remains separately pinned to Plaud `e0aec3f` and Media2Text `3cf1539`.
+  The project contract and sanitized pipeline job remain registered.
 - Live pipeline status remains truthfully `degraded/warning`: the latest audit
   observed three failed intake jobs retained for review and four Transcript
   Ready obligations pending because Cortex delivery is intentionally disabled.
@@ -284,7 +285,7 @@ roadmap.
    and respect live hard caps.
 3. ~~Reconcile deployed Media2Text/Plaud versions, truthful degraded state,
    route provenance, and source commits through Home Infra/Infra Portal.~~ Done
-   through synchronized Home Infra 0.7.6 and Portal 0.20.3.
+   through synchronized Home Infra 0.7.11 and Portal 0.20.3.
 4. ~~Send the committed 0.40.1 contract hashes and producer SHA to Cortex for a
    bounded re-review that replaces the historical 0.40.0 pin at `ace98a4`.~~
    Done: Cortex consumer ACCEPT is `73a3d11`, the operator ratified the exact
