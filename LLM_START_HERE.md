@@ -50,17 +50,20 @@ Recommended reading order:
 ## Current Focus (Snapshot)
 
 Source of truth: docs/llm/HANDOFF.md.
-- Last Updated: 2026-07-20
-- Working on: the operator-ratified bilateral connections program is now
-  recorded as D-024, with Media2Text runtime provisioning and two sensitive
-  portable bundles defined but implementation still separately gated.
+- Last Updated: 2026-07-30
+- Working on: D-025 records the Home Infra-owned NAS ingress isolation in
+  addition to the separately gated D-024 connections program. The canonical
+  operator origin is `https://y2t.lamanoriega.com`; the web backend is
+  loopback-only on `127.0.0.1:3000`, and each product deploy/rollback must be
+  followed by Home Infra reconciliation until the deploy absorbs that bind.
 - Status: Media2Text producer acknowledgement `b90ebf7` and Cortex final-freeze
   commit `6aa96e5` make the exact 0.40.1 five-artifact pin operator-ratified,
   producer-acknowledged, and final-frozen. Do not dispatch that gate again. NAS
   remains on 0.39.3; Cortex delivery, deployment, credentials, pending
   obligations, the scheduler, and the 622-item replay remain disabled behind
   separate gates. Only Wave 1 documentation is authorized; `0.41.x`/`0.42.x`
-  product work has not started.
+  product work has not started. The ingress correction changes no product
+  version, frozen artifact, scheduler, provider, replay, or delivery gate.
 
 Keep this section synchronized with the "Current Status" block in docs/llm/HANDOFF.md.
 

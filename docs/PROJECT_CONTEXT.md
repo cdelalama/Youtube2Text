@@ -52,7 +52,7 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Storage | Persist outputs + idempotency | TBD | Layout: `output/<channel_title_slug>__<channel_id>/<basename>.*`. |
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
-## Current Status (2026-07-20)
+## Current Status (2026-07-30)
 v0.40.1 stable in source preserves the v0.40.0 provenance, cursor, lifecycle,
 scoped-read, and HMAC revisions while closing the post-ratification schema gap
 found by Cortex. Transcript Ready v1 now mechanically couples ready events to
@@ -63,6 +63,12 @@ SHA-256. Media2Text acknowledged the exact pin at `b90ebf7`, and Cortex recorded
 it as operator-ratified, producer-acknowledged, and final-frozen at `6aa96e5`.
 Live Cortex delivery remains disabled and the NAS remains on v0.39.3 behind a
 separate deploy gate.
+
+Home Infra now applies D-025's platform-owned loopback override so the
+application-authenticated web backend listens only on `127.0.0.1:3000`; the
+supported operator origin remains `https://y2t.lamanoriega.com`. This ingress
+isolation does not modify product code, version, contracts, scheduler,
+profiles, provider spend, Plaud replay, or Cortex delivery.
 
 v0.39.3 stable and deployed from `3cf1539` implements the commit-pinned Plaud Mirror
 Transcription Intake v1 compatibility profile as an additive facade over the

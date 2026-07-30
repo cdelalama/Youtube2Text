@@ -5,7 +5,25 @@ This file is the current operational snapshot. Historical detail belongs in
 `HISTORY.md`, `HANDOFF_ARCHIVE.md`, `DECISIONS.md`, and the cross-project
 roadmap.
 
-- Last Updated: 2026-07-20
+- Last Updated: 2026-07-30
+
+## NAS Ingress Isolation - 2026-07-30
+
+- D-025 records that `https://y2t.lamanoriega.com` is the only supported
+  production operator origin. The deployed web backend remains on internal
+  port 3000 but now binds only to `127.0.0.1` through a Home Infra-owned
+  Compose overlay.
+- The prior `0.0.0.0:3000` host-network bind let an HTTP request for
+  `buzz.lamanoriega.com:3000` reach the Media2Text login. Home Infra owns the
+  correction: Caddy binds the LAN address on port 3000 only for exact-host
+  redirects to canonical HTTPS, while Media2Text remains loopback-only.
+- After every Media2Text NAS deploy or rollback, immediately run
+  `home-infra/scripts/reconcile-buzz-ingress.sh`; the current product deploy
+  assets can otherwise recreate the all-interface bind.
+- This slice changes documentation and platform ingress only. Media2Text
+  source remains 0.40.1, NAS remains 0.39.3, and no frozen contract artifact,
+  product code, scheduler, provider call, profile, Plaud replay, or Cortex
+  delivery changed.
 
 ## Connections Program Ratification - 2026-07-20
 
@@ -251,7 +269,8 @@ roadmap.
   final-frozen at `6aa96e5`. No runtime authority follows.
 - Current NAS runtime: `0.39.3`, healthy and authenticated. The Plaud facade is
   reachable only on its three exact TLS machine routes; generic operator paths
-  remain behind the web session boundary.
+  remain behind the web session boundary. The web backend is platform-isolated
+  on `127.0.0.1:3000`; raw NAS port 3000 is not a supported product origin.
 - Home Infra/Infra Portal: service identity is `Media2Text`, technical id is
   `y2t`, project id is `youtube2text`, and the catalog reports image 0.39.3
   with application auth satisfied. Home Infra 0.7.11 release `6055b63` is
@@ -330,4 +349,6 @@ npm run test:docker-smoke
 
 Deployment must use `scripts/deploy-nas.sh`; direct NAS Compose invocation is
 not the canonical path. Private host, credential, and rollback details remain
-in Home Infra documentation.
+in Home Infra documentation. Immediately follow a successful deploy or
+rollback with `home-infra/scripts/reconcile-buzz-ingress.sh` until the product
+deploy absorbs D-025's loopback bind.

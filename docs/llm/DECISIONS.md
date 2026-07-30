@@ -582,3 +582,35 @@ Implications:
   only its owned control-plane consequences. ForgeOS may link to that artifact,
   and Home Infra may record deployed versions/digests and sanitized health, but
   neither becomes the pairing authority.
+
+## D-025 - Keep the NAS web backend loopback-only at the platform boundary
+
+Decision:
+- The supported production operator origin remains
+  `https://y2t.lamanoriega.com`; raw NAS port 3000 is not a product URL.
+- Until the product-owned NAS deployment supports the bind natively, Home
+  Infra owns a narrow Compose overlay that sets the deployed web process
+  `HOSTNAME=127.0.0.1` while preserving its internal port 3000 and healthcheck.
+- Home Infra owns the coupled Caddy listener that redirects exact
+  Media2Text/Buzz hostnames from LAN port 3000 to their canonical HTTPS
+  origins. Media2Text does not own Buzz routing.
+- Every Media2Text NAS deploy or rollback must be followed immediately by the
+  Home Infra ingress reconciliation because the current product deploy assets
+  can recreate the web process without the platform overlay.
+
+Rationale:
+- The prior host-network listener used `0.0.0.0:3000`. HTTP routing cannot
+  distinguish products before it reaches that process, so
+  `buzz.lamanoriega.com:3000` displayed the unrelated Media2Text login even
+  though both canonical TLS services were correctly routed.
+- Keeping the backend on loopback removes the cross-hostname exposure without
+  renaming the product, changing its application auth, or inventing a second
+  web port inside the product contract.
+
+Implications:
+- This is a documentation-only acknowledgement of a Home Infra platform
+  control. Source remains 0.40.1 and NAS remains 0.39.3.
+- The final-frozen five-artifact pin, OpenAPI bytes, runtime profiles,
+  scheduler, provider spend, Plaud replay, and Cortex delivery are unchanged.
+- A future product release may absorb a first-class loopback bind and retire
+  the overlay only after Home Infra verifies equivalent negative exposure.
