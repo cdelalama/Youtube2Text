@@ -5,6 +5,19 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.40.2] - 2026-09-12
+
+### Added
+- Added the centrally managed Fable-preferred, exact-Opus fallback review
+  policy.
+
+### Changed
+- Preserved Media2Text code, deployed runtime, frozen artifacts, delivery,
+  replay, spend, and full-template provenance.
+
+### Fixed
+- None.
+
 ## [0.40.1] - 2026-07-18
 
 ### Added

@@ -1,11 +1,11 @@
-<!-- doc-version: 0.40.1 -->
+<!-- doc-version: 0.40.2 -->
 # LLM Work Handoff
 
 This file is the current operational snapshot. Historical detail belongs in
 `HISTORY.md`, `HANDOFF_ARCHIVE.md`, `DECISIONS.md`, and the cross-project
 roadmap.
 
-- Last Updated: 2026-07-30
+- Last Updated: 2026-09-12
 
 ## NAS Ingress Isolation - 2026-07-30
 

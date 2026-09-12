@@ -1,4 +1,4 @@
-<!-- doc-version: 0.40.1 -->
+<!-- doc-version: 0.40.2 -->
 # Project Context - Media2Text
 
 ## Vision
