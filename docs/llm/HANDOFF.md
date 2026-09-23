@@ -1,11 +1,11 @@
-<!-- doc-version: 0.40.2 -->
+<!-- doc-version: 0.40.3 -->
 # LLM Work Handoff
 
 This file is the current operational snapshot. Historical detail belongs in
 `HISTORY.md`, `HANDOFF_ARCHIVE.md`, `DECISIONS.md`, and the cross-project
 roadmap.
 
-- Last Updated: 2026-09-12
+- Last Updated: 2026-09-23 - Codex (DocKit fleet update).
 
 ## NAS Ingress Isolation - 2026-07-30
 
@@ -260,6 +260,11 @@ roadmap.
   diff check, and npm audit with zero vulnerabilities.
 
 ## Current Status
+
+- Last Updated: 2026-09-23 - Codex (DocKit fleet update).
+- Source tooling: DocKit 4.16.2 adopted; see `docs/llm/DOCKIT_ADOPTION.md`.
+  Existing project work and runtime acceptance remain authoritative below.
+
 
 - Version: 0.40.1 in source; NAS remains on 0.39.3 from `3cf1539`. The contract
   correction is not deployed and has not activated Cortex delivery.

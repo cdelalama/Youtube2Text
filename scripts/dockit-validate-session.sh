@@ -62,7 +62,7 @@ while [ $# -gt 0 ]; do
         --help|-h)
             echo "Usage: $0 [--human|--json] [--quiet] [--check NAME]... [--project PATH]"
             echo ""
-            echo "Checks: handoff-date, history-entry, decisions-referenced, version-sync, external-context, external-triggers, orientation, orientation-drift, template-residue, trace-protocol"
+            echo "Checks: handoff-date, history-entry, decisions-referenced, version-sync, external-context, external-triggers, orientation, handoff-shape, orientation-drift, template-residue, trace-protocol"
             echo ""
             echo "Exit codes: 0=pass, 1=fail, 2=script error"
             exit 0
@@ -104,11 +104,16 @@ RESULTS=""
 ERRORS=0
 WARNINGS=0
 CHECKS_RUN=0
+CHECKS_SKIPPED=0
+CHECKS_PASSED=0
 
 add_result() {
     _name="$1"
     _status="$2"
     _message="$3"
+    _skipped=${4:-false}
+    if [ "$_skipped" = true ]; then CHECKS_SKIPPED=$((CHECKS_SKIPPED + 1));
+    elif [ "$_status" = PASS ]; then CHECKS_PASSED=$((CHECKS_PASSED + 1)); fi
 
     CHECKS_RUN=$((CHECKS_RUN + 1))
 
@@ -128,8 +133,10 @@ add_result() {
     fi
     # Escape for valid JSON: backslashes, double quotes, newlines, tabs
     _escaped_msg=$(printf '%s' "$_message" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr '\n' ' ' | sed 's/\t/ /g')
-    RESULTS="$RESULTS{\"name\":\"$_name\",\"status\":\"$_status\",\"message\":\"$_escaped_msg\"}"
+    RESULTS="$RESULTS{\"name\":\"$_name\",\"status\":\"$_status\",\"message\":\"$_escaped_msg\",\"skipped\":$_skipped}"
 }
+
+skip_result() { add_result "$1" "PASS" "$2" true; }
 
 # ── Check: should this check run? ───────────────────────────────────────────
 
@@ -146,11 +153,40 @@ should_run() {
     return 1
 }
 
+tracked_diff_hash() {
+    git -C "$PROJECT_ROOT" diff HEAD --binary --no-ext-diff 2>/dev/null \
+        | git -C "$PROJECT_ROOT" hash-object --stdin 2>/dev/null
+}
+
 is_zero_diff_read_only_session() {
     [ "${DOCKIT_ALLOW_READ_ONLY_SKIP:-0}" = "1" ] || return 1
+
+    _baseline_file=${DOCKIT_SESSION_BASELINE_FILE:-}
+    if [ -n "$_baseline_file" ]; then
+        [ -f "$_baseline_file" ] || return 1
+        _baseline_head=$(sed -n 's/^head=//p' "$_baseline_file" | head -1)
+        _baseline_diff=$(sed -n 's/^diff=//p' "$_baseline_file" | head -1)
+        case "$_baseline_head" in
+            ""|*[!0-9a-f]*) return 1 ;;
+        esac
+        case "$_baseline_diff" in
+            ""|*[!0-9a-f]*) return 1 ;;
+        esac
+        _current_head=$(git -C "$PROJECT_ROOT" rev-parse HEAD 2>/dev/null || true)
+        _current_diff=$(tracked_diff_hash || true)
+        if [ "$_baseline_head" = "$_current_head" ] \
+            && [ "$_baseline_diff" = "$_current_diff" ]; then
+            READ_ONLY_SKIP_REASON="session baseline unchanged; untracked files excluded"
+            return 0
+        fi
+        return 1
+    fi
+
     (cd "$PROJECT_ROOT" \
         && git diff HEAD --quiet 2>/dev/null \
-        && git diff --cached --quiet 2>/dev/null)
+        && git diff --cached --quiet 2>/dev/null) || return 1
+    READ_ONLY_SKIP_REASON="zero tracked diff"
+    return 0
 }
 
 is_clean_tracked_tree() {
@@ -224,7 +260,7 @@ check_handoff_date() {
     fi
 
     if is_zero_diff_read_only_session; then
-        add_result "handoff-date" "PASS" "Skipped (DOCKIT_ALLOW_READ_ONLY_SKIP=1, zero-diff session)"
+        skip_result "handoff-date" "Skipped (DOCKIT_ALLOW_READ_ONLY_SKIP=1, $READ_ONLY_SKIP_REASON)"
         return
     fi
 
@@ -253,7 +289,7 @@ check_history_entry() {
     fi
 
     if is_zero_diff_read_only_session; then
-        add_result "history-entry" "PASS" "Skipped (DOCKIT_ALLOW_READ_ONLY_SKIP=1, zero-diff session)"
+        skip_result "history-entry" "Skipped (DOCKIT_ALLOW_READ_ONLY_SKIP=1, $READ_ONLY_SKIP_REASON)"
         return
     fi
 
@@ -552,8 +588,8 @@ _trace_validate_commit() {
 
     if [ "$_require_subject_time" = true ]; then
         _subject=$(git -C "$PROJECT_ROOT" show -s --format=%s "$_hash" 2>/dev/null || true)
-        _commit_time_seconds=$(git -C "$PROJECT_ROOT" show -s --format=%cd --date=format:'%Y-%m-%d %H:%M:%S UTC' "$_hash" 2>/dev/null || true)
-        _commit_time_minutes=$(git -C "$PROJECT_ROOT" show -s --format=%cd --date=format:'%Y-%m-%d %H:%M UTC' "$_hash" 2>/dev/null || true)
+        _commit_time_seconds=$(TZ=UTC git -C "$PROJECT_ROOT" show -s --format=%cd --date=format-local:'%Y-%m-%d %H:%M:%S UTC' "$_hash" 2>/dev/null || true)
+        _commit_time_minutes=$(TZ=UTC git -C "$PROJECT_ROOT" show -s --format=%cd --date=format-local:'%Y-%m-%d %H:%M UTC' "$_hash" 2>/dev/null || true)
         if [ -n "$_subject" ] && ! printf '%s\n' "$_text" | grep -qF "$_subject"; then
             _trace_append_error "$_context target $_short is missing commit subject: $_subject"
         fi
@@ -592,13 +628,13 @@ check_external_context() {
 
     # CI portability: skip if env var set
     if [ "${DOCKIT_SKIP_EXTERNAL:-0}" = "1" ]; then
-        add_result "external-context" "PASS" "Skipped (DOCKIT_SKIP_EXTERNAL=1)"
+        skip_result "external-context" "Skipped (DOCKIT_SKIP_EXTERNAL=1)"
         return
     fi
 
     # No config file -> explicit skip (opt-in feature)
     if [ ! -f "$CONFIG_FILE" ]; then
-        add_result "external-context" "PASS" "Skipped (no .dockit-config.yml)"
+        skip_result "external-context" "Skipped (no .dockit-config.yml)"
         return
     fi
 
@@ -607,7 +643,7 @@ check_external_context() {
 
     # No external_context section -> explicit skip
     if [ -z "$_ext_path" ]; then
-        add_result "external-context" "PASS" "Skipped (no external_context in config)"
+        skip_result "external-context" "Skipped (no external_context in config)"
         return
     fi
 
@@ -651,20 +687,20 @@ check_external_triggers() {
 
     # CI portability: skip if env var set
     if [ "${DOCKIT_SKIP_EXTERNAL:-0}" = "1" ]; then
-        add_result "external-triggers" "PASS" "Skipped (DOCKIT_SKIP_EXTERNAL=1)"
+        skip_result "external-triggers" "Skipped (DOCKIT_SKIP_EXTERNAL=1)"
         return
     fi
 
     # No config file -> explicit skip
     if [ ! -f "$CONFIG_FILE" ]; then
-        add_result "external-triggers" "PASS" "Skipped (no .dockit-config.yml)"
+        skip_result "external-triggers" "Skipped (no .dockit-config.yml)"
         return
     fi
 
     # Read triggers from config
     _triggers=$(_read_ext_triggers)
     if [ -z "$_triggers" ]; then
-        add_result "external-triggers" "PASS" "No update_triggers defined"
+        skip_result "external-triggers" "No update_triggers defined"
         return
     fi
 
@@ -829,12 +865,12 @@ check_orientation_drift() {
     if ! should_run "orientation-drift"; then return; fi
 
     if [ ! -f "$CONFIG_FILE" ]; then
-        add_result "orientation-drift" "PASS" "Skipped (no .dockit-config.yml; enable with orientation_drift.enabled: true)"
+        skip_result "orientation-drift" "Skipped (no .dockit-config.yml; enable with orientation_drift.enabled: true)"
         return
     fi
 
     if ! _orientation_drift_enabled; then
-        add_result "orientation-drift" "PASS" "Skipped (orientation_drift.enabled is not true)"
+        skip_result "orientation-drift" "Skipped (orientation_drift.enabled is not true)"
         return
     fi
 
@@ -919,7 +955,7 @@ check_template_residue() {
     if ! should_run "template-residue"; then return; fi
 
     if [ -f "$PROJECT_ROOT/dockit-sync-manifest.yml" ]; then
-        add_result "template-residue" "PASS" "Skipped (LLM-DocKit source repo; templates carry placeholders by design)"
+        skip_result "template-residue" "Skipped (LLM-DocKit source repo; templates carry placeholders by design)"
         return
     fi
 
@@ -989,19 +1025,20 @@ check_template_residue() {
 #     canonical short hash / subject / commit time appear in the anchor, and
 #     remote ancestry is checked when origin refs are available.
 #   - HISTORY.md entries dated >= trace_protocol.since that reference backticked
-#     hashes include an inline Trace footer:
-#       Trace: role=executor|auditor|advisor; commits=...; state=...; validation=...; next=...
+#     hashes include an inline Trace footer. Local hashes belong in commits=;
+#     optional cross-repository hashes use external=repo@hash:
+#       Trace: role=executor|auditor|advisor; commits=...; [external=...;] state=...; validation=...; next=...
 
 check_trace_protocol() {
     if ! should_run "trace-protocol"; then return; fi
 
     if [ ! -f "$CONFIG_FILE" ]; then
-        add_result "trace-protocol" "PASS" "Skipped (no .dockit-config.yml; durable Trace enforcement activates via trace_protocol.enabled: true)"
+        skip_result "trace-protocol" "Skipped (no .dockit-config.yml; durable Trace enforcement activates via trace_protocol.enabled: true)"
         return
     fi
 
     if ! _trace_enabled_for_validation; then
-        add_result "trace-protocol" "PASS" "Skipped (trace_protocol.enabled is not true)"
+        skip_result "trace-protocol" "Skipped (trace_protocol.enabled is not true)"
         return
     fi
 
@@ -1082,14 +1119,44 @@ check_trace_protocol() {
             _entry_hashes=$(printf '%s\n' "$_entry" | _trace_hashes_from_text)
             [ -z "$_entry_hashes" ] && continue
 
-            if ! printf '%s\n' "$_entry" | grep -qE 'Trace: role=(executor|auditor|advisor); commits=[^;]+; state=[^;]+; validation=[^;]+; next=.+'; then
+            if ! printf '%s\n' "$_entry" | grep -qE 'Trace: role=(executor|auditor|advisor); commits=[^;]+;( external=[^;]+;)? state=[^;]+; validation=[^;]+; next=.+'; then
                 _trace_append_error "HISTORY entry $_date references backticked commit hash(es) but lacks inline Trace footer"
                 continue
             fi
 
             _commits_field=$(printf '%s\n' "$_entry" | sed 's/.*Trace: role=[^;]*; commits=\([^;]*\); state=.*/\1/')
+            case "$_commits_field" in
+                *'; external='*) _commits_field=$(printf '%s\n' "$_entry" | sed 's/.*Trace: role=[^;]*; commits=\([^;]*\); external=.*/\1/') ;;
+            esac
             _commits_csv=",$(printf '%s' "$_commits_field" | tr -d ' '),"
+
+            _external_field=$(printf '%s\n' "$_entry" | sed -n 's/.*; external=\([^;]*\); state=.*/\1/p')
+            _external_hashes=""
+            if [ -n "$_external_field" ]; then
+                _saved_ifs="$IFS"
+                IFS=','
+                for _external_ref in $_external_field; do
+                    _external_ref=$(printf '%s' "$_external_ref" | tr -d ' ')
+                    if ! printf '%s\n' "$_external_ref" | grep -qE '^[A-Za-z0-9._/-]+@[0-9A-Fa-f]{7,40}$'; then
+                        _trace_append_error "HISTORY entry $_date has invalid external= reference $_external_ref (expected repo@hash)"
+                        continue
+                    fi
+                    _external_hash=$(printf '%s' "${_external_ref##*@}" | tr 'A-F' 'a-f')
+                    if ! printf '%s\n' "$_entry_hashes" | grep -qxF "$_external_hash"; then
+                        _trace_append_error "HISTORY entry $_date external= declares $_external_ref but the exact hash is not backtick-quoted in the entry"
+                    fi
+                    _external_hashes="$_external_hashes $_external_hash"
+                done
+                IFS="$_saved_ifs"
+            fi
+
             for _hash in $_entry_hashes; do
+                if printf '%s\n' "$_external_hashes" | tr ' ' '\n' | grep -qxF "$_hash"; then
+                    case "$_commits_csv" in
+                        *,"$_hash",*) _trace_append_error "HISTORY entry $_date declares $_hash as both local commits= and external=" ;;
+                    esac
+                    continue
+                fi
                 _short=$(cd "$PROJECT_ROOT" && git rev-parse --short=7 "$_hash" 2>/dev/null || printf '%s' "$_hash")
                 case "$_commits_csv" in
                     *,"$_hash",*|*,"$_short",*) ;;
@@ -1112,6 +1179,65 @@ check_trace_protocol() {
     fi
 }
 
+# Default size advice is exit-neutral. Content interpretation requires a contract.
+check_handoff_shape() {
+    if ! should_run "handoff-shape"; then return; fi
+    if [ ! -f "$HANDOFF" ]; then add_result "handoff-shape" "FAIL" "HANDOFF.md missing"; return; fi
+    _hs_max=$(_read_top_level_value handoff_max_lines || true); _hs_max=${_hs_max:-200}
+    case "$_hs_max" in ''|*[!0-9]*) add_result "handoff-shape" "FAIL" "handoff_max_lines must be a nonnegative integer"; return;; esac
+    if [ ${#_hs_max} -gt 6 ]; then add_result "handoff-shape" "FAIL" "handoff_max_lines is too large"; return; fi
+    _hs_lines=$(wc -l < "$HANDOFF" | tr -d ' ')
+    _hs_size=""
+    if [ "$_hs_max" -gt 0 ] && [ "$_hs_lines" -gt "$_hs_max" ]; then _hs_size="HANDOFF has $_hs_lines lines (advisory threshold $_hs_max)"; fi
+    _hs_start=$(_read_top_level_value handoff_active_start || true)
+    _hs_end=$(_read_top_level_value handoff_active_end || true)
+    _hs_roles=$(_read_top_level_value handoff_singleton_sections || true)
+    _hs_version=$(_read_top_level_value handoff_version_label || true)
+    _hs_strict=$(_read_top_level_value handoff_shape_strict || true)
+    _hs_error=""
+    if [ -z "$_hs_start$_hs_end$_hs_roles$_hs_version" ]; then
+        _hs_content="Content checks not configured"
+    elif [ -z "$_hs_start" ] || [ -z "$_hs_end" ] || [ "$_hs_start" = "$_hs_end" ]; then
+        _hs_error="Content checks require distinct explicit active start/end markers"
+    else
+        _hs_expected=$(sed -n '1p' "$PROJECT_ROOT/VERSION" 2>/dev/null || true)
+        _hs_error=$(awk -v begin="$_hs_start" -v end="$_hs_end" -v roles="$_hs_roles" -v label="$_hs_version" -v expected="$_hs_expected" '
+          function issue(s) { errors=errors (errors=="" ? "" : "; ") s }
+          BEGIN { n=split(roles, wanted, ",") }
+          /^[[:space:]]*```/ || /^[[:space:]]*~~~/ { fence=!fence; next }
+          fence || /^[[:space:]]*>/ { next }
+          $0==begin { starts++; active=1; next }
+          $0==end { ends++; if(!active) issue("active end precedes start"); active=0; next }
+          active {
+            if(/^## /) {
+              title=substr($0,4)
+              for(i=1;i<=n;i++) if(wanted[i]!="" && index(title,wanted[i])==1) {
+                rest=substr(title,length(wanted[i])+1)
+                if(rest=="" || rest !~ /^[A-Za-z0-9]/) seen[i]++
+              }
+            }
+            if(label!="" && index($0,label)==1) {
+              versions++; actual=substr($0,length(label)+1)
+              gsub(/^[[:space:]]+|[[:space:]]+$/, "", actual)
+              if(expected=="" || actual!=expected) issue("explicit current source version differs from VERSION")
+            }
+          }
+          END {
+            if(starts!=1 || ends!=1 || active) issue("active scope must appear exactly once and close")
+            for(i=1;i<=n;i++) if(wanted[i]!="" && seen[i]!=1) issue("canonical section " wanted[i] " must appear exactly once")
+            if(label!="" && versions!=1) issue("current source version field must appear exactly once")
+            print errors
+          }
+        ' "$HANDOFF")
+        _hs_content="Configured current-state fields checked; historical prose excluded"
+    fi
+    if [ -n "$_hs_error" ]; then
+        case "$_hs_strict" in true|yes|1) _hs_status=FAIL;; *) _hs_status=WARN;; esac
+        add_result "handoff-shape" "$_hs_status" "$_hs_error${_hs_size:+; $_hs_size}"
+    elif [ -n "$_hs_size" ]; then add_result "handoff-shape" "WARN" "$_hs_size; $_hs_content"
+    else add_result "handoff-shape" "PASS" "Size within advisory threshold; $_hs_content"; fi
+}
+
 # ── Run all checks ──────────────────────────────────────────────────────────
 
 check_handoff_date
@@ -1121,6 +1247,7 @@ check_version_sync
 check_external_context
 check_external_triggers
 check_orientation
+check_handoff_shape
 check_orientation_drift
 check_template_residue
 check_trace_protocol
@@ -1140,7 +1267,7 @@ fi
 TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date +%Y-%m-%dT%H:%M:%SZ)
 
 if [ "$OUTPUT_MODE" = "json" ]; then
-    printf '{"ok":%s,"warnings":%d,"timestamp":"%s","checks":[%s]}\n' "$OK_VALUE" "$WARNINGS" "$TIMESTAMP" "$RESULTS"
+    printf '{"ok":%s,"warnings":%d,"timestamp":"%s","checked":%d,"skipped":%d,"passed":%d,"failed":%d,"checks":[%s]}\n' "$OK_VALUE" "$WARNINGS" "$TIMESTAMP" "$((CHECKS_RUN-CHECKS_SKIPPED))" "$CHECKS_SKIPPED" "$CHECKS_PASSED" "$ERRORS" "$RESULTS"
 else
     # Human-readable output
     echo "=== Documentation Validation ==="
@@ -1149,11 +1276,11 @@ else
 
     # Parse results for human display
     if [ "$ERRORS" -gt 0 ]; then
-        echo "RESULT: FAIL ($ERRORS error(s), $WARNINGS warning(s) in $CHECKS_RUN check(s))"
+        echo "RESULT: FAIL ($ERRORS failed, $WARNINGS warned, $((CHECKS_RUN-CHECKS_SKIPPED)) checked, $CHECKS_SKIPPED skipped)"
     elif [ "$WARNINGS" -gt 0 ]; then
-        echo "RESULT: PASS with $WARNINGS warning(s) ($CHECKS_RUN check(s))"
+        echo "RESULT: PASS with $WARNINGS warning(s) ($((CHECKS_RUN-CHECKS_SKIPPED)) checked, $CHECKS_SKIPPED skipped)"
     else
-        echo "RESULT: PASS ($CHECKS_RUN check(s) passed)"
+        echo "RESULT: PASS ($((CHECKS_RUN-CHECKS_SKIPPED)) checked: $CHECKS_PASSED passed, $CHECKS_SKIPPED skipped)"
     fi
     echo ""
 
@@ -1163,6 +1290,7 @@ else
         status=$(printf '%s' "$entry" | sed 's/.*"status":"\([^"]*\)".*/\1/')
         message=$(printf '%s' "$entry" | sed 's/.*"message":"\([^"]*\)".*/\1/' | sed 's/\\"/"/g')
 
+        if printf '%s' "$entry" | grep -q '"skipped":true'; then status=SKIP; fi
         printf '  [%s] %s: %s\n' "$status" "$name" "$message"
     done
 fi

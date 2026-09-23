@@ -5,6 +5,14 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.40.3] - 2026-09-23
+
+### Changed
+- Updated DocKit delivery checks and Opus 5.5 review policy; no runtime deployment.
+
+
+
+
 ## [0.40.2] - 2026-09-12
 
 ### Added

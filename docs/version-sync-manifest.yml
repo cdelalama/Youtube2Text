@@ -30,3 +30,4 @@ targets:
 - path: package.json               marker: json-version
 - path: package-lock.json          marker: package-lock-version
 - path: openapi.yaml               marker: yaml-info-version
+- path: docs/DELIVERY_CONTRACT.md marker: html-comment
