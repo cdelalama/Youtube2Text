@@ -1,8 +1,8 @@
 # DocKit adoption - 2026-09-23
 
-Source: LLM-DocKit 4.16.2, patch candidate based on revision 361b393; final provenance is in the fleet report.
+Source: LLM-DocKit 4.16.3, patch candidate based on revision 361b393; final provenance is in the fleet report.
 
-Adopted DocKit 4.16.2 delivery controls, visible skipped checks and exact Opus 5.5 high review policy. Existing deployment and acceptance gates remain unchanged.
+Adopted DocKit 4.16.3 delivery controls, visible skipped checks and exact Opus 5.5 high review policy. Existing deployment and acceptance gates remain unchanged.
 
 This is a selective release rollout. Historical full-template identity is retained;
 project hooks, versioning scripts, local validator regressions and excluded sections
