@@ -21,6 +21,17 @@ This document assigns work across Media2Text, Home Infra, Plaud Mirror, and
 Cortex. It does not authorize one repository to edit another. Each project must
 load its own onboarding and validate its own current state before acting.
 
+## Operational priority update - 2026-09-30
+
+Carlos selected desktop and mobile reading. M0 local Markdown preparation is
+now the immediate Media2Text-owned work; see
+[the M0 runbook](operations/M0_MARKDOWN_READING.md). Reading, searching and
+transfer on both real devices remain acceptance gates. Next are M1 one bounded
+new recording, M2 daily reliability, and M3 Cortex. This changes the immediate
+product sequence, not the frozen contracts, paid-replay authority, Cortex's
+own roadmap or the historical stages below. Stage 4B remains accepted backlog.
+No new runtime, provider call, scheduler or downstream delivery is activated.
+
 ## Current Scope Decision
 
 Cortex V1 has operator GO and proceeds in its own repository and session.

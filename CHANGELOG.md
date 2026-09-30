@@ -5,6 +5,26 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.41.0] - 2026-09-30
+
+### Added
+
+- Offline verified Markdown vault export for existing Plaud transcripts, with
+  Spanish reading/index content, separate source-admission validation, exclusion
+  policy, edit-conflict protection and deterministic manifests.
+- Read-only bounded snapshot collector and regression coverage. No NAS runtime
+  deployment, new transcription or automatic device synchronization.
+
+### Changed
+
+- Prioritize M0 desktop/mobile reading and retain M1-M3 and device acceptance gates.
+- Correct current source-version prose while preserving historical contract pins.
+
+### Fixed
+
+- Refresh compatible dependency locks to resolve existing npm audit findings
+  before source publication; the NAS runtime is not upgraded by this change.
+
 ## [0.40.3] - 2026-09-23
 
 ### Changed

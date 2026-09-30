@@ -1,4 +1,4 @@
-<!-- doc-version: 0.40.3 -->
+<!-- doc-version: 0.41.0 -->
 # Project Context - Media2Text
 
 ## Vision
@@ -52,7 +52,14 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Storage | Persist outputs + idempotency | TBD | Layout: `output/<channel_title_slug>__<channel_id>/<basename>.*`. |
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
-## Current Status (2026-07-30)
+## Current Status (2026-09-30)
+v0.41.0 stable in source adds the bounded offline M0 Markdown export for
+existing Plaud transcripts. Carlos selected desktop and mobile; local
+preparation is distinct from private transfer and actual device acceptance.
+The NAS remains 0.39.3. No live contract, provider execution, delivery or
+scheduler changes are included. See docs/operations/M0_MARKDOWN_READING.md.
+
+## Historical implementation checkpoint (2026-07-30)
 v0.40.1 stable in source preserves the v0.40.0 provenance, cursor, lifecycle,
 scoped-read, and HMAC revisions while closing the post-ratification schema gap
 found by Cortex. Transcript Ready v1 now mechanically couples ready events to

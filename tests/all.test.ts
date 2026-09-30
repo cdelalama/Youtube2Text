@@ -75,3 +75,5 @@ import "./cortexFixture.test.js";
 import "./runArtifacts.test.js";
 import "./apiCatalog.test.js";
 import "./versionCheck.test.js";
+
+import "./markdownVault.test.mjs";

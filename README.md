@@ -1,4 +1,4 @@
-<!-- doc-version: 0.40.3 -->
+<!-- doc-version: 0.41.0 -->
 # Media2Text
 
 Media2Text is the visible product name for the `youtube2text` engine: a
@@ -730,3 +730,10 @@ Build TypeScript output:
 ```powershell
 npm run build
 ```
+
+## Read existing transcripts on desktop and mobile
+
+The authenticated library is available at the configured operator origin.
+For a verified private Markdown/Obsidian copy, use the
+[M0 reading runbook](docs/operations/M0_MARKDOWN_READING.md).
+The offline tooling does not transcribe audio or enable device synchronization.

@@ -614,3 +614,23 @@ Implications:
   scheduler, provider spend, Plaud replay, and Cortex delivery are unchanged.
 - A future product release may absorb a first-class loopback bind and retire
   the overlay only after Home Infra verifies equivalent negative exposure.
+
+## D-026 - Existing transcripts become useful before more processing
+
+Decision (2026-09-30): Carlos chose both desktop and mobile. Adopt the bounded
+M0 preparation from the Codex/Opus operational consensus: Media2Text owns a
+private offline Markdown projection of verified existing records, with source
+admission evidence, explicit exclusions and protected personal annotations.
+Obsidian is the prepared local reader option; device transfer and actual
+reading/search acceptance are still pending. No subscription or synchronization
+platform is selected by this decision.
+
+M1 is one separately bounded new recording after current economic headroom;
+M2 is daily reliability; M3 is Cortex retrieval under its owner's controls.
+Full bilateral provisioning remains accepted backlog. Its historical 0.41/0.42
+version suggestions do not reserve release numbers or supersede this priority.
+
+Canonical records remain immutable. V1 recording dates stay unknown. The
+legacy web library is interim browsing with known search/exclusion/date/link
+gaps. Neither the new source version nor a viewport check is deployment or
+physical-device acceptance. No provider spend or historical replay is enabled.

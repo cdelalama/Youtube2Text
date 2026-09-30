@@ -1,8 +1,8 @@
-<!-- doc-version: 0.40.3 -->
+<!-- doc-version: 0.41.0 -->
 # Media2Text Architecture (youtube2text Engine)
 
-> Version: 0.40.1 (synced with package.json)
-> Last Updated: 2026-07-17
+> Version: 0.41.0 source; 0.39.3 NAS runtime
+> Last Updated: 2026-09-30
 > Status: Safety foundation and Plaud compatibility facade deployed and live-verified; Cortex delivery, YouTube scheduler, and bulk replay remain gated
 > Authors: Claude + GPT-5.2 (viewpoints preserved)
 
@@ -85,6 +85,15 @@ Local-first artifacts on disk. Current layout:
 
 Future multi-tenancy (Phase 2+) can wrap the same structure under a `user_id` prefix:
 `output/<user_id>/...` and `audio/<user_id>/...`.
+
+## Offline reading projection (M0)
+
+The snapshot collector uses authenticated immutable GETs plus read-only intake
+identity evidence. The offline exporter writes a derived private Markdown vault
+and a separate custody manifest. It does not mutate canonical records or run
+providers. Exclusions, hash verification and edit conflicts are explicit; no
+scheduler or device synchronization exists. See
+[the operating contract](operations/M0_MARKDOWN_READING.md).
 
 ## Events Contract
 

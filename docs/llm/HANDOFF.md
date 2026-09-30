@@ -1,11 +1,33 @@
-<!-- doc-version: 0.40.3 -->
+<!-- doc-version: 0.41.0 -->
 # LLM Work Handoff
 
 This file is the current operational snapshot. Historical detail belongs in
 `HISTORY.md`, `HANDOFF_ARCHIVE.md`, `DECISIONS.md`, and the cross-project
 roadmap.
 
-- Last Updated: 2026-09-23 - Codex (DocKit fleet update).
+- Last Updated: 2026-09-30 - Codex (M0 local reading preparation).
+
+## M0 desktop and mobile - 2026-09-30
+
+- Compatible dependency lock updates close the existing CI audit findings;
+  Next.js remains on major 15. This source preparation does not patch NAS runtime.
+- Source 0.41.0 prepares a private, offline Markdown reader projection, owned
+  here. Carlos chose both desktop and mobile; device transfer and actual
+  reading/search acceptance remain open. See docs/operations/M0_MARKDOWN_READING.md.
+- Current web reading/download passed 1440/390 viewport checks; anonymous
+  library returned 401. Search, stable note links, provenance exclusion and
+  truthful recording dates remain gaps in that legacy web view.
+- Fresh read-only snapshot has 76 v1 records, 75 trusted source identities and
+  one excluded historical derivative mismatch. No transcript was reprocessed.
+- The source exporter, tests and managed task record carry the preparation;
+  source publication and device acceptance are separate. NAS remains 0.39.3
+  with September 19 start times. No deployment, replay, Cortex delivery or
+  provider spend is authorized by this entry.
+- Immediate order: finish M0 transfer/acceptance, M1 new-recording canary after
+  fresh economic headroom, M2 daily reliability, M3 Cortex. Complete bilateral
+  provisioning is not a prerequisite; its old version suggestions are historical.
+- Prior dated sections below preserve their observations and gates, not current
+  source versions, inventory counts or a request to repeat final-freeze dispatch.
 
 ## NAS Ingress Isolation - 2026-07-30
 
@@ -261,13 +283,13 @@ roadmap.
 
 ## Current Status
 
-- Last Updated: 2026-09-23 - Codex (DocKit fleet update).
+- Last Updated: 2026-09-30 - Codex (M0 local reading preparation).
 - Source tooling: DocKit 4.16.3 adopted; see `docs/llm/DOCKIT_ADOPTION.md`.
   Existing project work and runtime acceptance remain authoritative below.
 
 
-- Version: 0.40.1 in source; NAS remains on 0.39.3 from `3cf1539`. The contract
-  correction is not deployed and has not activated Cortex delivery.
+- Version: 0.41.0 in source; NAS remains on 0.39.3 from `3cf1539`. The M0 offline
+  tooling is separate from the unchanged NAS service; Cortex delivery remains off.
 - Transcript Ready v1 is operator-ratified at the exact Media2Text `fa205972`
   five-artifact pin after Cortex consumer ACCEPT `73a3d11`. Media2Text recorded
   producer acknowledgement at `b90ebf7`, and Cortex recorded the pin
@@ -299,6 +321,9 @@ roadmap.
 
 ## Next Gates
 
+0. Finish M0 private device transfer and reading/search acceptance on desktop
+   and mobile; see the M0 runbook. Older gates below remain independently scoped.
+
 1. ~~Publish/deploy `0.39.3` and prove one provenance-correct OGG canary.~~ Done
    2026-07-17; source, provider derivative, transcript, callback, pull, and lease
    boundaries pass.
@@ -316,8 +341,8 @@ roadmap.
    pin, Media2Text published acknowledgement `b90ebf7`, and Cortex recorded the
    final freeze at `6aa96e5`. Do not dispatch this gate again; keep live delivery
    disabled pending separate authority.
-5. Request separate authority for the D-024 runtime-profile/bundle design and
-   implementation. Do not start `0.41.x`/`0.42.x` from this handoff alone.
+5. D-024 runtime-profile/bundle design and implementation remain independently
+   scoped, without reserved version numbers (see D-026).
 6. Configure exact YouTube channel URLs disabled first, preview duration/cost,
    obtain operator cost approval, then canary at concurrency 1.
 

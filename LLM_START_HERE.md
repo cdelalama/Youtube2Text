@@ -1,4 +1,4 @@
-<!-- doc-version: 0.40.3 -->
+<!-- doc-version: 0.41.0 -->
 # LLM Start Guide - Media2Text
 
 - Last Updated: 2026-09-23 - Codex (DocKit fleet update).
@@ -53,22 +53,20 @@ Recommended reading order:
 ## Current Focus (Snapshot)
 
 Source of truth: docs/llm/HANDOFF.md.
-- Last Updated: 2026-09-12
-- Working on: D-025 records the Home Infra-owned NAS ingress isolation in
-  addition to the separately gated D-024 connections program. The canonical
-  operator origin is `https://y2t.lamanoriega.com`; the web backend is
-  loopback-only on `127.0.0.1:3000`, and each product deploy/rollback must be
-  followed by Home Infra reconciliation until the deploy absorbs that bind.
-- Status: Media2Text producer acknowledgement `b90ebf7` and Cortex final-freeze
-  commit `6aa96e5` make the exact 0.40.1 five-artifact pin operator-ratified,
-  producer-acknowledged, and final-frozen. Do not dispatch that gate again. NAS
-  remains on 0.39.3; Cortex delivery, deployment, credentials, pending
-  obligations, the scheduler, and the 622-item replay remain disabled behind
-  separate gates. Only Wave 1 documentation is authorized; `0.41.x`/`0.42.x`
-  product work has not started. The ingress correction changes no product
-  version, frozen artifact, scheduler, provider, replay, or delivery gate.
-
-Keep this section synchronized with the "Current Status" block in docs/llm/HANDOFF.md.
+- Last Updated: 2026-09-30
+- Source 0.41.0 prepares M0 private Markdown reading for desktop and mobile.
+  The offline exporter excludes the known bad source attribution, preserves
+  canonical evidence, and blocks modified generated notes. Device transfer and
+  actual reading/search acceptance remain open; see
+  docs/operations/M0_MARKDOWN_READING.md.
+- The NAS stays on 0.39.3. The canonical authenticated browser entry remains
+  https://y2t.lamanoriega.com. No scheduler, replay, new transcription, runtime
+  deployment or Cortex delivery is enabled. D-025 ingress reconciliation is
+  still required after every future deploy/rollback.
+- The historical 0.40.1 Transcript Ready pin is final-frozen; do not dispatch
+  that gate again. Current version markers are not new consumer acceptance.
+- M0 is followed by M1 new recording, M2 daily reliability, then M3 Cortex.
+  D-024 bilateral provisioning remains accepted backlog, independently gated.
 
 ## Getting Started Checklist
 - [ ] Read this entire file and update placeholders

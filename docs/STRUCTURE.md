@@ -75,3 +75,11 @@ youtube2text/
 2. If integrating: read `INTEGRATION.md`.
 2. Review `docs/PROJECT_CONTEXT.md` and `docs/ARCHITECTURE.md` for roadmap.
 3. Read `docs/llm/README.md` and then `docs/llm/HANDOFF.md` before coding.
+
+## M0 offline reading
+
+- `scripts/snapshot-markdown-input.mjs`: bounded read-only v1 evidence collection.
+- `scripts/export-markdown-vault.mjs`: verified private Markdown projection.
+- `tests/markdownVault.test.mjs`: integrity, exclusion, conflict and custody guards.
+- `docs/operations/M0_MARKDOWN_READING.md`: ownership, transfer and acceptance.
+- `docs/llm/WORK_INDEX.md` and `docs/llm/work/`: parent-owned task dispositions.

@@ -1,0 +1,10 @@
+{
+  "artifacts": [],
+  "branch": "work/m0-markdown-reading-20260930",
+  "id": "m0-markdown-reading-20260930",
+  "next_step": "Offline M0 source and private NAS reading artifact prepared and reviewed; publish source, retain checkout/custody. Actual desktop/mobile transfer and reading/search acceptance remain operator follow-up; NAS runtime security upgrade is separate.",
+  "project": "youtube2text",
+  "purpose": "Prepare verified local Markdown reading for desktop and mobile without runtime processing",
+  "schema": 1,
+  "state": "closed"
+}
