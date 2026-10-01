@@ -52,10 +52,11 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Storage | Persist outputs + idempotency | TBD | Layout: `output/<channel_title_slug>__<channel_id>/<basename>.*`. |
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
-## Current Status (2026-09-30)
+## Current Status (2026-10-01)
 v0.41.0 stable in source adds the bounded offline M0 Markdown export for
-existing Plaud transcripts. Carlos selected desktop and mobile; local
-preparation is distinct from private transfer and actual device acceptance.
+existing Plaud transcripts. Carlos confirmed notes work on both actual devices
+on October 1 in response to the reading/search/offline question; M0 is accepted.
+The next proposed step is one M1 recording after connection and cost preflight.
 The NAS remains 0.39.3. No live contract, provider execution, delivery or
 scheduler changes are included. See docs/operations/M0_MARKDOWN_READING.md.
 

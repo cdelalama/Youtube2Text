@@ -23,14 +23,16 @@ load its own onboarding and validate its own current state before acting.
 
 ## Priority and work-line continuity - 2026-10-01
 
-The immediate user outcome is reading the prepared notes on computer and Android.
-The [Spanish operator guide](operations/M0_READING_GUIDE.es.md) starts with
-one action: download the ZIP from the personal NAS folder, extract it and open
-LEEME in Obsidian. Then copy to the phone and verify search and offline reading.
-This real-device result remains open; source/export checks do not substitute it.
+M0 is complete by Carlos's October 1 confirmation that notes work on computer
+and Android, answering the explicit reading/search/offline question. See
+[the operator acceptance receipt](operations/M0_ACCEPTANCE_2026-10-01.md).
+The next agent action is to check the current Plaud connection, provider and
+cost limits, then prepare one named-recording M1 test with an estimate. Carlos
+approves the chosen recording and cost before any processing. The [Spanish guide](operations/M0_READING_GUIDE.es.md) remains
+available for reinstalling or opening the existing reading copy.
 
 There are two work lines, not one silently renumbered sequence. Daily use starts
-with selected M0, then proposed M1 one new recording, M2 daily reliability and
+with accepted M0, then proposed M1 one new recording, M2 daily reliability and
 M3 Cortex. The existing foundation and Stage 4B/bilateral connection program
 remain retained owner work. Separate lines do not imply simultaneous execution.
 The September 29 consensus and September 30 device choice explain the priority:

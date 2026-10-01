@@ -1,6 +1,6 @@
 # M0: private transcript reading on desktop and mobile
 
-Status: local preparation; device transfer and real-device acceptance remain open.
+Status: M0 accepted by Carlos on 2026-10-01; see M0_ACCEPTANCE_2026-10-01.md.
 Owner: Media2Text. Source 0.41.0 adds offline tooling; NAS stays on 0.39.3.
 
 ## Operator instructions
@@ -8,7 +8,8 @@ Owner: Media2Text. Source 0.41.0 adds offline tooling; NAS stays on 0.39.3.
 Use [the Spanish reading guide](M0_READING_GUIDE.es.md) with Carlos. It names
 the prepared archive, personal NAS folder, computer and Android steps, and the
 observable result. Recorded Portal product context identifies Android; do not
-repeat the platform question. Installed apps and device success remain unverified.
+repeat the platform question. Carlos has confirmed the reading outcome on both
+devices; software versions and device logs were not independently inspected.
 
 ## Scope and sequence
 
@@ -118,7 +119,8 @@ operator access; this is not a hostile multi-user synchronization system.
 - On both actual devices: open the folder in the chosen reader, find two
   personally meaningful terms, open results/index links and read one note
   offline. Physical-device and reading-quality acceptance belong to Carlos.
-- M0 is not complete until transfer and both device checks pass. M1 still needs
+- Carlos accepted this outcome on both devices on October 1, answering the
+  explicit reading/search/offline question. M1 still needs
   a fresh budget/headroom check and a separately bounded new recording.
 
 No live API/content contract changed. The historically ratified five-artifact

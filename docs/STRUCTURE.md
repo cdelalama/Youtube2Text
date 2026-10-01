@@ -83,3 +83,5 @@ youtube2text/
 - `tests/markdownVault.test.mjs`: integrity, exclusion, conflict and custody guards.
 - `docs/operations/M0_MARKDOWN_READING.md`: ownership, transfer and acceptance.
 - `docs/llm/WORK_INDEX.md` and `docs/llm/work/`: parent-owned task dispositions.
+
+- `docs/operations/M0_ACCEPTANCE_2026-10-01.md`: Carlos's acceptance of M0 on computer and Android, next M1 preflight and the retained Dossier publication gate.

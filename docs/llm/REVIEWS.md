@@ -1,4 +1,12 @@
 
+## 2026-10-01 - M0 operator acceptance receipt
+
+- Exact independent reviewer: `claude-opus-5-5`; high effort requested; returned modelUsage/canonicalModel verified. Read-only session `151ff611-275b-4ad9-bf7e-68e03cca6e7a`, prior complete owner onboarding retained, bounded primary receipt/diff review.
+- Command: `claude -p --resume 151ff611-275b-4ad9-bf7e-68e03cca6e7a --model claude-opus-5-5 --effort high --restricted --tools Read,Glob,Grep --allowedTools Read,Glob,Grep --permission-mode dontAsk --strict-mcp-config --mcp-config '{"mcpServers":{}}' --max-turns 8 --add-dir /home/cdelalama/src --add-dir /home/cdelalama/.local/state/plaud-mirror/m0-acceptance-20261001 --output-format json`.
+- Verdict: SOURCE_GO after C1 explicitly preserves Carlos's approval of one recording and its cost. Corrected the guide to quote Carlos's real answer separately from the test criterion, and reconciled current focus/Trace. Final document/version/whitespace checks required before commit; the reviewer allowed these conditions and receipt metadata without another round.
+- Native caller-side capture SHA256 `a6afc44ffcdbb695de1e30f6320e74277ff82a027c679f090d6397bf7caa2c87`, copy equality verified. Private packet contains baseline commits, exact reviewed patches, prompts and result; no transcript contents are in Git.
+- Scope: records explicit M0 user acceptance on both devices, not an independently observed device test. M1 processing, Dossier S7 and runtime/expense changes remain outside this receipt. No product-code tests repeated for this documentation-only acceptance record.
+
 ## 2026-10-01 - Shared operator clarity and roadmap continuity
 
 - Advisor: exact `claude-opus-5-5`, high effort, session `aee91cc8-92ab-44df-9fff-649a6c56df80`; canonicalModel verified. Native capture SHA256 `442c06282448f710a81721e79cc44ae6a8865c698a66135f40bed4d5341b8cce`.

@@ -11,10 +11,11 @@ current usefulness, one named next action, observable completion and the fate
 of earlier work after priority changes. Existing priorities and runtime gates
 remain. Source and installed-policy review are tracked in REVIEWS.md.
 
-Immediate user step: download the prepared notes ZIP from the personal NAS
-folder and open LEEME in Obsidian on the computer; then copy to Android and
-try search/offline reading. See Media2Text docs/operations/M0_READING_GUIDE.es.md.
-M0 is selected; M1-M3 are proposed next. Base phases and connection work remain
+M0 accepted by Carlos on 2026-10-01: notes work on computer and Android, in
+response to the explicit reading/search/offline question. Receipt:
+docs/operations/M0_ACCEPTANCE_2026-10-01.md. Next agent action: check the
+connection and current cost limits before preparing one new-recording M1 test.
+M0 is complete; M1-M3 are proposed next. Base phases and connection work remain
 retained obligations, not completed or newly activated parallel execution.
 
 # LLM Work Handoff
@@ -23,15 +24,16 @@ This file is the current operational snapshot. Historical detail belongs in
 `HISTORY.md`, `HANDOFF_ARCHIVE.md`, `DECISIONS.md`, and the cross-project
 roadmap.
 
-- Last Updated: 2026-09-30 - Codex (M0 local reading preparation).
+- Last Updated: 2026-10-01 - Codex (M0 operator acceptance).
 
-## M0 desktop and mobile - 2026-09-30
+## M0 preparation (September 30) and acceptance (October 1)
 
 - Compatible dependency lock updates close the existing CI audit findings;
   Next.js remains on major 15. This source preparation does not patch NAS runtime.
 - Source 0.41.0 prepares a private, offline Markdown reader projection, owned
-  here. Carlos chose both desktop and mobile; device transfer and actual
-  reading/search acceptance remain open. See docs/operations/M0_MARKDOWN_READING.md.
+  here. Carlos now confirms notes work on both devices in response to the
+  explicit reading/search/offline question. M0 is accepted; see
+  docs/operations/M0_ACCEPTANCE_2026-10-01.md.
 - Current web reading/download passed 1440/390 viewport checks; anonymous
   library returned 401. Search, stable note links, provenance exclusion and
   truthful recording dates remain gaps in that legacy web view.
@@ -41,7 +43,7 @@ roadmap.
   source publication and device acceptance are separate. NAS remains 0.39.3
   with September 19 start times. No deployment, replay, Cortex delivery or
   provider spend is authorized by this entry.
-- Immediate order: finish M0 transfer/acceptance, M1 new-recording canary after
+- Immediate order: M0 accepted; agent prepares one M1 new-recording test after
   fresh economic headroom, M2 daily reliability, M3 Cortex. Complete bilateral
   provisioning is not a prerequisite; its old version suggestions are historical.
 - Prior dated sections below preserve their observations and gates, not current
@@ -301,7 +303,7 @@ roadmap.
 
 ## Current Status
 
-- Last Updated: 2026-09-30 - Codex (M0 local reading preparation).
+- Last Updated: 2026-10-01 - Codex (M0 operator acceptance).
 - Source tooling: DocKit 4.16.3 adopted; see `docs/llm/DOCKIT_ADOPTION.md`.
   Existing project work and runtime acceptance remain authoritative below.
 

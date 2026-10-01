@@ -15,3 +15,5 @@ Index:
 - `API_CONTRACT.md` - OpenAPI + generated types/client + contract-check workflow to prevent endpoint/type drift.
 - `DEPLOY_PLAYBOOK.md` - Single-tenant server deployment guidance (Docker + reverse proxy + security).
 - `DOCS_VERSIONING_ROADMAP.md` - Delivery roadmap for documentation/versioning guardrails and release discipline.
+
+- `docs/operations/M0_ACCEPTANCE_2026-10-01.md`: Carlos's acceptance of M0 on computer and Android, next M1 preflight and the retained Dossier publication gate.

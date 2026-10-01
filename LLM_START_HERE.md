@@ -9,10 +9,11 @@ current usefulness, one named next action, observable completion and the fate
 of earlier work after priority changes. Existing priorities and runtime gates
 remain. Source and installed-policy review are tracked in REVIEWS.md.
 
-Immediate user step: download the prepared notes ZIP from the personal NAS
-folder and open LEEME in Obsidian on the computer; then copy to Android and
-try search/offline reading. See Media2Text docs/operations/M0_READING_GUIDE.es.md.
-M0 is selected; M1-M3 are proposed next. Base phases and connection work remain
+M0 accepted by Carlos on 2026-10-01: notes work on computer and Android, in
+response to the explicit reading/search/offline question. Receipt:
+docs/operations/M0_ACCEPTANCE_2026-10-01.md. Next agent action: check the
+connection and current cost limits before preparing one new-recording M1 test.
+M0 is complete; M1-M3 are proposed next. Base phases and connection work remain
 retained obligations, not completed or newly activated parallel execution.
 
 # LLM Start Guide - Media2Text
@@ -69,12 +70,12 @@ Recommended reading order:
 ## Current Focus (Snapshot)
 
 Source of truth: docs/llm/HANDOFF.md.
-- Last Updated: 2026-09-30
+- Last Updated: 2026-10-01
 - Source 0.41.0 prepares M0 private Markdown reading for desktop and mobile.
   The offline exporter excludes the known bad source attribution, preserves
-  canonical evidence, and blocks modified generated notes. Device transfer and
-  actual reading/search acceptance remain open; see
-  docs/operations/M0_MARKDOWN_READING.md.
+  canonical evidence, and blocks modified generated notes. Carlos accepted
+  reading/search/offline use on both actual devices on October 1; see
+  docs/operations/M0_ACCEPTANCE_2026-10-01.md.
 - The NAS stays on 0.39.3. The canonical authenticated browser entry remains
   https://y2t.lamanoriega.com. No scheduler, replay, new transcription, runtime
   deployment or Cortex delivery is enabled. D-025 ingress reconciliation is
