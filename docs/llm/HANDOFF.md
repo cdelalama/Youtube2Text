@@ -1,4 +1,20 @@
 <!-- doc-version: 0.41.0 -->
+
+## Operator clarity and roadmap continuity - 2026-10-01
+
+Last Updated: 2026-10-01 - Codex.
+Carlos requires actionable operator status across projects. The managed
+operator-clarity rule is selectively adopted; author/reviewer must inspect
+current usefulness, one named next action, observable completion and the fate
+of earlier work after priority changes. Existing priorities and runtime gates
+remain. Source and installed-policy review are tracked in REVIEWS.md.
+
+Immediate user step: download the prepared notes ZIP from the personal NAS
+folder and open LEEME in Obsidian on the computer; then copy to Android and
+try search/offline reading. See Media2Text docs/operations/M0_READING_GUIDE.es.md.
+M0 is selected; M1-M3 are proposed next. Base phases and connection work remain
+retained obligations, not completed or newly activated parallel execution.
+
 # LLM Work Handoff
 
 This file is the current operational snapshot. Historical detail belongs in

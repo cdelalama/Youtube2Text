@@ -1,8 +1,11 @@
 # LLM Change History
 
+
 Append new entries at the top so the most recent activity is easiest to find. Follow the required format:
 
 YYYY-MM-DD - <LLM_NAME> - <Brief summary> - Files: [list of touched files] - Version impact: <yes/no + details>
+
+2026-10-01 - Codex - Applied the shared operator-clarity rule and explicit roadmap continuity requested by Carlos. Plain next actions and user-observable completion replace technical shorthand; earlier priorities, history and acceptance remain. Source and curation review precede delivery. Files: [LLM_START_HERE.md, docs/MEDIA_PIPELINE_CROSS_PROJECT_ROADMAP.md, docs/operations/M0_READING_GUIDE.es.md, docs/operations/M0_MARKDOWN_READING.md, docs/llm/*]. Version impact: no (documentation only). Trace: role=executor; state=clarity-candidate; validation=review-and-owner-checks-pending; next=source-review-and-verified-reader
 
 2026-09-30 - Codex - Prepared M0 desktop/mobile Markdown reading with read-only verified snapshots, admission identity checks, exclusions and protected personal notes; recorded browser viewport evidence and pending device transfer/acceptance. Files: scripts/*markdown*.mjs, tests/markdownVault.test.mjs, tests/all.test.ts, docs/operations/M0_MARKDOWN_READING.md, roadmap/onboarding/version/workspace documentation. Version impact: yes (0.41.0 additive offline feature and compatible dependency locks; NAS 0.39.3 unchanged). Independent exact Opus review conditions R1/R2 resolved; 228 tests, both builds, contracts and zero-finding dependency audits pass.
 

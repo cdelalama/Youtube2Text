@@ -3,6 +3,13 @@
 Status: local preparation; device transfer and real-device acceptance remain open.
 Owner: Media2Text. Source 0.41.0 adds offline tooling; NAS stays on 0.39.3.
 
+## Operator instructions
+
+Use [the Spanish reading guide](M0_READING_GUIDE.es.md) with Carlos. It names
+the prepared archive, personal NAS folder, computer and Android steps, and the
+observable result. Recorded Portal product context identifies Android; do not
+repeat the platform question. Installed apps and device success remain unverified.
+
 ## Scope and sequence
 
 Carlos selected both desktop and mobile on 2026-09-30. The September 29
@@ -81,7 +88,7 @@ records, previous snapshots and backups remain intact; exclusion is not erasure.
 ## Transfer and recovery
 
 The output is ordinary Markdown, prepared for a local Obsidian vault on both
-devices. Phone platform and an existing private transfer path are still inputs;
+devices. The operator guide uses the recorded Android environment and a manual USB copy;
 this preparation does not buy Obsidian Sync or choose a new cloud service.
 The web entry can be used meanwhile with the existing login and network access.
 

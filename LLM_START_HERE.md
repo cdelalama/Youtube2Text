@@ -1,4 +1,20 @@
 <!-- doc-version: 0.41.0 -->
+
+## Operator clarity and roadmap continuity - 2026-10-01
+
+Last Updated: 2026-10-01 - Codex.
+Carlos requires actionable operator status across projects. The managed
+operator-clarity rule is selectively adopted; author/reviewer must inspect
+current usefulness, one named next action, observable completion and the fate
+of earlier work after priority changes. Existing priorities and runtime gates
+remain. Source and installed-policy review are tracked in REVIEWS.md.
+
+Immediate user step: download the prepared notes ZIP from the personal NAS
+folder and open LEEME in Obsidian on the computer; then copy to Android and
+try search/offline reading. See Media2Text docs/operations/M0_READING_GUIDE.es.md.
+M0 is selected; M1-M3 are proposed next. Base phases and connection work remain
+retained obligations, not completed or newly activated parallel execution.
+
 # LLM Start Guide - Media2Text
 
 - Last Updated: 2026-09-23 - Codex (DocKit fleet update).
@@ -99,6 +115,28 @@ Use the Do Not Touch section in docs/llm/HANDOFF.md to flag any files or areas t
 ---
 
 Every change must be documented. If you are unsure about a rule, ask the user before proceeding.
+
+<!-- DOCKIT-TEMPLATE:START operator-clarity -->
+### Operator clarity and roadmap continuity
+
+- Write all operator-facing status, roadmaps, Dossiers, reports and questions
+  for someone returning without the chat. Use the configured product language.
+- Explain the useful outcome, what works today, what remains, and one immediate
+  next step: who acts, where, what they do, and the result they should see.
+  Read recorded operator/device preferences before asking for missing details.
+- Define completion with an observable user example. Unexplained phrases such
+  as "private transfer", "acceptance verified", "gate" or "canary" are not
+  actionable instructions. Keep technical evidence available separately.
+- Explain priority changes with previous/new order, date, reason and authority;
+  show what happens to the earlier unfinished work. Separate work lines and
+  real dependencies. Array order does not establish progress or prerequisites.
+- Preserve IDs, historical evidence, pending obligations and proposed/accepted
+  boundaries. Prepared, published, deployed and personally tried remain distinct.
+- Before delivery, author and independent reviewer read the actual operator
+  view: what is usable, who does what next, what finishes it, and why the route
+  changed. Correct ambiguity before claiming delivery. Schema PASS is not proof
+  of comprehension. Follow LLM-DocKit docs/OPERATOR_CLARITY.md for examples.
+<!-- DOCKIT-TEMPLATE:END operator-clarity -->
 
 <!-- DOCKIT-TEMPLATE:START doc-update-rules -->
 ### Documentation Update Rules

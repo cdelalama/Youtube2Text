@@ -21,6 +21,24 @@ This document assigns work across Media2Text, Home Infra, Plaud Mirror, and
 Cortex. It does not authorize one repository to edit another. Each project must
 load its own onboarding and validate its own current state before acting.
 
+## Priority and work-line continuity - 2026-10-01
+
+The immediate user outcome is reading the prepared notes on computer and Android.
+The [Spanish operator guide](operations/M0_READING_GUIDE.es.md) starts with
+one action: download the ZIP from the personal NAS folder, extract it and open
+LEEME in Obsidian. Then copy to the phone and verify search and offline reading.
+This real-device result remains open; source/export checks do not substitute it.
+
+There are two work lines, not one silently renumbered sequence. Daily use starts
+with selected M0, then proposed M1 one new recording, M2 daily reliability and
+M3 Cortex. The existing foundation and Stage 4B/bilateral connection program
+remain retained owner work. Separate lines do not imply simultaneous execution.
+The September 29 consensus and September 30 device choice explain the priority:
+use the existing collection before building the whole setup workflow. Carlos's
+October 1 direction requires that explanation to be visible. Original IDs,
+contracts, acceptance and cost authority remain intact. M2 must reconcile the
+joint Phase 3 reliability checks; M3 is not an amendment of Cortex's own roadmap.
+
 ## Operational priority update - 2026-09-30
 
 Carlos selected desktop and mobile reading. M0 local Markdown preparation is

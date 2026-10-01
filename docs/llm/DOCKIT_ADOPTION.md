@@ -25,3 +25,11 @@ Validation and independent review are recorded in the source fleet report:
 
 The upstream regression suite runs in the DocKit source repository, where its
 control-plane fixtures exist. Existing adopter regression files are preserved.
+
+
+## 2026-10-01 - Selective operator-clarity policy
+
+Adopted only the managed operator-clarity section from LLM-DocKit 4.18.2.
+Existing hooks, template identity, source pins and project priorities remain.
+This is reviewed manual section adoption in an existing checkout, not a full
+template upgrade or a claim that historical publications were rewritten.
