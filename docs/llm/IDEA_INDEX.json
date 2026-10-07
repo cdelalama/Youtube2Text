@@ -224,6 +224,13 @@
         "IDEA-0004"
       ],
       "no_ideas_reason": null
+    },
+    {
+      "task": "docs/llm/work/portal-dossier-20261007.json",
+      "ideas": [
+        "REF-D027"
+      ],
+      "no_ideas_reason": null
     }
   ]
 }

@@ -98,3 +98,39 @@ The coherent S1 backup restores into absent isolated same-NAS custody and exact
 current/history reads agree. This is not physically independent recovery. Final
 curated Media/Home snapshots and independent actual-view review follow. No
 application delivery ledger is fabricated; full application delivery remains open.
+
+## Completed scoped Dossier delivery
+
+Verified UTC: 2026-10-07T22:56:02Z. Independent exact claude-opus-5-5/high delivery review
+cc28d50b-bdcd-406a-ad44-6a329c2a6575 returned scoped DELIVERY_GO with native strict custody.
+Media2Text shared S2: shared:49ffa28f6ae531d5d5170491314accd8b13ae418af3bbbad22949f3de578d4a3.
+Home Infra shared S18: shared:e49d36bd143b39c87b512ad2bea45216eef71cb3695ae7a44636313ca0956d1a.
+Both exact contents, current/history permalinks, five Spanish sections at three
+viewports and isolated coherent same-NAS restores pass. Earlier histories remain
+unchanged. The nine-reader Portal, existing image/configuration, service identity
+and read-only application checks are preserved. Source0.41.3 versus runtime0.39.3
+and M1/M2 acceptance boundaries remain explicit.
+
+Home publication acknowledgment and standard backup exceeded the existing client
+limit. Read-only bounded reconciliation proved the exact S18 publication without
+a mutation retry; bounded backup/restoration verified the same immutable history.
+The original Home restore verifier exited143; all19current/history selections
+were then completed in bounded read-only batches against the same restored copy,
+without a second restore. The installed transport limit remains owner work.
+A pre-submit local mode refusal
+was fixed with unchanged reviewed bytes/UUID after status proved no submission.
+Historical shared source anchors are preserved; only new/changed source anchors
+are required to be newly published. Earlier cached S17 screenshots are retained
+as pre-refresh evidence and superseded by exact S18 reader checks.
+
+The full application delivery matrix returns FAIL (exit1), missing owner evidence
+for this exact documentation revision; it is not a scoped Dossier failure or an
+authorization to fabricate a release ledger. No full application PASS is claimed.
+The baseline global Spitfire URL audit failure also remains separately owned.
+
+This parent task closes only the authorized instructions and dedicated Dossier
+delivery. Existing idea dispositions, historical coverage/unknowns and unrelated
+work records are preserved. The managed host record and exact portable task row
+are reconciled without overwriting other tasks. Retain checkout and evidence.
+Dossier assessment: no_change for these closing receipts; meaningful adoption is
+already represented in the two reviewed shared snapshots. No recursive capture.

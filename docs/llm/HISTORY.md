@@ -1,3 +1,5 @@
+2026-10-07 - Codex - Close authorized Media2Text dedicated Dossier delivery: exact Opus review, Media S2/Home S18, actual Spanish reader/card/history and coherent same-NAS restores. Source/runtime/product gates remain separate; full application matrix exit1 and baseline unrelated catalog issue retained. Task/idea reconciliation complete; receipt-only Dossier no_change. Trace UTC 2026-10-07T22:56:02Z.
+
 2026-10-07 - Codex - Verify dedicated Dossier initial delivery: published source/intake, native L1/shared S1, nine readers, card actions, Spanish views, role negatives and same-NAS recovery. Source 0.41.3, runtime 0.39.3. Final Media/Home refresh and independent actual-view closeout follow; M1-M3 stay open.
 
 2026-10-07 - Codex - Correct the two explicit source-version prose fields to 0.41.3 after CI37695550549 exposed their drift from the synchronized manifest. Runtime remains 0.39.3; no processing change. Initial Dossier content and source anchors remain accurate.

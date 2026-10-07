@@ -2,9 +2,9 @@
   "artifacts": [],
   "branch": "work/portal-dossier-20261007",
   "id": "portal-dossier-20261007",
-  "next_step": "Complete this task and record its result or explicit pending disposition.",
+  "next_step": "Use the dedicated Media2Text Dossier in Portal. Carlos owns the pending M1 device reading test; agent-owned reliability, application release, Windows/fleet and independent recovery stay open. Retain this checkout and review/recovery evidence.",
   "project": "youtube2text",
   "purpose": "Complete Media2Text integration guidance and dedicated reviewed Dossier delivery",
   "schema": 1,
-  "state": "active"
+  "state": "closed"
 }

@@ -19,6 +19,11 @@ No new provider spend, replay, scheduler or application deployment occurred.
 The final meaningful Dossier/Home refresh and independent delivery readback are
 being closed; receipt-only updates then assess no_change.
 
+Final receipt (2026-10-07T22:56:02Z): reviewed Media S2 and Home S18 are published,
+readable and restored with exact history; scoped DELIVERY_GO. The dedicated
+Dossier task is closed. Closing receipts assess no_change; M1/M2 and the full
+application delivery gate remain open. See docs/operations/DOSSIER_ADOPTION_2026-10-07.md.
+
 ## Idea continuity adoption - 2026-10-07
 
 Last Updated: 2026-10-07 - Codex.

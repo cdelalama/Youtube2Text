@@ -19,6 +19,11 @@ No new provider spend, replay, scheduler or application deployment occurred.
 The final meaningful Dossier/Home refresh and independent delivery readback are
 being closed; receipt-only updates then assess no_change.
 
+Final receipt (2026-10-07T22:56:02Z): reviewed Media S2 and Home S18 are published,
+readable and restored with exact history; scoped DELIVERY_GO. The dedicated
+Dossier task is closed. Closing receipts assess no_change; M1/M2 and the full
+application delivery gate remain open. See docs/operations/DOSSIER_ADOPTION_2026-10-07.md.
+
 ## Idea continuity delivery receipt - 2026-10-07
 
 This receipt supersedes preparation/publication-pending wording in earlier revisions.
@@ -468,7 +473,7 @@ roadmap.
 - Visible brand: Media2Text. Technical runtime/repo/env contract remains
   `youtube2text` + `Y2T_` per D-018.
 
-## Trace Anchor
+## Previous Trace Anchor - initial verification
 
 - Role: executor
 - Sent: 2026-10-07 12:45:42 CEST (10:45:42 UTC)
@@ -556,3 +561,11 @@ deploy absorbs D-025's loopback bind.
 - Next gate: Carlos recognizes, reads, searches and opens the new note offline on both computer and Android. Then M2 reliability; existing upstream-watch/physical-recovery gates remain separate.
 
 Continuity source receipt (2026-10-07 14:55:57 UTC): independent SOURCE_GO; explicit baseline and pinned helper verified. Required Dossier delivery remains open in the owning continuity note.
+
+## Trace Anchor
+
+- Role: executor; sent: 2026-10-07T22:56:02Z.
+- State verified: scoped dedicated Dossier delivery complete; source publication/readback follows this receipt.
+- Validation: exact reviewed snapshots, nine readers, current/history, Spanish views and same-NAS restores.
+- Next: Carlos M1 device test; agent M2 reliability and separate application release gate.
+- Dossier: no_change; no new meaningful decision beyond the already reviewed delivery.
