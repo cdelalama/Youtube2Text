@@ -173,5 +173,16 @@
       }
     }
   ],
-  "task_reconciliations": []
+  "task_reconciliations": [
+    {
+      "task": "docs/llm/work/idea-continuity-20261007.json",
+      "ideas": [
+        "IDEA-0001",
+        "IDEA-0002",
+        "IDEA-0003",
+        "IDEA-0004"
+      ],
+      "no_ideas_reason": null
+    }
+  ]
 }

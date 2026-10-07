@@ -10,4 +10,4 @@ This index records custody and disposition, not permission to delete a checkout.
 
 - [m1-preparation-20261007](work/m1-preparation-20261007.json): closed preparation; private note and L8/S8 delivered with exact Opus GO. Carlos still must accept reading/search/offline on both devices; retained checkout/evidence.
 
-- [idea-continuity-20261007](work/idea-continuity-20261007.json): active; implement durable idea continuity and scoped historical recovery.
+- [idea-continuity-20261007](work/idea-continuity-20261007.json): closed; implement durable idea continuity and scoped historical recovery.
