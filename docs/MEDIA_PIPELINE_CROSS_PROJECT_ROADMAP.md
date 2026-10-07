@@ -1,5 +1,35 @@
 # Media Pipeline Cross-Project Roadmap
 
+## M1 preparation update - 2026-10-07
+
+M0 remains accepted. Carlos authorized M1 preparation with Opus consensus and
+independent audit. Fresh evidence identifies a recording made after M0, on
+October 2 at 14:39 Madrid (6m11s), already completed through the existing Plaud
+and Media2Text path. Its verified note is delivered as a separate private NAS
+package at USD 0 incremental transcription cost. The next action is Carlos
+opening that note on computer and Android, finding a phrase and confirming
+that it corresponds to the recording and is readable offline on both devices.
+M1 remains in progress until that confirmation; preparation is not acceptance.
+Use `docs/operations/M1_READING_TEST.es.md` for the operator instructions and
+Plaud's `docs/operations/M1_PREPARATION_2026-10-07.md` for the owner evidence.
+
+This dated refinement preserves the October 1 and September 29 records below.
+No new attended provider call, upgrade, budget change or replay is included.
+The existing enabled automatic path stays live and may process new recordings
+within receiver caps. Approval before processing applies to a separately
+requested new paid test: approve its specification and cost before its trigger;
+this is not a global runtime spending interlock.
+
+M2 explicitly retains pause, honest economic-block feedback, failure recovery,
+several natural daily cycles and note-update delivery. These obligations were
+not completed or removed by preparing one note; the original Plaud Phase 3
+conditions still apply. The 8 additional failures since September 29 are
+unclassified recovery input, separate from the 622 unsent recordings. M3/Cortex
+and the retained base phases and connection waves keep their existing owners.
+No source upgrade is required to read this existing v1 result; a future upgrade
+that produces v2 first requires extending the v1-only collector and the normal
+owner release, recovery and ingress-reconciliation checks.
+
 Status: operator-ratified execution and session-dispatch artifact.
 
 Execution checkpoint (2026-07-20): the Media2Text safety foundation, Transcript

@@ -132,3 +132,37 @@ amendment; existing automatic spend remains live; disclose +28 completions and
 Corrected advisor's multilingual/multichannel label against official Deepgram
 pricing. No runtime upgrade for v1 reuse; future v2 needs collector support.
 This consensus is not the independent audit or device acceptance.
+
+## M1 preparation independent source and curation audit - 2026-10-07
+
+Reviewer: exact `claude-opus-5-5`, high effort, independent read-only session
+`f18e7ccb-059b-4869-8f3b-a79926259ddd`, separate from the advisory session.
+Returned `modelUsage` and `canonicalModel` verified. Read/Glob/Grep only;
+no shell, network, writes, MCP or subagents. Private note content was excluded.
+Command: `/home/cdelalama/.local/bin/claude -p --session-id f18e7ccb-059b-4869-8f3b-a79926259ddd --model claude-opus-5-5 --effort high --restricted --permission-mode dontAsk --tools Read,Glob,Grep --allowedTools Read,Glob,Grep --strict-mcp-config --mcp-config '{"mcpServers":{}}' --settings '{"disableAllHooks":true}' --output-format json --disable-slash-commands --max-turns 35` with the named source and private-evidence add-dir arguments.
+Reviewed Plaud `461a52e4ba619e7d7981bf946be6ec7d2707fe9c`
+(tree `cff9a8d85515bda0e8c1b2a1bb35ea081e8c4edb`) and Media2Text
+`6041ff8a1a6b45f6a93676bd8d760ebdc23516b2`
+(tree `6d71a418f861791318fd74b7c178c7ed13380024`).
+Native caller capture SHA-256 b8ccd3e128240ce721fb80a4cb2c0a24fb4815bb8bd7990935721e42a5d9c65a; copied byte-identically from the exact session.
+Raw evidence remains private.
+
+Verdict: REQUEST_CHANGES (R1 only) and CURATION_GO on the unchanged L8 draft.
+R1 required a dated October 7 amendment to Media2Text's cross-project roadmap;
+its history already claimed that update. The executor inspected the narrow diff
+and confirmed it adds exactly the requested M1 reuse/acceptance, still-enabled
+automatic path, retained M2 obligations and v1/v2 collector boundaries, preserving
+the older dated record. This satisfies the auditor's explicitly permitted narrow
+executor confirmation; conditional source-publication gate is cleared.
+No new full source round is required. Plaud `461a52e` must remain reachable for
+the two L8 source pins. Actual reader and delivery review remains a separate gate.
+
+Advisory follow-through: device acceptance must explicitly include reading,
+search and offline use on both computer and Android. Do not infer that from a
+weaker confirmation. The already delivered ZIP remains byte-identical, 4,768
+bytes, SHA-256 `fca5ff9cf50ebb86437ce0b0a75b80b7ad455cb8187ec6b381c8e687fed3c5e8`.
+A5 pricing recollection was checked against the official prerecorded pricing
+page: prerecorded diarization is included; streaming has a separate add-on.
+Installed rates/caps remain unchanged. A2 wording, A3 dated older status blocks,
+A4 indexes and A6 dated failure history are nonblocking follow-ups, not claims
+of M1 acceptance. Receipt-only closure may proceed without recursive snapshots.
