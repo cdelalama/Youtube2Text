@@ -1,4 +1,13 @@
 
+
+## 2026-10-07 - Continuity publication and DEV installation witness
+
+- Recorded verified source publication, installed guidance and actual capture behavior.
+- Preserved the dirty ForgeOS primary and unclassified legacy capture history.
+- No feature/version change; Dossier/recovery closure remains in progress.
+- All eight dedicated CI checks pass; Media2Text current-version prose correction
+  and Portal inherited dependency-audit failure retain their explicit scope.
+
 2026-10-07 - Codex - Prepare project-owned idea continuity, pinned validation, bounded B001 historical recovery and explicit task reconciliation; preserve existing priorities and runtime. Exact Opus 5.5/high advisor consensus obtained; independent SOURCE_GO and final checks pass (16 idea, 14 capture, 96 validator regressions at their owners); source publication and required Dossier delivery tracked separately. See docs/llm/IDEA_CONTINUITY_2026-10-07.md.
 2026-10-07 - Codex - Close reviewed M1 preparation: one private note delivered and read back again at 11:08 UTC, exact Opus consensus/source/render/delivery GO, Spanish Plaud L8/S8 and eight-record isolated restore verified. M1 actual-device recognition/reading/search/offline acceptance remains pending; preparation tasks closed with checkout/evidence retained. Media2Text source-only dependency patch CI 37612260162 passed on 41c73ee; its old yt-dlp upstream watch remains red and separately owned. Files: handoff, onboarding, delivery/review/work receipts. Version impact: none (receipt-only closure of Plaud 0.16.11 / Media2Text 0.41.1). Trace: role=executor; commits=none; state=preparation-delivered-device-acceptance-open; validation=Opus-GO-export-reader-restore-runtime-identity-CI; next=Carlos-reads-searches-offline-on-both-devices
 

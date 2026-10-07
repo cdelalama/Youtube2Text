@@ -1,5 +1,27 @@
 <!-- doc-version: 0.41.2 -->
 
+## Idea continuity publication witness - 2026-10-07
+
+Source cd00559e72d059e7e4ad0c1f56fbcbf487427765 (version 0.41.2) is published. The new idea-continuity
+CI passes in all eight adopters. DEV guidance is installed for Codex, Claude and
+the source root; the reviewed ForgeOS capture helper is installed at its pinned
+version. A real completed advisor session was captured through the configured
+hook and verified. Its new-error count is zero; the retained legacy error log
+remains unclassified. Exact Opus 5.5/high returned CONSENSUS_GO and independent
+SOURCE_GO. Sixteen idea tests, fourteen capture tests and ninety-six DocKit
+regression tests pass. Coverage is the declared initial batch, not all history.
+
+Seven clean primary checkouts were fast-forwarded; the dirty ForgeOS Live Now
+primary is preserved. Windows/fleet installation and physically independent
+recovery are not established. Required existing Dossier refresh/readback and the
+bounded review-corpus restore are still being completed by this agent. Existing
+product priorities and acceptance remain unchanged.
+
+The first source CI exposed two stale current-version prose fields in HANDOFF
+and PROJECT_CONTEXT; the closure candidate corrects them to 0.41.2. The other
+227 application tests passed. The existing versionCheck module validates the
+corrected candidate; the next published CI must confirm the complete run.
+
 ## Idea continuity adoption - 2026-10-07
 
 Last Updated: 2026-10-07 - Codex.
@@ -355,7 +377,7 @@ roadmap.
   Existing project work and runtime acceptance remain authoritative below.
 
 
-- Version: 0.41.1 in source; NAS remains on 0.39.3 from `3cf1539`. The M0 offline
+- Version: 0.41.2 in source; NAS remains on 0.39.3 from `3cf1539`. The M0 offline
   tooling is separate from the unchanged NAS service; Cortex delivery remains off.
 - Transcript Ready v1 is operator-ratified at the exact Media2Text `fa205972`
   five-artifact pin after Cortex consumer ACCEPT `73a3d11`. Media2Text recorded
