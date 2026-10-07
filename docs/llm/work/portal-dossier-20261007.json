@@ -1,0 +1,10 @@
+{
+  "artifacts": [],
+  "branch": "work/portal-dossier-20261007",
+  "id": "portal-dossier-20261007",
+  "next_step": "Complete this task and record its result or explicit pending disposition.",
+  "project": "youtube2text",
+  "purpose": "Complete Media2Text integration guidance and dedicated reviewed Dossier delivery",
+  "schema": 1,
+  "state": "active"
+}

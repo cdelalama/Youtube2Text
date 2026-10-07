@@ -1,7 +1,10 @@
 # LLM-DocKit .gitignore
 
 # Claude Code local settings
-.claude/
+.claude/*
+!.claude/checklists/
+.claude/checklists/*
+!.claude/checklists/homelab-project.md
 
 # Editor directories and files
 .vscode/

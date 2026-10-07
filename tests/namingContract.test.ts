@@ -60,6 +60,20 @@ test("naming contract rejects short M2T env prefixes", async () => {
   assert.equal(errors.some((msg) => msg.includes(".env.example") && msg.includes("M2T_API_KEY")), true);
 });
 
+test("owner admission references do not exempt env names in the same file", async () => {
+  const root = createFixture();
+  const path = join(root, "integration-plan.json");
+  const plan = { acceptance_ref: "docs/operations/MEDIA2TEXT_CONSUMER_ACCEPTANCE_2026-10-07.md" };
+  writeFileSync(path, JSON.stringify(plan), "utf8");
+  assert.deepEqual((await checkNamingContract(root)).errors, []);
+
+  writeFileSync(path, JSON.stringify({ ...plan, apiKeyEnv: "MEDIA2TEXT_API_KEY" }), "utf8");
+  const { errors } = await checkNamingContract(root);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /MEDIA2TEXT_API_KEY/);
+  assert.equal(errors[0].includes("MEDIA2TEXT_CONSUMER_ACCEPTANCE"), false);
+});
+
 test("naming contract rejects untracked Media2Text env prefixes", async () => {
   const root = createFixture();
   initializeGitFixture(root);

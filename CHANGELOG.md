@@ -5,6 +5,21 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.41.3] - 2026-10-07
+
+### Added
+
+- Adopt the published homelab integration guidance, owner-derived plan and narrowly curated dedicated Media2Text Dossier.
+
+### Changed
+
+- Version the new Dossier configuration as source 0.41.3; the active NAS application remains 0.39.3.
+
+### Fixed
+
+- Keep the naming guard strict for environment variables while accepting the exact frozen owner admission document reference.
+- Resolve missing project-local integration instructions while preserving product and device acceptance gates.
+
 ## [0.41.2] - 2026-10-07
 
 ### Changed

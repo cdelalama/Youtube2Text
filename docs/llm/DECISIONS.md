@@ -634,3 +634,29 @@ Canonical records remain immutable. V1 recording dates stay unknown. The
 legacy web library is interim browsing with known search/exclusion/date/link
 gaps. Neither the new source version nor a viewport check is deployment or
 physical-device acceptance. No provider spend or historical replay is enabled.
+
+## D-027 - Adopt dedicated Media2Text integration guidance and Dossier
+
+Status: accepted by Carlos on 2026-10-07.
+
+After the executor identified missing instructions and a dedicated Dossier in
+the Portal integration inventory, Carlos explicitly answered "Hazlo" to the
+proposed agent-owned completion across Media2Text, Home Infra and Portal.
+
+Adopt the published Protocol AGENTS/checklist with the canonical Claude alias,
+retaining this project's onboarding and existing service contract. Use registered
+identity youtube2text and the existing shared ForgeOS engines. Home Infra owns
+legacy admission, read scope, transport and Portal catalog. The sole Dossier
+source is docs/operations/DOSSIER_STATUS.md; the reader's five sections are
+Spanish and use exact committed source anchors. Media bytes, private identities,
+credentials, native conversations and unrestricted source bodies are excluded.
+
+Meaningful completion requires source and independent review, native capture,
+restricted shared publication, actual Portal card/reader/history readback and
+coherent isolated restore. Preserve all neighboring bindings/histories and report
+same-NAS recovery separately from independent hardware. Source-only preparation
+is not delivery. No provider call, replay, budget/runtime/scheduler change,
+Cortex activation or M1 device acceptance is implied. M0-M3 and retained base
+phases/connection waves keep their existing meanings and priorities.
+
+Implementation/evidence: docs/operations/DOSSIER_ADOPTION_2026-10-07.md.

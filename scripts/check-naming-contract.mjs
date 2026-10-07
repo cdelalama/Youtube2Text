@@ -6,6 +6,12 @@ import { pathToFileURL } from "node:url";
 const EXPECTED_ROOT_PACKAGE_NAME = "youtube2text";
 const FORBIDDEN_ENV_PREFIX_RE = /\b(?:MEDIA2TEXT|M2T)_[A-Z0-9_]+\b/g;
 
+// This frozen Home Infra admission is a document reference, not an env rename.
+// Strip only its exact path; other tokens in the same file remain checked.
+const ALLOWED_DOCUMENT_REFERENCES = [
+  "docs/operations/MEDIA2TEXT_CONSUMER_ACCEPTANCE_2026-10-07.md",
+];
+
 const ALLOWED_FORBIDDEN_PREFIX_MENTIONS = new Set([
   "docs/llm/DECISIONS.md",
   "docs/llm/HANDOFF.md",
@@ -82,7 +88,10 @@ export async function checkNamingContract(rootDir = process.cwd()) {
     }
     if (!isLikelyText(buffer)) continue;
 
-    const text = buffer.toString("utf8");
+    const text = ALLOWED_DOCUMENT_REFERENCES.reduce(
+      (value, reference) => value.replaceAll(reference, ""),
+      buffer.toString("utf8"),
+    );
     const matches = [...text.matchAll(FORBIDDEN_ENV_PREFIX_RE)].map((match) => match[0]);
     if (matches.length > 0) {
       const unique = [...new Set(matches)].join(", ");

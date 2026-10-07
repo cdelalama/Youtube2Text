@@ -93,3 +93,13 @@ M1 preparation: `docs/operations/M1_READING_TEST.es.md`; task custody: `docs/llm
 - `docs/IDEA_CONTINUITY.md`: shared capture, recall and closeout rules.
 - `docs/llm/IDEA_INDEX.json`: project-owned references, untracked ideas and bounded coverage batches.
 - `scripts/dockit-ideas.py`: pinned structural and baseline validation.
+
+## Media2Text Dossier integration (2026-10-07)
+
+`AGENTS.md`, `CLAUDE.md`, `.claude/checklists/homelab-project.md` provide local
+integration guidance. `.forgeos/dossier.json` declares only
+`docs/operations/DOSSIER_STATUS.md`. The adoption receipt is
+`docs/operations/DOSSIER_ADOPTION_2026-10-07.md`.
+
+- `.forgeos/integration-plan.json`: owner-derived Portal/Dossier obligations.
+- `docs/operations/DOSSIER.md`: project-native Dossier operating entrypoint.

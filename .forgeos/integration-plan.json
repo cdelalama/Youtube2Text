@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "subject": "youtube2text",
+  "requirements_sha256": "6db24f25efab1f996ca942d225973bef92e0f7790c2a718ca69667e7f767a99b",
+  "policy": {
+    "commit": "02dd913a7c8062e5fdbaab2f043f5a49aba72b6e",
+    "profile_sha256": "b806c915acc2ae8945760765d39f62ccd6d35e3509d937ae6425cab734e4e4f1",
+    "subjects_sha256": "304256af5d2ab8bb93f9838ee347fa03dbc65e8ab2a2ec7a041c690ea02682bf"
+  },
+  "consumers": {
+    "portal": {
+      "status": "required",
+      "owner": "home-infra",
+      "phases": {
+        "study": [
+          "admitted_subject",
+          "scope_documents",
+          "owner_acceptance_plan"
+        ],
+        "birth": [
+          "resolved_plan"
+        ],
+        "build": [
+          "resolved_plan"
+        ],
+        "delivery": [
+          "published_catalog",
+          "accepted_input",
+          "service_identity",
+          "fresh_status",
+          "rendered_access",
+          "backend_functionality"
+        ]
+      },
+      "exclusion_ref": null,
+      "assessment": {
+        "admitted_subject": "mechanical",
+        "scope_documents": "mechanical",
+        "owner_acceptance_plan": "reviewer-assessed",
+        "resolved_plan": "mechanical",
+        "published_catalog": "mechanical",
+        "accepted_input": "mechanical",
+        "service_identity": "mechanical",
+        "fresh_status": "mechanical",
+        "rendered_access": "reviewer-assessed",
+        "backend_functionality": "reviewer-assessed"
+      },
+      "acceptance_ref": "docs/operations/MEDIA2TEXT_CONSUMER_ACCEPTANCE_2026-10-07.md",
+      "acceptance_sha256": "c234d420258228e6274a2be6f667bf009a47caccf841efac9bb1a7f6316cdb6e"
+    },
+    "dossier": {
+      "status": "required",
+      "owner": "forgeos",
+      "phases": {
+        "study": [
+          "admitted_subject",
+          "scope_documents",
+          "source_allowlist_plan",
+          "reviewed_publication_plan"
+        ],
+        "birth": [
+          "resolved_plan"
+        ],
+        "build": [
+          "valid_declaration",
+          "registered_binding",
+          "native_capture"
+        ],
+        "delivery": [
+          "read_admission",
+          "reviewed_spanish",
+          "fixed_reader",
+          "shared_publication",
+          "exact_history",
+          "exact_permalink",
+          "coherent_restore"
+        ]
+      },
+      "exclusion_ref": null,
+      "assessment": {
+        "admitted_subject": "mechanical",
+        "scope_documents": "mechanical",
+        "source_allowlist_plan": "mechanical",
+        "reviewed_publication_plan": "reviewer-assessed",
+        "resolved_plan": "mechanical",
+        "valid_declaration": "mechanical",
+        "registered_binding": "mechanical",
+        "native_capture": "mechanical",
+        "read_admission": "mechanical",
+        "reviewed_spanish": "reviewer-assessed",
+        "fixed_reader": "reviewer-assessed",
+        "shared_publication": "mechanical",
+        "exact_history": "mechanical",
+        "exact_permalink": "mechanical",
+        "coherent_restore": "reviewer-assessed"
+      },
+      "acceptance_ref": "docs/operations/MEDIA2TEXT_CONSUMER_ACCEPTANCE_2026-10-07.md",
+      "acceptance_sha256": "c234d420258228e6274a2be6f667bf009a47caccf841efac9bb1a7f6316cdb6e",
+      "source_plan": {
+        "project_id": "youtube2text",
+        "read_scope": "lan_technical",
+        "sources": [
+          "docs/operations/DOSSIER_STATUS.md"
+        ]
+      },
+      "source_plan_ref": "docs/integration-source-plans/youtube2text.json"
+    }
+  }
+}

@@ -31,6 +31,24 @@
       "coverage_claim": "declared_corpus_only",
       "remaining_backfill": "Review further historical suggestions and retained work in bounded attributed batches. The initial audit inventoried 2343 commit metadata entries and 625 Markdown paths across eight repos; those counts are not semantic review.",
       "cursor": "Resume from this batch sources and the remaining historical queue; no exhaustive scan has been claimed."
+    },
+    {
+      "id": "B002-media2text-dossier-20261007",
+      "date": "2026-10-07",
+      "sources": [
+        {
+          "path": "docs/llm/DECISIONS.md"
+        }
+      ],
+      "excluded": [
+        "Earlier conversations and private media content."
+      ],
+      "unknown": [
+        "Unreviewed historical sessions remain unknown."
+      ],
+      "coverage_claim": "declared_corpus_only",
+      "remaining_backfill": "Original B001 historical queue remains unchanged.",
+      "cursor": "Resume original historical backfill when relevant; this batch covers only the current adoption request."
     }
   ],
   "entries": [
@@ -170,6 +188,29 @@
       "acceptance": {
         "state": "pending",
         "reason": "Source implementation observed; no fresh runtime acceptance was performed in this continuity batch."
+      }
+    },
+    {
+      "id": "REF-D027",
+      "record": "reference",
+      "kind": "accepted_decision",
+      "title": "Dedicated Media2Text integration guidance and Dossier delivery",
+      "origin": {
+        "date": "2026-10-07",
+        "attribution": "Carlos explicitly answered Hazlo after the bounded proposal.",
+        "sources": [
+          {
+            "path": "docs/llm/DECISIONS.md",
+            "contains": "## D-027"
+          }
+        ]
+      },
+      "batch": "B002-media2text-dossier-20261007",
+      "owner": "youtube2text",
+      "recall_trigger": "Before Media2Text source or delivery closeout; preserve dedicated Dossier, narrow source scope and separate M1/runtime acceptance.",
+      "ref": {
+        "path": "docs/llm/DECISIONS.md",
+        "contains": "## D-027"
       }
     }
   ],

@@ -1,4 +1,14 @@
-<!-- doc-version: 0.41.2 -->
+<!-- doc-version: 0.41.3 -->
+
+## Dedicated Dossier integration - 2026-10-07
+
+Last Updated: 2026-10-07 - Codex.
+Carlos authorized completing the missing integration instructions and dedicated
+Media2Text Dossier. D-027 and docs/operations/DOSSIER_ADOPTION_2026-10-07.md
+retain the scope. Source preparation is in progress; admission, independent
+review, native capture, shared reader and recovery remain required. M0-M3 and
+all runtime/spend gates are unchanged. The agent owns this documentary delivery.
+
 
 ## Idea continuity delivery receipt - 2026-10-07
 

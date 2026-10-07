@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "contract": "forgeos/dossier-offline-v1",
+  "project_id": "youtube2text",
+  "display_name": "Media2Text",
+  "registry": {
+    "namespace": "home-infra-projects",
+    "project_id": "youtube2text"
+  },
+  "tool": {
+    "version": "1.1.0",
+    "sha256": "fd34d3f45a9382fbf8317a932edd1fa827230d0acccaba68c0b87963c1704a95"
+  },
+  "sources": [
+    "docs/operations/DOSSIER_STATUS.md"
+  ]
+}
