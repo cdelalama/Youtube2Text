@@ -70,3 +70,31 @@ The naming guard initially mistook the frozen Home acceptance filename for an
 environment-variable rename. A narrow exact document-path exception fixes that
 false positive; the regression verifies that forbidden environment names in the
 same file still fail. No broad file exemption or runtime prefix is introduced.
+
+## Verified initial delivery
+
+Source 3554bdb (0.41.3), CI37695769388 PASS, and Home plan01a94bf3 are published;
+intake/build gates pass. Native L1 is local:5c2036be978b8bc57e677d63fa30ce15039a6005c6dce996131c6459a298ee16;
+shared S1 is shared:87ab48d5d516ef3913edd0d6337b99f22b21a78d8e532d35743b337936ebb8c8.
+The exact reviewed draft was captured, exported, submitted, published and read back.
+Its original adapted receipt had a false L1-sharing label; the preimage is retained
+and the corrected label agrees with exact native/submission/shared records.
+
+Home catalog842ebcbb (0.52.15) now provides the Dossier action. Inode-preserving
+sync changed only this link; every other service and contract remains identical.
+The real reader passes 15 section/viewport checks, all history permalinks, nine
+index entries and no browser errors. Desktop/mobile card checks preserve Open
+service, Dossier, Details order and successfully open the reader. Five fixed-role,
+wrong-project and arbitrary-command checks pass. All eight old reader histories,
+140 original coordinator files and existing key bytes are unchanged.
+
+Portal was restarted once with the same 0.34.4 container, image, complete config,
+mounts and source address after SQLite Online Backup verified integrity. The
+first activation call failed before any mutation while the backup was unfinished;
+activation proceeded only after the verified backup receipt existed. Media runtime
+stays 0.39.3; authenticated GET works and unauthenticated GET returns401.
+
+The coherent S1 backup restores into absent isolated same-NAS custody and exact
+current/history reads agree. This is not physically independent recovery. Final
+curated Media/Home snapshots and independent actual-view review follow. No
+application delivery ledger is fabricated; full application delivery remains open.

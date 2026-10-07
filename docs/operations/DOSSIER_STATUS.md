@@ -41,10 +41,11 @@ tested upstream-tool update remain separately owned follow-up.
 - Retained foundations and bilateral connection waves: still owned work with
   their original contracts and gates. Their separate listing starts no execution
   and creates no new dependency between independent lines.
-- Dedicated Dossier: in progress under the October 7 authorization. The agent
-  installs integration guidance, obtains admission/review, publishes curated
-  content, verifies the Portal card/reader and restores a coherent backup.
-  Source preparation alone does not complete this delivery.
+- Dedicated Dossier: delivered under the October 7 authorization. Integration
+  guidance, admission and reviewed native/shared content are available. The
+  Portal card opens the dedicated reader; all five Spanish sections pass on
+  desktop/mobile viewports and a coherent copy restores in isolated same-NAS
+  custody. The other eight readers and every historical record are preserved.
 
 ## Decisions
 
@@ -63,9 +64,10 @@ The October 7 task follows Carlos's request to resolve the documentation gap
 reported by Portal. It adds project-owned continuity rather than treating the
 Plaud Dossier as Media2Text's own. It preserves earlier history and priorities.
 
-The source-only preparation adds instructions, a declaration, a narrow allowlist
-and owner admission. Shared publication, current/exact-history readback, Spanish
-desktop/mobile inspection and isolated restoration remain required observations.
+The delivery adds instructions, a declaration, a narrow allowlist and published
+owner admission. Shared publication, current/exact-history readback, Spanish
+desktop/mobile inspection and isolated restoration are verified. The existing
+Portal image/configuration and all other service/contract bytes are preserved.
 Same-NAS restoration does not establish physically independent recovery. Native
 Windows/fleet acceptance and personal phone acceptance are not inferred.
 

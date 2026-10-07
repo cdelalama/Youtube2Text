@@ -1,14 +1,23 @@
 <!-- doc-version: 0.41.3 -->
 
-## Dedicated Dossier integration - 2026-10-07
+## Dedicated Dossier delivery - 2026-10-07
 
 Last Updated: 2026-10-07 - Codex.
-Carlos authorized completing the missing integration instructions and dedicated
-Media2Text Dossier. D-027 and docs/operations/DOSSIER_ADOPTION_2026-10-07.md
-retain the scope. Source preparation is in progress; admission, independent
-review, native capture, shared reader and recovery remain required. M0-M3 and
-all runtime/spend gates are unchanged. The agent owns this documentary delivery.
+Media2Text now has its own Dossier in Portal, linked from its existing service
+card. Published integration guidance, owner admission/plan, native L1/shared S1,
+all five Spanish sections at 390/840/1440 pixels, exact history, role denials and
+isolated same-NAS recovery are verified. Existing readers, histories, service
+identities and application runtime are preserved. Source is 0.41.3; runtime is
+0.39.3. D-027 and docs/operations/DOSSIER_ADOPTION_2026-10-07.md retain evidence.
+This supersedes earlier legacy-unresolved wording for this dedicated adoption.
 
+Carlos's next product step is still the M1 reading test on computer and Android:
+recognize, read, search a phrase and reopen offline. The existing private Spanish
+M1 guide names the prepared package. The agent owns technical failures and keeps
+M2 reliability/note updates, M3 Cortex and earlier connections independently open.
+No new provider spend, replay, scheduler or application deployment occurred.
+The final meaningful Dossier/Home refresh and independent delivery readback are
+being closed; receipt-only updates then assess no_change.
 
 ## Idea continuity delivery receipt - 2026-10-07
 
