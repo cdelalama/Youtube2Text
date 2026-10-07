@@ -428,7 +428,7 @@ roadmap.
   Existing project work and runtime acceptance remain authoritative below.
 
 
-- Version: 0.41.2 in source; NAS remains on 0.39.3 from `3cf1539`. The M0 offline
+- Version: 0.41.3 in source; NAS remains on 0.39.3 from `3cf1539`. The M0 offline
   tooling is separate from the unchanged NAS service; Cortex delivery remains off.
 - Transcript Ready v1 is operator-ratified at the exact Media2Text `fa205972`
   five-artifact pin after Cortex consumer ACCEPT `73a3d11`. Media2Text recorded

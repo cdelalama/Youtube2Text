@@ -1,3 +1,5 @@
+2026-10-07 - Codex - Correct the two explicit source-version prose fields to 0.41.3 after CI37695550549 exposed their drift from the synchronized manifest. Runtime remains 0.39.3; no processing change. Initial Dossier content and source anchors remain accurate.
+
 2026-10-07 - Codex - Prepare operator-authorized Media2Text integration guidance and dedicated Dossier admission with narrow curated disclosure, preserved runtime and exact Opus review. Source/admission/reader/recovery remain distinct. Files: local integration guidance/plan, Dossier declaration/status, decision D-027, project handoff/history and managed task record. Owner admission/source plan are in Home Infra. Version impact: patch 0.41.3 because the repository guard versions new .forgeos configuration; no application deployment. Trace: role=executor; sent=2026-10-07 21:58:54 UTC; state=preparation; validation=pending; next=independent-review-and-published-admission
 
 
