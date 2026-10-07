@@ -15,11 +15,11 @@ Fresh read-only evidence proves a post-M0 recording (October 2, 14:39 Madrid,
 6m11s) already completed through Plaud and Media2Text. Reuse its verified note:
 incremental transcription cost USD 0. The separate one-note package and Spanish
 LEEME are delivered to the private NAS folder and byte-verified. Exact Opus
-consensus is GO with R1-R4 applied; independent audit and Dossier delivery remain
-pending. Package: Media2Text-private/M1-20261007/Prueba-M1-20261007.zip.
+consensus is GO with R1-R4 applied; independent SOURCE_GO/RENDER_GO/DELIVERED_GO
+are recorded. Portal 0.34.2 serves verified L8/S8 with seven old revisions preserved. Package: Media2Text-private/M1-20261007/Prueba-M1-20261007.zip.
 M0 remains done; M1 is in progress, not accepted on the two devices yet.
-After delivery, Carlos opens the new note on computer and Android and confirms
-it corresponds to the recording and is readable offline. The agent owns delivery
+Carlos now opens the new note on computer and Android and confirms recognition,
+reading, phrase search and offline use on both devices. The agent owns delivery
 and documentation. M2 then owns daily reliability and note-update delivery;
 M3, base phases and connection waves retain their separate obligations.
 
@@ -448,3 +448,14 @@ not the canonical path. Private host, credential, and rollback details remain
 in Home Infra documentation. Immediately follow a successful deploy or
 rollback with `home-infra/scripts/reconcile-buzz-ingress.sh` until the product
 deploy absorbs D-025's loopback bind.
+
+## M1 delivered Trace - 2026-10-07
+
+- Role: executor
+- Sent: 2026-10-07 13:11:48 CEST (11:11:48 UTC)
+- Subject: M1 private note preparation and L8/S8 delivered; actual-device acceptance pending
+- Resulting state: version=0.41.1; gate=next-slice; preparation delivered, M1 still in progress.
+- Repo state: managed task branch; receipt-only closure being published after reviewed source.
+- Validation: exact Opus consensus and independent SOURCE_GO/RENDER_GO/DELIVERED_GO; identity/export/package/reader/restore/runtime checks PASS; Media patch CI 37612260162 PASS.
+- Dossier: local L8 `local:03f81e818bf3dbec371530449d03610ab1f79ee21c93603cdd73159dc43a6903`; shared S8 `shared:2ed0e6383ccfd69d0196c2a3f786ca12d4fee829adab14deb8a3a276e9cf9afa`; exact reader https://infra.lamanoriega.com/dossier/shared/plaud-mirror?revision=shared%3A2ed0e6383ccfd69d0196c2a3f786ca12d4fee829adab14deb8a3a276e9cf9afa; HTTP 200 and real browser checked.
+- Next gate: Carlos recognizes, reads, searches and opens the new note offline on both computer and Android. Then M2 reliability; existing upstream-watch/physical-recovery gates remain separate.

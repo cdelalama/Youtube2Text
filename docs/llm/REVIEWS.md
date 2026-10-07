@@ -194,3 +194,7 @@ Use the stronger acceptance wording in the final operator message; the existing
 M1 dialog already states it. No weakening from the shorter next-step phrase.
 The audit's phrase "8 + 80 failures" is not a new count: current total is 80,
 including 8 added since September 29, with 622 unsent separately.
+
+Final condition satisfied: Media2Text CI 37612260162 on `41c73eea7000fce7b48d6e4fd51271aee7a7f702` passed.
+No runtime deployment. The package was freshly read back at 11:08:33 UTC and
+still matches the reviewed SHA-256/4,768 bytes. Actual-device acceptance remains open.

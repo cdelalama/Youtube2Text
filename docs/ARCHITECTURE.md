@@ -1,8 +1,8 @@
 <!-- doc-version: 0.41.1 -->
 # Media2Text Architecture (youtube2text Engine)
 
-> Version: 0.41.0 source; 0.39.3 NAS runtime
-> Last Updated: 2026-09-30
+> Version: 0.41.1 source; 0.39.3 NAS runtime
+> Last Updated: 2026-10-07 (source-version receipt only)
 > Status: Safety foundation and Plaud compatibility facade deployed and live-verified; Cortex delivery, YouTube scheduler, and bulk replay remain gated
 > Authors: Claude + GPT-5.2 (viewpoints preserved)
 
