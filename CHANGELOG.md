@@ -5,6 +5,17 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.41.2] - 2026-10-07
+
+### Changed
+- Preserve project ideas through a pinned continuity index, session/CI checks and bounded historical recovery without changing product priorities.
+
+### Added
+
+### Changed
+
+### Fixed
+
 ## [0.41.1] - 2026-10-07
 
 ### Fixed

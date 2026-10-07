@@ -1,4 +1,17 @@
-<!-- doc-version: 0.41.1 -->
+<!-- doc-version: 0.41.2 -->
+
+## Idea continuity adoption - 2026-10-07
+
+Last Updated: 2026-10-07 - Codex.
+Carlos authorized durable idea continuity across the eight reviewed projects.
+Read `docs/llm/IDEA_INDEX.json` before relevant brainstorming and
+`docs/llm/IDEA_CONTINUITY_2026-10-07.md` for scope, validation and delivery.
+Requests/suggestions retain origins, owners and recall triggers; existing
+decision registers keep sole lifecycle authority. The first historical batch is
+bounded and remaining coverage stays explicit. Product priorities and runtime
+remain as recorded below. Independent exact Opus 5.5/high SOURCE_GO and final eight-project checks pass.
+Source publication and required Dossier readback remain separate delivery steps.
+
 ## M1 preparation - 2026-10-07
 
 Source-only CI correction, October 7: 0.41.1 updates only web's transitive
@@ -459,3 +472,5 @@ deploy absorbs D-025's loopback bind.
 - Validation: exact Opus consensus and independent SOURCE_GO/RENDER_GO/DELIVERED_GO; identity/export/package/reader/restore/runtime checks PASS; Media patch CI 37612260162 PASS.
 - Dossier: local L8 `local:03f81e818bf3dbec371530449d03610ab1f79ee21c93603cdd73159dc43a6903`; shared S8 `shared:2ed0e6383ccfd69d0196c2a3f786ca12d4fee829adab14deb8a3a276e9cf9afa`; exact reader https://infra.lamanoriega.com/dossier/shared/plaud-mirror?revision=shared%3A2ed0e6383ccfd69d0196c2a3f786ca12d4fee829adab14deb8a3a276e9cf9afa; HTTP 200 and real browser checked.
 - Next gate: Carlos recognizes, reads, searches and opens the new note offline on both computer and Android. Then M2 reliability; existing upstream-watch/physical-recovery gates remain separate.
+
+Continuity source receipt (2026-10-07 14:55:57 UTC): independent SOURCE_GO; explicit baseline and pinned helper verified. Required Dossier delivery remains open in the owning continuity note.

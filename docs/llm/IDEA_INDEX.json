@@ -1,0 +1,177 @@
+{
+  "schema": 1,
+  "project": "youtube2text",
+  "validator_sha256": "b1fe8e98663e6d03b440ed05a35578ffee5787750ba4f5adef32e672db521def",
+  "registers": [
+    {
+      "path": "docs/llm/DECISIONS.md",
+      "pattern": "^#{2,6}\\s+(D-\\d{3})\\b"
+    }
+  ],
+  "batches": [
+    {
+      "id": "B001-audit-20261007",
+      "date": "2026-10-07",
+      "sources": [
+        {
+          "path": "docs/llm/DECISIONS.md",
+          "revision": "d9dfde157a8e76f037f8ea787b229346782a7f78"
+        },
+        {
+          "path": "docs/llm/HANDOFF_ARCHIVE.md",
+          "revision": "d9dfde157a8e76f037f8ea787b229346782a7f78"
+        }
+      ],
+      "excluded": [
+        "Full contents of all historic commits and native conversations; no broad private corpus promotion."
+      ],
+      "unknown": [
+        "Other hosts, external chats, retired worktrees, and complete historical capture coverage."
+      ],
+      "coverage_claim": "declared_corpus_only",
+      "remaining_backfill": "Review further historical suggestions and retained work in bounded attributed batches. The initial audit inventoried 2343 commit metadata entries and 625 Markdown paths across eight repos; those counts are not semantic review.",
+      "cursor": "Resume from this batch sources and the remaining historical queue; no exhaustive scan has been claimed."
+    }
+  ],
+  "entries": [
+    {
+      "id": "IDEA-0001",
+      "record": "native",
+      "kind": "agent_suggestion",
+      "title": "Pagination for GET /runs; cursor versus offset still needs classification",
+      "origin": {
+        "date": "2025-12-17",
+        "attribution": "Historical agent suggestion; not automatically operator-approved",
+        "sources": [
+          {
+            "path": "docs/llm/HANDOFF_ARCHIVE.md",
+            "revision": "d9dfde157a8e76f037f8ea787b229346782a7f78",
+            "contains": "**4. Pagination for GET /runs**"
+          }
+        ]
+      },
+      "batch": "B001-audit-20261007",
+      "owner": "youtube2text",
+      "state": "captured",
+      "recall_trigger": "Before changing the run-list API or scaling run history; classify the optional suggestion and pagination question.",
+      "documentation_refs": [
+        {
+          "path": "docs/llm/HANDOFF_ARCHIVE.md",
+          "revision": "d9dfde157a8e76f037f8ea787b229346782a7f78",
+          "contains": "**4. Pagination for GET /runs**"
+        }
+      ]
+    },
+    {
+      "id": "IDEA-0002",
+      "record": "native",
+      "kind": "agent_suggestion",
+      "title": "Filter runs by status and channel",
+      "origin": {
+        "date": "2025-12-17",
+        "attribution": "Historical agent suggestion; not automatically operator-approved",
+        "sources": [
+          {
+            "path": "docs/llm/HANDOFF_ARCHIVE.md",
+            "revision": "d9dfde157a8e76f037f8ea787b229346782a7f78",
+            "contains": "**5. Run filtering**"
+          }
+        ]
+      },
+      "batch": "B001-audit-20261007",
+      "owner": "youtube2text",
+      "state": "captured",
+      "recall_trigger": "Before changing run-list/API filtering; confirm need before treating it as accepted scope.",
+      "documentation_refs": [
+        {
+          "path": "docs/llm/HANDOFF_ARCHIVE.md",
+          "revision": "d9dfde157a8e76f037f8ea787b229346782a7f78",
+          "contains": "**5. Run filtering**"
+        }
+      ]
+    },
+    {
+      "id": "IDEA-0003",
+      "record": "native",
+      "kind": "agent_suggestion",
+      "title": "SSE keepalive from historical suggestion",
+      "origin": {
+        "date": "2025-12-17",
+        "attribution": "Historical agent suggestion; not automatically operator-approved",
+        "sources": [
+          {
+            "path": "docs/llm/HANDOFF_ARCHIVE.md",
+            "revision": "d9dfde157a8e76f037f8ea787b229346782a7f78",
+            "contains": "**6. SSE keepalive/heartbeat**"
+          }
+        ]
+      },
+      "batch": "B001-audit-20261007",
+      "owner": "youtube2text",
+      "state": "implemented",
+      "recall_trigger": "When reviewing old hardening proposals; inspect present code before proposing the feature again.",
+      "documentation_refs": [
+        {
+          "path": "docs/llm/HANDOFF_ARCHIVE.md",
+          "revision": "d9dfde157a8e76f037f8ea787b229346782a7f78",
+          "contains": "**6. SSE keepalive/heartbeat**"
+        }
+      ],
+      "authority": "Existing published implementation observed; this entry does not retrospectively invent an operator acceptance.",
+      "rationale": "The bounded audit found published code implementing this historical suggestion.",
+      "evidence": [
+        {
+          "path": "src/api/server.ts",
+          "revision": "d9dfde157a8e76f037f8ea787b229346782a7f78",
+          "contains": "heartbeat"
+        }
+      ],
+      "acceptance": {
+        "state": "pending",
+        "reason": "Source implementation observed; no fresh runtime acceptance was performed in this continuity batch."
+      }
+    },
+    {
+      "id": "IDEA-0004",
+      "record": "native",
+      "kind": "agent_suggestion",
+      "title": "Run timeout from historical suggestion",
+      "origin": {
+        "date": "2025-12-17",
+        "attribution": "Historical agent suggestion; not automatically operator-approved",
+        "sources": [
+          {
+            "path": "docs/llm/HANDOFF_ARCHIVE.md",
+            "revision": "d9dfde157a8e76f037f8ea787b229346782a7f78",
+            "contains": "**7. Run timeout**"
+          }
+        ]
+      },
+      "batch": "B001-audit-20261007",
+      "owner": "youtube2text",
+      "state": "implemented",
+      "recall_trigger": "When reviewing old hardening proposals; inspect present code before proposing the feature again.",
+      "documentation_refs": [
+        {
+          "path": "docs/llm/HANDOFF_ARCHIVE.md",
+          "revision": "d9dfde157a8e76f037f8ea787b229346782a7f78",
+          "contains": "**7. Run timeout**"
+        }
+      ],
+      "authority": "Existing published implementation observed; this entry does not retrospectively invent an operator acceptance.",
+      "rationale": "The bounded audit found published code implementing this historical suggestion.",
+      "evidence": [
+        {
+          "path": "src/api/server.ts",
+          "revision": "d9dfde157a8e76f037f8ea787b229346782a7f78",
+          "contains": "Y2T_RUN_TIMEOUT_MINUTES"
+        }
+      ],
+      "acceptance": {
+        "state": "pending",
+        "reason": "Source implementation observed; no fresh runtime acceptance was performed in this continuity batch."
+      }
+    }
+  ],
+  "task_reconciliations": []
+}

@@ -1,4 +1,4 @@
-<!-- doc-version: 0.41.1 -->
+<!-- doc-version: 0.41.2 -->
 # Media2Text Architecture (youtube2text Engine)
 
 > Version: 0.41.1 source; 0.39.3 NAS runtime

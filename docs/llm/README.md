@@ -34,3 +34,7 @@ Goals:
 ## Encoding
 
 Keep these files ASCII-only to avoid Windows encoding issues.
+
+## Idea continuity
+
+Read `docs/llm/IDEA_INDEX.json` before relevant brainstorming. Policy: `docs/IDEA_CONTINUITY.md`. Existing owner registers retain decision authority and roadmap priority. Coverage is the declared batch only.

@@ -87,3 +87,9 @@ youtube2text/
 - `docs/operations/M0_ACCEPTANCE_2026-10-01.md`: Carlos's acceptance of M0 on computer and Android, next M1 preflight and the retained Dossier publication gate.
 
 M1 preparation: `docs/operations/M1_READING_TEST.es.md`; task custody: `docs/llm/work/m1-preparation-20261007.json`.
+
+## Idea continuity
+
+- `docs/IDEA_CONTINUITY.md`: shared capture, recall and closeout rules.
+- `docs/llm/IDEA_INDEX.json`: project-owned references, untracked ideas and bounded coverage batches.
+- `scripts/dockit-ideas.py`: pinned structural and baseline validation.
