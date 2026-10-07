@@ -1,4 +1,4 @@
-<!-- doc-version: 0.41.0 -->
+<!-- doc-version: 0.41.1 -->
 ## M1 preparation - 2026-10-07
 
 Last Updated: 2026-10-07 - Codex.

@@ -1,5 +1,13 @@
-<!-- doc-version: 0.41.0 -->
+<!-- doc-version: 0.41.1 -->
 ## M1 preparation - 2026-10-07
+
+Source-only CI correction, October 7: 0.41.1 updates only web's transitive
+`source-map-js` lock from 1.2.1 to patched 1.2.2 (GHSA-68fv-2mgg-jv7q), plus
+version/release metadata. CI 37610980289 exposed the existing vulnerable lock
+before tests. NAS remains 0.39.3; this does not upgrade production or change the
+M1 package/acceptance. The old yt-dlp upstream watch failure (37337169199,
+2026.7.4 -> 2026.8.19) remains a separately owned tested-upgrade follow-up.
+
 
 Last Updated: 2026-10-07 - Codex.
 Carlos authorized M1 preparation with exact Opus consensus and independent audit.
@@ -334,7 +342,7 @@ roadmap.
   Existing project work and runtime acceptance remain authoritative below.
 
 
-- Version: 0.41.0 in source; NAS remains on 0.39.3 from `3cf1539`. The M0 offline
+- Version: 0.41.1 in source; NAS remains on 0.39.3 from `3cf1539`. The M0 offline
   tooling is separate from the unchanged NAS service; Cortex delivery remains off.
 - Transcript Ready v1 is operator-ratified at the exact Media2Text `fa205972`
   five-artifact pin after Cortex consumer ACCEPT `73a3d11`. Media2Text recorded

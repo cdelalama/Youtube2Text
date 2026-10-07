@@ -5,6 +5,20 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.41.1] - 2026-10-07
+
+### Fixed
+
+- Update the existing web transitive `source-map-js` lock from 1.2.1 to 1.2.2
+  for GHSA-68fv-2mgg-jv7q, restoring the dependency audit without weakening CI.
+  Application code and API schemas are unchanged; source version metadata is
+  synchronized. NAS 0.39.3 is not deployed or restarted by this source patch.
+
+### Changed
+
+- Document verified zero-spend M1 note reuse, the private two-device reading
+  instructions and the explicitly retained M2 reliability obligations.
+
 ## [0.41.0] - 2026-09-30
 
 ### Added

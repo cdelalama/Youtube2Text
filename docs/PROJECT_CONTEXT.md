@@ -1,4 +1,4 @@
-<!-- doc-version: 0.41.0 -->
+<!-- doc-version: 0.41.1 -->
 # Project Context - Media2Text
 
 ## Vision
@@ -53,7 +53,7 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
 ## Current Status (2026-10-01)
-v0.41.0 stable in source adds the bounded offline M0 Markdown export for
+v0.41.1 stable in source retains the bounded offline M0 Markdown export for
 existing Plaud transcripts. Carlos confirmed notes work on both actual devices
 on October 1 in response to the reading/search/offline question; M0 is accepted.
 The next proposed step is one M1 recording after connection and cost preflight.

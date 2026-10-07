@@ -17,3 +17,7 @@ Index:
 - `DOCS_VERSIONING_ROADMAP.md` - Delivery roadmap for documentation/versioning guardrails and release discipline.
 
 - `docs/operations/M0_ACCEPTANCE_2026-10-01.md`: Carlos's acceptance of M0 on computer and Android, next M1 preflight and the retained Dossier publication gate.
+
+## M1 preparation (2026-10-07)
+
+- [Spanish operator reading test](M1_READING_TEST.es.md)

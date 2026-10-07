@@ -1,3 +1,5 @@
+2026-10-07 - Codex - Fix the web transitive source-map-js lock at 1.2.2 after CI 37610980289 identified GHSA-68fv-2mgg-jv7q; upstream release, tarball integrity, registry signatures and quarantine reviewed. No production deployment or M1 package change. Files: web/package-lock.json and version/release metadata. Version impact: patch 0.41.1; dependency hardening. Validation and independent narrow delta audit pending.
+
 2026-10-07 - Codex - Prepare M1 from a verified post-M0 result with zero incremental transcription cost; preserve automatic-path truth, old notes, failure history and actual-device gate. Exact Opus consensus/audit and Dossier delivery pending. Files: onboarding, handoff, roadmap, M1 guide and work record. Version impact: none, documentation only. Trace: role=executor; commits=325b939; state=M1 preparation, not device acceptance; validation=read-only identity chain, receiver ledger and deterministic export; next=review and deliver one note then operator reading.
 
 # LLM Change History

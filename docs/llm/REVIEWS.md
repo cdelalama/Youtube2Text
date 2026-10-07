@@ -166,3 +166,31 @@ page: prerecorded diarization is included; streaming has a separate add-on.
 Installed rates/caps remain unchanged. A2 wording, A3 dated older status blocks,
 A4 indexes and A6 dated failure history are nonblocking follow-ups, not claims
 of M1 acceptance. Receipt-only closure may proceed without recursive snapshots.
+
+### M1 actual reader/delivery and narrow CI repair review - 2026-10-07
+
+Same independent `claude-opus-5-5`/high session resumed; exact returned
+`modelUsage` and `canonicalModel` verified. Command is the source-audit command
+above with `--resume` instead of `--session-id`, `--max-turns 20`, otherwise the
+same read-only restriction and add-dir arguments. Native caller capture SHA-256
+`77bf962fd431db7b7d8325979e083fe67f3c5e0a2d616106d5fee7c45e6942a7`, byte-identical to that exact session; raw transcript stays private.
+Media narrow reviewed diff SHA-256
+`1516db872932a040b84333ac48bbd31105918b12c5269c8194626cc2f4dce98f`.
+
+R1 confirmed. SOURCE_GO for Media2Text 0.41.1's sole existing source-map-js lock
+entry change 1.2.1 -> 1.2.2 plus release metadata/docs, conditional on final CI
+passing before reporting green. 228/228 local tests and web/engine builds pass;
+quarantine integrity and two registry signatures verified. Runtime is unchanged.
+The old yt-dlp upstream-watch failure remains separately declared.
+
+RENDER_GO and DELIVERED_GO for M1 preparation only: actual Spanish Now/next-step
+and M1-dialog screenshots inspected, exact L8/S8 and seven earlier records,
+eight-record complete archive/restore, package and unchanged runtime identities.
+Independent physical recovery and Carlos's M1 reading/search/offline acceptance
+on both devices remain open. Receipt-only closeout is permitted without another
+round/capture, including final CI, delivered-state prose and closed preparation
+records. Changing the package, L8, dependency scope or runtime needs re-review.
+Use the stronger acceptance wording in the final operator message; the existing
+M1 dialog already states it. No weakening from the shorter next-step phrase.
+The audit's phrase "8 + 80 failures" is not a new count: current total is 80,
+including 8 added since September 29, with 622 unsent separately.
