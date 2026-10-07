@@ -85,3 +85,5 @@ youtube2text/
 - `docs/llm/WORK_INDEX.md` and `docs/llm/work/`: parent-owned task dispositions.
 
 - `docs/operations/M0_ACCEPTANCE_2026-10-01.md`: Carlos's acceptance of M0 on computer and Android, next M1 preflight and the retained Dossier publication gate.
+
+M1 preparation: `docs/operations/M1_READING_TEST.es.md`; task custody: `docs/llm/work/m1-preparation-20261007.json`.

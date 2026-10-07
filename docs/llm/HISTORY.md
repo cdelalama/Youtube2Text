@@ -1,3 +1,5 @@
+2026-10-07 - Codex - Prepare M1 from a verified post-M0 result with zero incremental transcription cost; preserve automatic-path truth, old notes, failure history and actual-device gate. Exact Opus consensus/audit and Dossier delivery pending. Files: onboarding, handoff, roadmap, M1 guide and work record. Version impact: none, documentation only. Trace: role=executor; commits=325b939; state=M1 preparation, not device acceptance; validation=read-only identity chain, receiver ledger and deterministic export; next=review and deliver one note then operator reading.
+
 # LLM Change History
 
 

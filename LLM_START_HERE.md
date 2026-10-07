@@ -1,4 +1,30 @@
 <!-- doc-version: 0.41.0 -->
+## M1 preparation - 2026-10-07
+
+Last Updated: 2026-10-07 - Codex.
+Carlos authorized M1 preparation with exact Opus consensus and independent audit.
+Fresh read-only evidence proves a post-M0 recording (October 2, 14:39 Madrid,
+6m11s) already completed through Plaud and Media2Text. Reuse its verified note:
+incremental transcription cost USD 0. The separate one-note package and Spanish
+LEEME are delivered to the private NAS folder and byte-verified. Exact Opus
+consensus is GO with R1-R4 applied; independent audit and Dossier delivery remain
+pending. Package: Media2Text-private/M1-20261007/Prueba-M1-20261007.zip.
+M0 remains done; M1 is in progress, not accepted on the two devices yet.
+After delivery, Carlos opens the new note on computer and Android and confirms
+it corresponds to the recording and is readable offline. The agent owns delivery
+and documentation. M2 then owns daily reliability and note-update delivery;
+M3, base phases and connection waves retain their separate obligations.
+
+The already enabled Plaud path automatically processes new recordings; today's
+preparation neither enabled it nor called a provider. A new requested paid test
+needs prior recording/specification and cost approval; that is not a global
+approval interlock on the existing automatic path. Do not ask Carlos to make
+another recording before that scope is explicit. Current 30-day internal ledger:
+USD 21.050780 of 25, 2,288.1286 of 3,000 minutes, zero unresolved reservations.
+The chosen result has one completed October 2 reservation estimated USD 0.056970;
+this is not a vendor invoice. No cap, provider, runtime or frozen contract changed.
+See docs/operations/M1_READING_TEST.es.md. Older dated observations below are retained history.
+
 
 ## Operator clarity and roadmap continuity - 2026-10-01
 

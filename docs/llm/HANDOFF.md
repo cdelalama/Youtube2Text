@@ -1,4 +1,30 @@
 <!-- doc-version: 0.41.0 -->
+## M1 preparation - 2026-10-07
+
+Last Updated: 2026-10-07 - Codex.
+Carlos authorized M1 preparation with exact Opus consensus and independent audit.
+Fresh read-only evidence proves a post-M0 recording (October 2, 14:39 Madrid,
+6m11s) already completed through Plaud and Media2Text. Reuse its verified note:
+incremental transcription cost USD 0. The separate one-note package and Spanish
+LEEME are delivered to the private NAS folder and byte-verified. Exact Opus
+consensus is GO with R1-R4 applied; independent audit and Dossier delivery remain
+pending. Package: Media2Text-private/M1-20261007/Prueba-M1-20261007.zip.
+M0 remains done; M1 is in progress, not accepted on the two devices yet.
+After delivery, Carlos opens the new note on computer and Android and confirms
+it corresponds to the recording and is readable offline. The agent owns delivery
+and documentation. M2 then owns daily reliability and note-update delivery;
+M3, base phases and connection waves retain their separate obligations.
+
+The already enabled Plaud path automatically processes new recordings; today's
+preparation neither enabled it nor called a provider. A new requested paid test
+needs prior recording/specification and cost approval; that is not a global
+approval interlock on the existing automatic path. Do not ask Carlos to make
+another recording before that scope is explicit. Current 30-day internal ledger:
+USD 21.050780 of 25, 2,288.1286 of 3,000 minutes, zero unresolved reservations.
+The chosen result has one completed October 2 reservation estimated USD 0.056970;
+this is not a vendor invoice. No cap, provider, runtime or frozen contract changed.
+See docs/operations/M1_READING_TEST.es.md. Older dated observations below are retained history.
+
 Source follow-up: the shared clarity correction is published and reviewed with exact Opus 5.5/high. The managed task is closed; ordinary project priorities and real-device acceptance stay as recorded. The rule is installed in Codex, Claude and source-root instructions on this host with exact before/after byte receipts.
 
 
@@ -339,10 +365,22 @@ roadmap.
 - Visible brand: Media2Text. Technical runtime/repo/env contract remains
   `youtube2text` + `Y2T_` per D-018.
 
+## Trace Anchor
+
+- Role: executor
+- Sent: 2026-10-07 12:45:42 CEST (10:45:42 UTC)
+- Subject: prepare a verified post-M0 note with zero incremental transcription cost.
+- Resulting state: version=0.41.0; M1 in progress; independent audit and Dossier pending.
+- Repo state: isolated work/m1-preparation-20261007, task-scoped documentation changes.
+- Validation: fresh read-only identity and economics; coherent 104-record collector; 75 old hashes preserved; repeat export identical; one-note ZIP NAS readback.
+- Next gate: agent completes independent audit and Dossier, then Carlos reads the October 2 note on computer and Android.
+- Dossier: existing Plaud L7/S7 retained; meaningful M1 refresh required, not yet published.
+
 ## Next Gates
 
-0. Finish M0 private device transfer and reading/search acceptance on desktop
-   and mobile; see the M0 runbook. Older gates below remain independently scoped.
+0. M0 is accepted. Deliver the reviewed post-M0 one-note M1 package, then Carlos
+   verifies it on computer and Android; see docs/operations/M1_READING_TEST.es.md.
+   Older gates below remain independently scoped.
 
 1. ~~Publish/deploy `0.39.3` and prove one provenance-correct OGG canary.~~ Done
    2026-07-17; source, provider derivative, transcript, callback, pull, and lease

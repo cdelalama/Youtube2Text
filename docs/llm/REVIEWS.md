@@ -118,3 +118,17 @@ Keep this file ASCII-only to avoid Windows encoding issues.
 
 ### Verdict
 Good scaffold for Phase 1 "local-first admin". Functional, minimal, correct architecture. Issues are minor and fixable in later iterations.
+
+## M1 reuse consensus - 2026-10-07
+
+Exact `claude-opus-5-5`, effort high, separate advisory session
+`c5e246c9-e348-435d-a928-149a8c614966`. Returned `modelUsage` and `canonicalModel` match in both rounds.
+Read-only tools Read/Glob/Grep; no shell, network, write, MCP or subagents.
+Command: `/home/cdelalama/.local/bin/claude -p --resume c5e246c9-e348-435d-a928-149a8c614966 --model claude-opus-5-5 --effort high --restricted --permission-mode dontAsk --tools Read,Glob,Grep --allowedTools Read,Glob,Grep --strict-mcp-config --mcp-config '{"mcpServers":{}}' --settings '{"disableAllHooks":true}' --output-format json --disable-slash-commands --max-turns 12` with approved source/evidence add-dir arguments.
+Native caller capture SHA-256 b0be9a4f3de68d29d7f02a8eecc3a81f89c89817b1c34b2b02b0fbcf18c72608; copied byte-identically from the exact session. Raw evidence remains private.
+CONSENSUS_GO with four required clarifications, applied: dated M1/M2 criteria
+amendment; existing automatic spend remains live; disclose +28 completions and
++8 unclassified failures; separate internal rates from provider invoices.
+Corrected advisor's multilingual/multichannel label against official Deepgram
+pricing. No runtime upgrade for v1 reuse; future v2 needs collector support.
+This consensus is not the independent audit or device acceptance.

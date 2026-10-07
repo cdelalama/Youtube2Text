@@ -1,0 +1,10 @@
+{
+  "artifacts": [],
+  "branch": "work/m1-preparation-20261007",
+  "id": "m1-preparation-20261007",
+  "next_step": "Complete reviewed zero-spend note preparation, NAS package and Plaud Dossier delivery; Carlos then verifies the note on computer and Android. Preserve existing runtime and paid-processing gates.",
+  "project": "youtube2text",
+  "purpose": "Prepare a verified post-M0 note without duplicate transcription spend and record the receiver proof",
+  "schema": 1,
+  "state": "active"
+}
