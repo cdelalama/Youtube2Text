@@ -1,5 +1,34 @@
 <!-- doc-version: 0.41.3 -->
 
+## STT provider and long-audio audit - 2026-10-23
+
+Last Updated: 2026-10-23 - Codex.
+Trace: role=auditor; sent=2026-10-23 11:47:13 CEST (09:47:13 UTC);
+subject=STT accounts, credits and provider-aware audio preparation;
+state=audited, proposal only; HEAD baseline=9df9de1; version=0.41.3;
+validation=read-only runtime/API/source checks and exact Opus 5.5/high;
+next=finish account balance evidence, then select any technical change;
+Dossier=no_change (existing M2 limits retained).
+
+[Audit and proposal](docs/operations/STT_PROVIDER_AUDIT_2026-10-23.md) records
+credential custody, unknown provider balances, the unavailable OpenAI path,
+byte-only splitting, the AssemblyAI upload-cap mismatch and merge/retry risks.
+The cloud consoles permit remote management when Carlos has the account login
+and required billing permissions. To finish the numeric balance check, Carlos
+signs into the existing Deepgram/AssemblyAI accounts and opens Billing; the
+executor currently has neither billing API access nor an authenticated browser
+session. A balance must identify its project and observation time. Secret values
+stay in Doppler. Edits take effect only after a scoped container recreation.
+The agent owns technical execution once Carlos selects that scope. No account,
+key, budget, replay, runtime deployment or paid transcription was changed here.
+
+The long-recording request remains blocked by the existing economic policy;
+completed results have a separate private export. The proposed planner/report
+and optional per-item exception are not implemented or accepted policy. M1
+actual-device acceptance, M2 daily reliability, M3 and connection work retain
+current priorities. This documentation task does not close those product gates.
+
+
 ## Dedicated Dossier delivery - 2026-10-07
 
 Last Updated: 2026-10-07 - Codex.

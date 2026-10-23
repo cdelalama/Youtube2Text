@@ -49,6 +49,24 @@
       "coverage_claim": "declared_corpus_only",
       "remaining_backfill": "Original B001 historical queue remains unchanged.",
       "cursor": "Resume original historical backfill when relevant; this batch covers only the current adoption request."
+    },
+    {
+      "id": "B003-stt-provider-audit-20261023",
+      "date": "2026-10-23",
+      "sources": [
+        {
+          "path": "docs/operations/STT_PROVIDER_AUDIT_2026-10-23.md"
+        }
+      ],
+      "excluded": [
+        "Private recordings, transcripts, account identities, credentials and raw native review conversations."
+      ],
+      "unknown": [
+        "Unreviewed historical sources remain unknown."
+      ],
+      "coverage_claim": "declared_corpus_only",
+      "remaining_backfill": "Prior historical queues remain unchanged.",
+      "cursor": "Revisit these proposed ideas before STT routing, credential pools, audio preparation or budget exception changes."
     }
   ],
   "entries": [
@@ -212,6 +230,78 @@
         "path": "docs/llm/DECISIONS.md",
         "contains": "## D-027"
       }
+    },
+    {
+      "id": "IDEA-0005",
+      "record": "native",
+      "kind": "operator_request",
+      "title": "Inspect STT credits and remote account management; report provider-aware audio splitting",
+      "origin": {
+        "date": "2026-10-23",
+        "attribution": "Carlos, current session request; implementation is not inferred",
+        "sources": [
+          {
+            "path": "docs/operations/STT_PROVIDER_AUDIT_2026-10-23.md"
+          }
+        ]
+      },
+      "batch": "B003-stt-provider-audit-20261023",
+      "owner": "youtube2text",
+      "state": "proposed",
+      "recall_trigger": "Before selecting OpenAI, changing STT credentials or checking account balances: recall the blank alias, stored-key 401 and missing billing visibility; recheck live access before routing or long-audio preparation.",
+      "documentation_refs": [
+        {
+          "path": "docs/operations/STT_PROVIDER_AUDIT_2026-10-23.md"
+        }
+      ]
+    },
+    {
+      "id": "IDEA-0006",
+      "record": "native",
+      "kind": "agent_suggestion",
+      "title": "Extend internal preparation with declared limits, durable piece recovery and truthful reports",
+      "origin": {
+        "date": "2026-10-23",
+        "attribution": "Codex and exact Opus 5.5/high advisory consensus; proposal only",
+        "sources": [
+          {
+            "path": "docs/operations/STT_PROVIDER_AUDIT_2026-10-23.md"
+          }
+        ]
+      },
+      "batch": "B003-stt-provider-audit-20261023",
+      "owner": "youtube2text",
+      "state": "proposed",
+      "recall_trigger": "Before implementing provider routing, splitting, reports or an exception for the blocked long recording; recheck live limits and authorization.",
+      "documentation_refs": [
+        {
+          "path": "docs/operations/STT_PROVIDER_AUDIT_2026-10-23.md"
+        }
+      ]
+    },
+    {
+      "id": "IDEA-0007",
+      "record": "native",
+      "kind": "agent_suggestion",
+      "title": "Consider a bounded per-item budget exception with explicit owner disposition",
+      "origin": {
+        "date": "2026-10-23",
+        "attribution": "Opus 5.5/high suggestion; not accepted operational policy",
+        "sources": [
+          {
+            "path": "docs/operations/STT_PROVIDER_AUDIT_2026-10-23.md"
+          }
+        ]
+      },
+      "batch": "B003-stt-provider-audit-20261023",
+      "owner": "youtube2text",
+      "state": "proposed",
+      "recall_trigger": "Before implementing provider routing, splitting, reports or an exception for the blocked long recording; recheck live limits and authorization.",
+      "documentation_refs": [
+        {
+          "path": "docs/operations/STT_PROVIDER_AUDIT_2026-10-23.md"
+        }
+      ]
     }
   ],
   "task_reconciliations": [

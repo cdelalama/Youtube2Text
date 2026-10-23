@@ -1,3 +1,51 @@
+## 2026-10-23 - STT accounts and provider-aware audio audit
+
+- Independent read-only advisor/reviewer: exact claude-opus-5-5, high effort;
+  actual modelUsage canonicalModel verified in all three rounds. Session:
+  b46816ed-9070-4040-bc23-51c68e537fdb. Parent Codex session:
+  01a165c4-a385-73d1-8725-97abf11165ad.
+- Invocation: claude --model claude-opus-5-5 --effort high
+  --permission-mode plan --tools Read,Grep,Glob --allowedTools Read,Grep,Glob
+  --no-chrome --print --output-format json; initial --session-id, subsequent
+  --resume of the same native session. Raw prompt/result/invocation/native
+  transcripts remain in private custody, never in Git or Dossier.
+- Baseline commit: 9df9de1a097c7139aaecf4c981e0abf2fdcf8e16.
+  Reviewed initial candidate tree: b4d7c4a3bc4b54085c0ed777bacfaddcdfcfa92d.
+  Reviewed final candidate tree: 925ebf11efab970cd8585b365aa1caf4111d346c.
+  These are tree objects, not release commits. Subsequent mechanical review,
+  work/export, validation and publication receipts were explicitly permitted.
+- Round 1: conditional consensus. Executor corrected the claim that the long
+  file fit every adapter (OpenAI does not), distinguished upload/processing
+  limits, confirmed blank-primary OpenAI masking plus independent key rejection,
+  and separated pure planning from actual local file preparation.
+- Round 2: CONSENSUS_GO, documentary CHANGES_REQUIRED. R1 remote access and
+  deployment wording, R3 overlap/credit/language findings and R4 recall triggers
+  were corrected. R2 was reconciled: preserve M1, but answer Carlos's current
+  balance request instead of redirecting him to a device test. Cross-config
+  equality does not imply distinct credit reserves.
+- Round 3: CONSENSUS_GO and SOURCE_GO for documentation only, no open blockers.
+  R5 mechanical receipts follow here and in work/idea indexes. Design remains
+  proposed; no runtime, credential, budget, contract or spending authority.
+- Strict schema-2 captures accepted all three rounds with native parent and
+  actual-model provenance. Manifest hashes by round:
+  1: 7af556d8598d70dde525acf505b56929bcf2da520a7e5c9bd283d114098cccdb;
+  2: eb399516f80c6bbffa84a37ee815d6174efe679afd76d847f5f0318d3c02611c;
+  3: 5ca80631733939e0a3f35be4938ecf84647a7e10ecbde93e600ed409e5ab3c56.
+  Manual capture is verified; hook status remains unknown with zero recorded
+  errors at this capture root. An earlier incorrectly formed status invocation
+  was rejected and retained; it was not a review rejection or lost evidence.
+- Validation: explicit-baseline idea continuity, workspace schema, naming,
+  version metadata, 13-file version manifest and diff checks pass. All seven
+  API/generated/contract files compared byte-identical to baseline. No runtime
+  tests/build were required for documentation-only changes. The normal session
+  check passes with its existing long-HANDOFF advisory and implicit-baseline
+  idea warning; the explicit-baseline idea check separately passes without
+  warnings. Initial isolated version check lacked yaml; the byte-identical
+  primary script with existing dependencies validated the candidate cwd.
+- Dossier: no_change accepted by reviewer; no accepted policy, milestone or
+  roadmap change. Existing M2 failure/economic feedback remains open. The last
+  local L2 export was checked; current reader access was not asserted.
+
 
 ## 2026-10-01 - M0 operator acceptance receipt
 
