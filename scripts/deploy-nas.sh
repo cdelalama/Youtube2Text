@@ -85,6 +85,7 @@ check_source_provenance() {
 
 run_release_checks() {
   npm test
+  node --test tests/deployment-verifier.test.mjs
   npm run build
   npm --prefix web run build
   npm run version:check

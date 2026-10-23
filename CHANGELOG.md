@@ -5,6 +5,19 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.42.2]
+
+- Wait for public web readiness during deployment; accept relative and absolute
+  canonical login redirects while rejecting foreign origins and lookalike paths.
+- Bound deployment HTTP requests and retain automatic rollback on real failures.
+ - 2026-10-23
+
+### Added
+
+### Changed
+
+### Fixed
+
 ## [0.42.1] - 2026-10-23
 
 - Update Zod to4.6.7, preserve explicit run overrides and bound invalid video collections before element validation. CLI and YAML video ID lists now share the API limit of5000 entries.

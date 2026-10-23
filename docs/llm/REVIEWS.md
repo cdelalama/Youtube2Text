@@ -1,3 +1,22 @@
+## 2026-10-24 - Product R8/R9: deployment verification correction
+
+Exact claude-opus-5-5/high, firstParty canonical metadata verified, same independent
+session e0d88e64-79d2-4f5c-840f-c134dafb83a5. R8's temporary public-readiness guard
+worked in attempt two, which exposed the verifier's absolute-redirect defect.
+Both attempts restored exact prior runtime file hashes and healthy 0.39.3 images.
+R9 returns SOURCE_GO for permanent bounded public readiness and exact canonical
+/login validation, including relative/absolute acceptance and foreign-origin/path
+rejection. All existing authentication, sanitized status, transcript, enforce and
+disabled-scheduler checks remain. Four focused regressions and 248 application
+tests pass, as do backend build, contract, versions, naming and DocKit. Both
+production dependency audits report zero vulnerabilities. Record focused tests
+on the published SHA; new immutable images must match that SHA. Use a fresh
+non-overlapping attended window with at least480seconds, fresh runtime check and
+drain, one guarded attempt; reconcile any failure without automatic replay.
+Runtime web digest, real browser/account/logout, restore, handoff, consumers and
+Dossier remain separate gates. R9 strict schema2 capture accepted without warnings;
+hook outcome unknown, zero recorded errors. Manifest SHA-256: ba69cd0bbfc0faedd8876f490555dd6d2fa1f92b91bbce772995e5d849713ae2.
+
 ## 2026-10-23 - Product R5/R6/R7: qualified 0.42.1 source
 
 Exact claude-opus-5-5/high, canonical firstParty metadata verified, independent

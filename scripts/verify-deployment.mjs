@@ -1,3 +1,7 @@
+import { waitFor, requireLoginRedirect } from "./verify-deployment-helpers.mjs";
+
+const request = (url, options = {}) => fetch(url, { ...options, signal: AbortSignal.timeout(5_000) });
+
 const args = new Map();
 for (let index = 2; index < process.argv.length; index += 2) {
   args.set(process.argv[index], process.argv[index + 1]);
@@ -10,19 +14,6 @@ const legacy = process.argv.includes("--legacy");
 
 if (!expectedVersion) throw new Error("--version is required");
 
-async function waitFor(label, operation, timeoutMs = 120_000) {
-  const deadline = Date.now() + timeoutMs;
-  let lastError;
-  while (Date.now() < deadline) {
-    try {
-      return await operation();
-    } catch (error) {
-      lastError = error;
-      await new Promise((resolve) => setTimeout(resolve, 2_000));
-    }
-  }
-  throw new Error(`${label} did not become ready: ${lastError?.message ?? lastError}`);
-}
 
 function expectStatus(response, expected, label) {
   const allowed = Array.isArray(expected) ? expected : [expected];
@@ -32,7 +23,7 @@ function expectStatus(response, expected, label) {
 }
 
 const health = await waitFor("API health", async () => {
-  const response = await fetch(`${apiUrl}/health`, { signal: AbortSignal.timeout(5_000) });
+  const response = await request(`${apiUrl}/health`, { signal: AbortSignal.timeout(5_000) });
   expectStatus(response, 200, "GET /health");
   const body = await response.json();
   if (body.version !== expectedVersion) {
@@ -42,13 +33,13 @@ const health = await waitFor("API health", async () => {
 });
 console.log(`[verify] API health version=${health.version}`);
 
-const unauthenticatedRuns = await fetch(`${apiUrl}/runs`);
+const unauthenticatedRuns = await request(`${apiUrl}/runs`);
 expectStatus(unauthenticatedRuns, 401, "unauthenticated GET /runs");
 console.log("[verify] backend authentication rejects missing key");
 
 if (legacy) {
   const root = await waitFor("legacy web", async () => {
-    const response = await fetch(webUrl, { redirect: "manual" });
+    const response = await request(webUrl, { redirect: "manual" });
     expectStatus(response, 200, "legacy web root");
     return response;
   });
@@ -56,7 +47,7 @@ if (legacy) {
   process.exit(0);
 }
 
-const mediaStatusResponse = await fetch(`${apiUrl}/status/media-pipeline`);
+const mediaStatusResponse = await request(`${apiUrl}/status/media-pipeline`);
 expectStatus(mediaStatusResponse, 200, "GET /status/media-pipeline");
 const mediaStatus = await mediaStatusResponse.json();
 if (!["ok", "degraded"].includes(mediaStatus?.condition) || !mediaStatus?.observed_at) {
@@ -64,15 +55,15 @@ if (!["ok", "degraded"].includes(mediaStatus?.condition) || !mediaStatus?.observ
 }
 console.log(`[verify] media pipeline status condition=${mediaStatus.condition}`);
 
-const publicMediaStatusResponse = await fetch(`${webUrl}/api/status/media-pipeline`);
-expectStatus(publicMediaStatusResponse, 200, "public web media pipeline status");
-const publicMediaStatus = await publicMediaStatusResponse.json();
-if (
-  !["ok", "degraded"].includes(publicMediaStatus?.condition) ||
-  !publicMediaStatus?.observed_at
-) {
-  throw new Error("public web media pipeline status is not a valid sanitized snapshot");
-}
+const publicMediaStatus = await waitFor("public web media pipeline status", async () => {
+  const response = await request(`${webUrl}/api/status/media-pipeline`);
+  expectStatus(response, 200, "public web media pipeline status");
+  const body = await response.json();
+  if (!["ok", "degraded"].includes(body?.condition) || !body?.observed_at) {
+    throw new Error("public web media pipeline status is not a valid sanitized snapshot");
+  }
+  return body;
+});
 console.log(`[verify] public media pipeline status condition=${publicMediaStatus.condition}`);
 
 const apiKey = process.env.Y2T_API_KEY;
@@ -82,7 +73,7 @@ if (!apiKey || !passphrase) {
 }
 
 const headers = { "x-api-key": apiKey };
-const transcriptsResponse = await fetch(`${apiUrl}/v1/transcripts?limit=1`, { headers });
+const transcriptsResponse = await request(`${apiUrl}/v1/transcripts?limit=1`, { headers });
 expectStatus(transcriptsResponse, 200, "authenticated GET /v1/transcripts");
 const transcriptsBody = await transcriptsResponse.json();
 if (transcriptsBody?.schemaVersion !== "media2text.transcript-list.v1") {
@@ -90,7 +81,7 @@ if (transcriptsBody?.schemaVersion !== "media2text.transcript-list.v1") {
 }
 console.log(`[verify] transcript store records=${transcriptsBody.items?.length ?? 0}`);
 
-const usageResponse = await fetch(`${apiUrl}/metrics/cost`, { headers });
+const usageResponse = await request(`${apiUrl}/metrics/cost`, { headers });
 expectStatus(usageResponse, 200, "authenticated GET /metrics/cost");
 const usageBody = await usageResponse.json();
 if (usageBody?.usage?.policy?.enforcement !== "enforce") {
@@ -100,7 +91,7 @@ console.log(
   `[verify] usage enforce cost30d=${usageBody.usage.last30d.estimatedUsd} cap30d=${usageBody.usage.policy.maxTotalUsd30d}`
 );
 
-const schedulerResponse = await fetch(`${apiUrl}/scheduler/status`, { headers });
+const schedulerResponse = await request(`${apiUrl}/scheduler/status`, { headers });
 expectStatus(schedulerResponse, 200, "authenticated GET /scheduler/status");
 const schedulerBody = await schedulerResponse.json();
 if (schedulerBody?.status?.enabled !== false || schedulerBody?.status?.running !== false) {
@@ -109,22 +100,20 @@ if (schedulerBody?.status?.enabled !== false || schedulerBody?.status?.running !
 console.log("[verify] scheduler disabled");
 
 const root = await waitFor("web login redirect", async () => {
-  const response = await fetch(webUrl, { redirect: "manual" });
+  const response = await request(webUrl, { redirect: "manual" });
   expectStatus(response, [307, 308], "web root redirect");
-  if (!response.headers.get("location")?.startsWith("/login")) {
-    throw new Error("web root did not redirect to /login");
-  }
+  requireLoginRedirect(response.headers.get("location"), webUrl);
   return response;
 });
 console.log(`[verify] web root protected status=${root.status}`);
 
-const loginPage = await fetch(`${webUrl}/login`);
+const loginPage = await request(`${webUrl}/login`);
 expectStatus(loginPage, 200, "GET /login");
 
-const unauthenticatedBff = await fetch(`${webUrl}/api/metrics/cost`);
+const unauthenticatedBff = await request(`${webUrl}/api/metrics/cost`);
 expectStatus(unauthenticatedBff, 401, "unauthenticated web BFF");
 
-const loginResponse = await fetch(`${webUrl}/api/auth/login`, {
+const loginResponse = await request(`${webUrl}/api/auth/login`, {
   method: "POST",
   redirect: "manual",
   headers: {
@@ -140,7 +129,7 @@ if (!cookie.startsWith("m2t_session=")) {
   throw new Error("operator login did not issue the signed session cookie");
 }
 
-const authenticatedBff = await fetch(`${webUrl}/api/metrics/cost`, {
+const authenticatedBff = await request(`${webUrl}/api/metrics/cost`, {
   headers: { cookie },
 });
 expectStatus(authenticatedBff, 200, "authenticated web BFF");

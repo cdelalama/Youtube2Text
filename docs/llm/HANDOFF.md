@@ -1,8 +1,40 @@
+## Deployment verification correction - 2026-10-24
+
+Last Updated: 2026-10-24 - Codex.
+
+- Version: 0.42.2 candidate; production restored and verified at 0.39.3.
+
+Two guarded deployments of published 0.42.1 were restored after verifier failures:
+the first queried the public web route before readiness; the second rejected the
+valid absolute canonical login redirect. Both attempts and exact restored runtime
+file hashes are retained. The private bootstrap secrets and empty encrypted store
+remain preserved; no provider call or account fixture was created.
+
+The patch waits for the public sanitized status, bounds HTTP requests and accepts
+only an exact canonical-origin /login redirect, relative or absolute. Four focused
+regressions cover successful startup retries, bounded failure and redirect guards.
+The executor reviews and publishes this correction, builds new immutable images,
+then uses a fresh non-overlapping attended window. Actual browser account use,
+private restore, owner/consumer receipts and Dossier delivery remain pending.
+Sentinel readiness d621285 is qualified through real maintenance expiry; its main
+facade remains b53257f. Existing accounts/login, spending limits and M1-M3 remain.
+
+### Trace Anchor
+
+- Role: executor
+- Sent: 2026-10-24 01:27:04 CEST (23:27:04 UTC)
+- Subject: permanent correction of deployment readiness and canonical redirect checks
+- Resulting state: HEAD=5beeafd632c60e336f34648c6100f84920171ae8; version=0.42.2; gate=source-review; production restored
+- Repo state: managed task with scoped local correction; published previous release and recovery evidence retained
+- Validation: focused regressions pass; 248 application tests, backend build, contract, audits, DocKit and exact Opus R9 SOURCE_GO pass; immutable images and actual delivery pending
+- Next gate: executor completes exact independent review and guarded release
+- Dossier: refresh_required; retained local L2; current reader refresh pending
+
 ## Account release dependency correction - 2026-10-23
 
 Last Updated: 2026-10-23 - Codex.
 
-- Version: 0.42.1 candidate; published account source3aa63de is0.42.0 and the usable NAS console remains0.39.3.
+- Version: 0.42.2 candidate; published account source3aa63de is0.42.0 and the usable NAS console remains0.39.3.
 
 Published 0.42.0 is superseded for release by candidate 0.42.1 after a fresh Zod HIGH advisory. Fixed Zod 4.6.7 preserves explicit-only overrides and bounds invalid arrays. All 248 tests, focused regression checks, typecheck, backend/web builds, API contract and both dependency audits pass. Exact Opus R5/R7 returned SOURCE_GO for core and deployment tooling. The NAS Compose qualification and six private release tests pass. Sentinel b53257f is active; Hermes 60 views, owner runtime admission and actual Portal mobile/desktop surveillance readback pass. No product containers or bootstrap secrets changed yet. Existing login remains available.
 
@@ -21,7 +53,7 @@ The executor publishes the qualified source and immutable images and the existin
 - Next gate: executor qualifies focused review and actual deployment/access/recovery
 - Dossier: refresh_required; previous native/shared history retained; new reader revision unavailable
 
-<!-- doc-version: 0.42.1 -->
+<!-- doc-version: 0.42.2 -->
 
 ## Current continuation - approved STT account administration, 2026-10-23
 

@@ -1,6 +1,6 @@
 # Media2Text curated project status
 
-Observed: 2026-10-23. This is the sole source admitted to the dedicated technical
+Observed: 2026-10-24. This is the sole source admitted to the dedicated technical
 Dossier. It contains no media content, personal titles, raw conversations or
 credentials. Engineering documentation remains English; the operator reader is
 curated in Spanish. It is a project status, not a complete operational archive.
@@ -16,8 +16,9 @@ separately verified. Accepted work keeps its selected credential version.
 
 Account source 0.42.0 is published. Corrected 0.42.1 is qualified after a fresh
 Zod security advisory: 248 tests, backend/web builds, dependency audits and
-exact independent Opus R5/R7 pass. Product runtime remains 0.39.3 until guarded
-deployment. Sentinel observes availability; the actual Portal mobile/desktop
+exact independent Opus R5/R7 pass. Two guarded attempts restored production to 0.39.3 after verifier
+startup/redirect defects. Candidate 0.42.2 corrects those checks before a fresh
+qualified deployment. Private custody remains preserved. Sentinel observes availability; the actual Portal mobile/desktop
 view shows that scope and disabled notifications. Existing processing failures
 remain visible. The executor next publishes immutable images and verifies the
 private credential store, recovery and actual login/account use/logout. No new
@@ -36,7 +37,7 @@ Media2Text converts YouTube/video and direct audio into structured and readable
 transcripts. The existing Plaud connection can process new recordings under its
 current limits. M0 is accepted: Carlos confirmed reading, phrase search and
 offline use on computer and Android on October 1. The October 7 integration brought its then-published source from 0.41.2 to
-0.41.3. The current account candidate is 0.42.1; production remains 0.39.3
+0.41.3. The current account candidate is 0.42.2; production remains 0.39.3
 until the separately verified deployment completes.
 
 A post-M0 recording has already been transcribed and delivered as the separate
