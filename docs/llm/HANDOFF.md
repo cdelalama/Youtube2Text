@@ -1,5 +1,23 @@
 <!-- doc-version: 0.41.3 -->
 
+## Multiple provider accounts in the UI - 2026-10-23
+
+Last Updated: 2026-10-23 - Codex.
+Carlos clarified that adding tokens from his different provider accounts must
+be easy inside the existing UI. The live desktop/mobile Settings page currently
+has only an informational API-key panel. The proposal in
+`docs/operations/STT_ACCOUNT_UI_PROPOSAL_2026-10-23.md` explains the reusable
+adapters, missing private credential store/API, simple account form and explicit
+account selection. No frontend/backend implementation or deployment is claimed.
+The agent inspected the actual view; exact Opus 5.5/high returned CONSENSUS_GO
+and SOURCE_GO for this proposal, without implementation or runtime approval.
+The next technical scope would deliver account management and selection together;
+credit integrations and the earlier audio/report proposal remain separately open.
+Existing M1-M3 and budget gates retain their status. Dossier assessment: no_change
+for this reviewed proposal. Trace: role=advisor; baseline=573cfee;
+sent=2026-10-23 20:24:02 CEST (18:24:02 UTC); gate=proposal-reviewed.
+
+
 ## STT provider and long-audio audit - 2026-10-23
 
 Last Updated: 2026-10-23 - Codex.

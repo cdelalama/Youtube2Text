@@ -1,0 +1,10 @@
+{
+  "artifacts": [],
+  "branch": "work/provider-accounts-ui-20261023",
+  "id": "provider-accounts-ui-20261023",
+  "next_step": "UI feasibility and exact Opus consensus complete. Retain checkout and private readback/review evidence. IDEA-0005 and IDEA-0008 preserve the requested multi-account UI and proposed design; implementation, access qualification, deployment and earlier audio/budget gates remain open.",
+  "project": "youtube2text",
+  "purpose": "Assess multi-account STT credential management in the existing UI and obtain exact Opus consensus; proposal only",
+  "schema": 1,
+  "state": "closed"
+}

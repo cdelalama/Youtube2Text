@@ -1,3 +1,46 @@
+## 2026-10-23 - Multi-account STT UI proposal
+
+- Exact independent claude-opus-5-5/high, canonical modelUsage verified; resumed
+  session b46816ed-9070-4040-bc23-51c68e537fdb, parent Codex session
+  01a165c4-a385-73d1-8725-97abf11165ad, cumulative rounds 4 and 5.
+- Read-only command: claude --model claude-opus-5-5 --effort high
+  --permission-mode plan --tools Read,Grep,Glob --allowedTools Read,Grep,Glob
+  --no-chrome --resume <session> --print --output-format json. Raw invocation,
+  native conversation, prompts/results and screenshots remain private.
+- Source baseline 573cfee5e92dabc07692e890a2d3e8f0c9622fbd; final candidate tree
+  d4a11eca1fca03a84340766943eb8e7c6ee25390 (includes permitted mechanical receipts).
+- Actual executor UI readback: existing authenticated Settings, 1440px desktop
+  and 390px mobile, login HTTP200, API-key panel informational, zero secret
+  inputs/add-account controls, then logout. Reviewer inspected the mobile
+  screenshot and primary code. This proves existing UI state, not delivery of
+  the proposed feature or operator acceptance on a physical device.
+- Round 4: conditional consensus. Agreed on simple account form, provider/account/
+  key separation, explicit account selection, encrypted mutable storage, access
+  probes without spend, source-precedence repair and truthful provider copy.
+- Round 5: CONSENSUS_GO and SOURCE_GO for documentation only, no blockers.
+  Reconciled private storage outside output/_jobs rather than the current jobs
+  database; recent reauthentication window rather than a password for every
+  new key; no login-provider migration. Account selection fails closed, does
+  not silently fall back to legacy or another account, and covers Plaud intake.
+- Strict schema-2 capture accepted both rounds with native parent evidence.
+  Round4 manifest: 844c1a9d9f6163ee32bec471c925047e3194e7c704091889084a3b9625b46c93.
+  Round5 manifest: 16d272db1a43cea1767712d7acc4d6df968bbd652461a52de404e7d08233f3e6.
+  Manual capture verified; hook status unknown, zero recorded errors here.
+- Review allowed mechanical task, validation and publication receipts. The
+  explicit-baseline idea guard initially rejected a changed IDEA-0005 origin;
+  its exact original origin was restored. The new attributed clarification
+  remains in B004, the proposal and documentation_refs, without erasing history.
+  IDEA-0008 records the agent design, not a duplicate operator request.
+- Portable task record copied exactly from installed task-workspace status;
+  existing curated WORK_INDEX annotations and all older records preserved.
+  Parent verification follows publication. Checks: explicit-baseline idea guard,
+  workspace schema, naming, version metadata, 13-file version manifest and diff.
+  Runtime tests/build are not required for documentation-only work. Existing
+  critical Next.js dependency CI/release gate remains open and unchanged.
+- Dossier no_change accepted: proposal only, no accepted architecture, milestone
+  or priority. Earlier audio preparation, long-recording budget and M1-M3 gates
+  remain open; implementation/deployment/spend are not inferred.
+
 ## 2026-10-23 - STT accounts and provider-aware audio audit
 
 - Independent read-only advisor/reviewer: exact claude-opus-5-5, high effort;

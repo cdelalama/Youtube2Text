@@ -14,3 +14,5 @@ This index records custody and disposition, not permission to delete a checkout.
 - [portal-dossier-20261007](work/portal-dossier-20261007.json): closed; Use the dedicated Media2Text Dossier in Portal. Carlos owns the pending M1 device reading test; agent-owned reliability, application release, Windows/fleet and independent recovery stay open. Retain this checkout and review/recovery evidence.
 
 - [provider-audio-audit-20261023](work/provider-audio-audit-20261023.json): closed audit; exact Opus consensus and source review complete. Credentials, balances, provider-aware splitting and the original long-recording gate are documented; proposed implementation stays open. Retain checkout and private evidence.
+
+- [provider-accounts-ui-20261023](work/provider-accounts-ui-20261023.json): closed proposal; authenticated UI inspection and exact Opus consensus/source review complete. Multi-account credential management remains unimplemented; retain checkout and private evidence.

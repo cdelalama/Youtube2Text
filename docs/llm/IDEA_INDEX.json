@@ -67,6 +67,24 @@
       "coverage_claim": "declared_corpus_only",
       "remaining_backfill": "Prior historical queues remain unchanged.",
       "cursor": "Revisit these proposed ideas before STT routing, credential pools, audio preparation or budget exception changes."
+    },
+    {
+      "id": "B004-stt-account-ui-20261023",
+      "date": "2026-10-23",
+      "sources": [
+        {
+          "path": "docs/operations/STT_ACCOUNT_UI_PROPOSAL_2026-10-23.md"
+        }
+      ],
+      "excluded": [
+        "Private account identities, tokens, recordings and native review contents."
+      ],
+      "unknown": [
+        "Historical coverage remains limited to prior declared batches."
+      ],
+      "coverage_claim": "declared_corpus_only",
+      "remaining_backfill": "Earlier historical backfill remains unchanged.",
+      "cursor": "Recall before implementing provider account/token management in the operator UI."
     }
   ],
   "entries": [
@@ -248,10 +266,13 @@
       "batch": "B003-stt-provider-audit-20261023",
       "owner": "youtube2text",
       "state": "proposed",
-      "recall_trigger": "Before selecting OpenAI, changing STT credentials or checking account balances: recall the blank alias, stored-key 401 and missing billing visibility; recheck live access before routing or long-audio preparation.",
+      "recall_trigger": "Before selecting OpenAI, changing STT credentials or checking account balances: recall the blank alias, stored-key 401 and missing billing visibility; recheck live access before routing or long-audio preparation. The operator-facing solution must add and manage accounts/tokens in Media2Text rather than require Doppler edits.",
       "documentation_refs": [
         {
           "path": "docs/operations/STT_PROVIDER_AUDIT_2026-10-23.md"
+        },
+        {
+          "path": "docs/operations/STT_ACCOUNT_UI_PROPOSAL_2026-10-23.md"
         }
       ]
     },
@@ -302,6 +323,30 @@
           "path": "docs/operations/STT_PROVIDER_AUDIT_2026-10-23.md"
         }
       ]
+    },
+    {
+      "id": "IDEA-0008",
+      "record": "native",
+      "kind": "agent_suggestion",
+      "title": "Private runtime credential registry and simple multi-account STT administration in the existing UI",
+      "origin": {
+        "date": "2026-10-23",
+        "attribution": "Codex and exact Opus 5.5/high proposal responding to the clarified IDEA-0005 request; implementation not selected",
+        "sources": [
+          {
+            "path": "docs/operations/STT_ACCOUNT_UI_PROPOSAL_2026-10-23.md"
+          }
+        ]
+      },
+      "batch": "B004-stt-account-ui-20261023",
+      "owner": "youtube2text",
+      "state": "proposed",
+      "recall_trigger": "Before implementing STT account administration: review private storage, recent reauthentication, source precedence, selected-account execution and truthful provider copy. D-024 is a related producer-profile pattern, not implemented STT storage.",
+      "documentation_refs": [
+        {
+          "path": "docs/operations/STT_ACCOUNT_UI_PROPOSAL_2026-10-23.md"
+        }
+      ]
     }
   ],
   "task_reconciliations": [
@@ -328,6 +373,14 @@
         "IDEA-0005",
         "IDEA-0006",
         "IDEA-0007"
+      ],
+      "no_ideas_reason": null
+    },
+    {
+      "task": "docs/llm/work/provider-accounts-ui-20261023.json",
+      "ideas": [
+        "IDEA-0005",
+        "IDEA-0008"
       ],
       "no_ideas_reason": null
     }
