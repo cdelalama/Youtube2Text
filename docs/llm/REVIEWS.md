@@ -42,6 +42,10 @@
   idea warning; the explicit-baseline idea check separately passes without
   warnings. Initial isolated version check lacked yaml; the byte-identical
   primary script with existing dependencies validated the candidate cwd.
+- Task closeout: the installed bulk export refused the existing curated index.
+  Preserved every earlier record/index annotation and added only the exact new
+  host-ledger record plus its index/reconciliation entry. Parent verification
+  against fetched publication follows; no checkout or history was removed.
 - Dossier: no_change accepted by reviewer; no accepted policy, milestone or
   roadmap change. Existing M2 failure/economic feedback remains open. The last
   local L2 export was checked; current reader access was not asserted.

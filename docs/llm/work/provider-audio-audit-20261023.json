@@ -1,0 +1,10 @@
+{
+  "artifacts": [],
+  "branch": "work/provider-audio-audit-20261023",
+  "id": "provider-audio-audit-20261023",
+  "next_step": "Audit and exact Opus consensus complete; retain checkout and private evidence. Numeric balances need authenticated billing access. IDEA-0005/0006/0007 remain proposed; long-recording execution, implementation, deployment and existing M1-M3 gates stay open.",
+  "project": "youtube2text",
+  "purpose": "Audit provider accounts, remote secret management and adaptive audio limits with exact Opus consensus",
+  "schema": 1,
+  "state": "closed"
+}
