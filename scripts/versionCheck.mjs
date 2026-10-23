@@ -45,7 +45,7 @@ export async function collectVersionState(rootDir = process.cwd()) {
     packageLockRootVersion: lock?.packages?.[""]?.version,
     openapiVersion,
     handoffVersion: extractFirstMatch(handoffRaw, /- Version:\s*([0-9]+\.[0-9]+\.[0-9]+)/),
-    projectContextVersion: extractFirstMatch(contextRaw, /\bv([0-9]+\.[0-9]+\.[0-9]+)\s+stable\b/i),
+    projectContextVersion: extractFirstMatch(contextRaw, /\bv([0-9]+\.[0-9]+\.[0-9]+)\s+(?:stable|candidate)\b/i),
   };
 }
 
@@ -76,7 +76,7 @@ export function validateVersionState(state) {
     errors.push("Missing or invalid version in docs/llm/HANDOFF.md (Current Status).");
   }
   if (!SEMVER_RE.test(String(projectContextVersion ?? ""))) {
-    errors.push("Missing or invalid stable version marker in docs/PROJECT_CONTEXT.md.");
+    errors.push("Missing or invalid source version marker in docs/PROJECT_CONTEXT.md.");
   }
 
   if (packageVersion && openapiVersion && packageVersion !== openapiVersion) {

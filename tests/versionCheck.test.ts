@@ -54,6 +54,12 @@ test("version check passes for synchronized versions", async () => {
   assert.deepEqual(errors, []);
 });
 
+test("version check reads current candidate before an older stable checkpoint", async () => {
+  const root = createFixture("2.4.6");
+  writeFileSync(join(root, "docs/PROJECT_CONTEXT.md"), "## Current Status\nv2.4.6 candidate.\n## Historical\nv2.4.5 stable.\n");
+  assert.deepEqual(validateVersionState(await collectVersionState(root)).errors, []);
+});
+
 test("version check detects package/openapi mismatch", async () => {
   const root = createFixture("1.0.0");
   writeFileSync(

@@ -1,3 +1,46 @@
+## 2026-10-23 - Publish existing-project identity before account feature
+
+- Role: executor
+- Sent: 2026-10-23 23:42:52 CEST (21:42:52 UTC)
+- Subject: reviewed existing-project Birth/auth records and owner-derived plan.
+- Resulting state: gate=publication-prerequisite; identity source only, runtime unchanged; source identity release is 0.41.4; application behavior remains unchanged until the separate 0.42.0 feature commit.
+- Repo state: managed task; reviewed feature remains local while identity publication unlocks its build matrix.
+- Validation: owner 70e25b1e published, exact source/cross-owner Opus SOURCE_GO; 246 tests/builds and isolated UI pass; current Protocol guidance matches dba90811.
+- Next gate: rerun required build matrix after identity publication, then publish unchanged reviewed feature and qualify consumer/runtime delivery.
+- Dossier: refresh_required; existing native/shared history retained, final feature publication/readback pending.
+
+The access checker reads committed Birth/auth files and refused their uncommitted
+addition. Publish those declarations and their referenced authority first; this
+is no runtime waiver. Existing password, URLs, provider and secrets remain.
+The two pristine older standard guidance files now match published Protocol;
+no project customization was overwritten. Full feature source publication and
+NAS activation still require their remaining checks.
+
+## 2026-10-23 - Approved STT account implementation candidate
+
+- Role: executor
+- Sent: 2026-10-23 22:52:05 CEST (20:52:05 UTC)
+- Subject: Existing Settings multi-account credentials and exact owner delivery preparation.
+- Resulting state: HEAD=977ab9b84685edce796303d477c1f68b9c91a7c7; version=0.42.0; gate=opened; local candidate, runtime unchanged.
+- Repo state: managed work/provider-accounts-implementation-20261023; uncommitted scoped code/docs, primary preserved.
+- Validation: backend build and twelve credential/API/worker tests pass; full release, browser and independent source checks pending.
+- Next gate: executor completes actual view, exact Opus source review, published owner access/Sentinel/consumer prerequisites and guarded delivery.
+- Dossier: refresh_required; prior local56b154981a0a1bb09c56569f11157d952fb264940515748953481d53e2e52357 retained; reader reachability unavailable this checkpoint.
+
+D-028 executes Carlos's Go. Separate encrypted private accounts/key versions,
+five-minute reauthentication, dedicated body-bound one-use administration proof,
+explicit legacy import and fail-closed manual defaults cover API/intake/scheduler
+work. Accepted jobs retain private account pins through rotation; local revocation
+blocks further provider calls without claiming provider cancellation or free work.
+Next.js15.5.28, corrected provider copy and source attribution accompany the
+feature. The existing project is safely retrofitted with ForgeOS Birth/auth
+records under the attributed existing-access disposition; no new login selected.
+Exact Opus5.5/high advisor required stronger proof separation, private references,
+individual imports and owner qualification; corrections are implemented or tracked
+in STT_ACCOUNT_UI_IMPLEMENTATION_2026-10-23.md. Advisor is not source/runtime GO.
+No NAS/config credential mutation, live STT, budget increase or legacy import.
+Existing adaptive audio/reporting proposal, M1/M2/M3 and economic gate remain.
+
 2026-10-23 - Codex - Clarify UI-native management of multiple provider accounts; inspect authenticated desktop/mobile Settings and prepare a functional proposal with exact Opus consensus. Preserve prior audio planning and all runtime/economic gates. Files: [account UI proposal, onboarding, handoff, history, reviews, idea/work records]. Version impact: no (proposal only). Trace: role=advisor; baseline=573cfee; state=design-review; next=scoped-account-management-implementation; Dossier=no_change-proposed.
 
 2026-10-23 - Codex - Record audit publication, exact parent task verification and passing continuity CI; retain general CI failure on unchanged Next.js dependencies as an open application gate. Files: [onboarding, handoff, reviews, history]. Version impact: no (receipt only). Trace: role=auditor; state=source-published-CI-limited; validation=origin-readback-and-lockfile-byte-comparison; next=existing-application-security-follow-up; Dossier=no_change.

@@ -1,3 +1,70 @@
+## 2026-10-23 - Identity publication prerequisite (R3)
+
+Exact same independent product reviewer e0d88e64-79d2-4f5c-840f-c134dafb83a5,
+claude-opus-5-5/high with canonical firstParty metadata verified, returned
+SOURCE_GO for identity publication followed by the unchanged feature after a
+real build matrix PASS. Required intermediate coherence: package/markers agree,
+DocKit/version/naming/idea/workspace checks pass on the exact tree. The precommit
+hook treats ForgeOS JSON as versioned configuration, so this identity-only
+release is 0.41.4; full reviewed account functionality remains 0.42.0.
+The already reviewed version-marker and exact-authority filename checks are
+included because the old checkers misclassify these identity documents.
+No application runtime behavior changes. Source tools match published trusted
+ForgeOS f754766d, also pinned by the owner gate. Protocol guidance is CURRENT.
+R3 strict native capture accepted without warnings; manifest
+c24774498fb9f4aae13986fbeea164f5ed497ba65f3cd4367468ff05a2ad6004.
+Hook outcome unknown, zero recorded errors. Functional source must remain exact
+R2 bytes; actual runtime/operator/consumer/Dossier acceptance remains pending.
+
+## 2026-10-23 - STT account implementation 0.42.0
+
+- Approved scope: Carlos's Go to the concrete proposal at 977ab9b, D-028.
+  Parent Codex session 01a165c4-a385-73d1-8725-97abf11165ad.
+- Exact claude-opus-5-5/high, canonical modelUsage and firstParty metadata
+  verified for advisor bb9c480d-acc8-4342-83bf-105db27ab794 rounds 1/2 and
+  independent reviewer e0d88e64-79d2-4f5c-840f-c134dafb83a5 rounds 1/2.
+  CLI explicitly selects --model claude-opus-5-5 --effort high, plan permission,
+  Read/Grep/Glob only, --no-chrome --print --output-format json. No substitution.
+  Exact invocation, native transcript, prompt/result/stderr and file-hash packets
+  remain private under the parent session's provider-accounts implementation evidence.
+- Advisor consensus required dedicated proof secret, private admission pins,
+  individual legacy import, atomic custody, matching-key recovery and existing
+  access qualification; round 2 confirmed Go authority without another generic
+  approval. It retained owner/Sentinel/consumer and actual access gates.
+- Reviewer R1: CHANGES_REQUIRED for orphan pin reuse after rollback/pruning,
+  unguarded optional credit lookup, final suite and deployment bootstrap docs.
+  R2: SOURCE_GO after upsert-on-new-admission plus duplicate-preserving regression,
+  pre-provider revocation guard, full 246/246 suite and exact UID/mode/secret/
+  legacy-preserving rollback instructions. Two publication conditions (current
+  continuation/check results and numeric spacing) are applied. Documentation
+  receipts are the only post-review changes; source code hashes remain pinned.
+- Additional corrections: child processes omit master/proof environment values;
+  BFF checks proof/session-secret separation; AssemblyAI poll waits abort.
+  Private table retention and the documented legacy-only CLI limitation remain.
+- Backend and web production builds pass with Next 15.5.28; root/web npm audits
+  report zero findings. Author and reviewer inspected actual component screenshots
+  at mobile/desktop; synthetic API exercise passed at 390/768/1440 with no overflow
+  or browser errors. Fixture selection readiness was corrected after R2 so a
+  disabled selected account displays the real fail-closed warning. This isolated
+  component proof is not deployed login/use/logout or physical-device acceptance.
+- Strict native capture schema 2 accepted all four rounds without warnings:
+  advisor R1 e71fcf6c349bda4ff3162ce53d646e08a6a6695fab8e2446bddc7ab9ebf04b97;
+  advisor R2 6ffbe9aeef54797a0133af029b3f00179d218c107ef3010ca4d6b794ae0708b3;
+  reviewer R1 c3e695f61b4f6761855333f28e0c0e498410a85980a690b7ad19702efae7cf2e;
+  reviewer R2 3b88d94a1a4589d4f36be950683b37a179a35831483036194447f48566bf1348.
+  --check-status reports hook outcome unknown, zero recorded errors; native
+  capture is retained without inventing hook success.
+- Owner plan published at 70e25b1e; integration plan regenerated from that
+  authority. Build matrix first requires publication of the already reviewed
+  Birth/auth contracts. The two pristine stale Protocol instruction files were
+  updated exactly to published dba90811 templates; no project customization
+  was overwritten. A bounded review covers this publication prerequisite.
+- SOURCE_GO does not accept runtime or complete delivery. Owner published auth/
+  Sentinel plan, private NAS backup/restore, bootstrap, immutable deployment,
+  actual anonymous/stale/reauth/logout/edge tests, operator retrieval handoff,
+  Portal/Dossier readers/history and consumer qualification remain required.
+  Existing long-audio economic/report and M1-M3 gates are preserved; no paid STT.
+
 ## 2026-10-23 - Multi-account STT UI proposal
 
 - Exact independent claude-opus-5-5/high, canonical modelUsage verified; resumed

@@ -1,4 +1,21 @@
-<!-- doc-version: 0.41.3 -->
+<!-- doc-version: 0.41.4 -->
+
+## Current identity publication - 2026-10-23
+
+Last Updated: 2026-10-23 - Codex.
+Carlos approved the account feature. This 0.41.4 source publication contains only
+existing-project Birth/access declarations, current standard guidance and the
+plan resolved from published Home Infra 70e25b1e. Runtime stays 0.39.3.
+The complete 0.42.0 feature candidate is retained separately and reviewed by
+exact Opus 5.5/high; it is not part of this intermediate tree.
+
+### Open work - next concrete step
+
+Follow `docs/operations/STT_ACCOUNT_UI_IMPLEMENTATION_2026-10-23.md`.
+The executor validates the build matrix on the published identity, then publishes
+the unchanged reviewed feature and completes installed consumer/private recovery/
+operator acceptance. No further general Go is pending. Existing M1-M3 and long
+recording economic limits retain their scope. Dossier refresh remains pending.
 
 ## Multiple provider accounts in the UI - 2026-10-23
 

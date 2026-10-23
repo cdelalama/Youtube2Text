@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "project": {
+    "name": "youtube2text",
+    "description": "Media2Text existing media transcription application"
+  },
+  "origin": {
+    "created_by": "ForgeOS",
+    "workflow": "safe-existing-project-adoption",
+    "created_at": "2026-10-23T20:47:45Z",
+    "forgeos_version": "0.43.0",
+    "contract_tool": {
+      "repo": "cdelalama/forgeos",
+      "path": "scripts/project-birth-contract.py",
+      "created_command": "/home/cdelalama/src/.worktrees/forgeos/operator-access-handoff-20261021/scripts/project-birth-contract.py"
+    }
+  },
+  "tooling": {
+    "current_command": "/home/cdelalama/src/.worktrees/forgeos/operator-access-handoff-20261021/scripts/project-birth-contract.py",
+    "relocations": []
+  },
+  "lifecycle": {
+    "state": "build_authorized",
+    "build_authorized": true,
+    "authorization_ref": "docs/brainstorms/project-birth-source.md",
+    "transitioned_at": "2026-10-23T20:47:45Z",
+    "history": []
+  },
+  "ownership": {
+    "project_learning_home": ".",
+    "project_brief": "docs/brainstorms/project-birth.md",
+    "framework_learning_home": "ForgeOS"
+  },
+  "ecosystem": {
+    "member": true,
+    "profiles": [
+      "llm-dockit",
+      "home-infra-protocol"
+    ],
+    "registry": "home-infra"
+  },
+  "next_gate": {
+    "kind": "implementation_gate",
+    "ref": "docs/operations/STT_ACCOUNT_UI_IMPLEMENTATION_2026-10-23.md"
+  },
+  "constraints": {
+    "runtime_allowed": true,
+    "deployment_allowed": false,
+    "secrets_allowed_in_git": false,
+    "real_data_allowed_in_git": false
+  },
+  "birth": {
+    "direction": "Preserve existing project and deliver approved multi-account STT administration",
+    "scope": "Existing-project adoption and approved account UI, private store, provider selection and required owner delivery",
+    "target_host": "nas",
+    "exposes_ui": true,
+    "source": {
+      "path": "docs/brainstorms/project-birth-source.md",
+      "sha256": "54cdfe48000a63125e68e8893944cbb1d5076132036f22d4b8b19d1d3335cf75"
+    },
+    "retrofit": true
+  },
+  "integrity": {
+    "immutable_sha256": "c8464250aaf4bedc7adfb8c07b2b3d843ae2e75fbd82bf57a37b7bb26daa07e4"
+  }
+}

@@ -1,5 +1,12 @@
-<!-- doc-version: 0.41.3 -->
+<!-- doc-version: 0.41.4 -->
 # Project Context - Media2Text
+
+## Identity publication checkpoint - 2026-10-23
+
+v0.41.4 candidate publishes the existing-project Birth/access declarations and
+owner integration plan. The reviewed 0.42.0 account feature is retained for the
+next source publication after the build matrix passes. Runtime remains 0.39.3.
+This intermediate source does not add account administration to the running app.
 
 ## Vision
 Build a modular local-first pipeline to turn YouTube/video sources and direct

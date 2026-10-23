@@ -1,0 +1,10 @@
+{
+  "artifacts": [],
+  "branch": "work/provider-accounts-implementation-20261023",
+  "id": "provider-accounts-implementation-20261023",
+  "next_step": "Complete this task and record its result or explicit pending disposition.",
+  "project": "youtube2text",
+  "purpose": "Implement and deliver approved multi-account STT credential management in the existing Media2Text UI",
+  "schema": 1,
+  "state": "active"
+}

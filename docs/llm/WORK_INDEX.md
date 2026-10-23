@@ -16,3 +16,5 @@ This index records custody and disposition, not permission to delete a checkout.
 - [provider-audio-audit-20261023](work/provider-audio-audit-20261023.json): closed audit; exact Opus consensus and source review complete. Credentials, balances, provider-aware splitting and the original long-recording gate are documented; proposed implementation stays open. Retain checkout and private evidence.
 
 - [provider-accounts-ui-20261023](work/provider-accounts-ui-20261023.json): closed proposal; authenticated UI inspection and exact Opus consensus/source review complete. Multi-account credential management remains unimplemented; retain checkout and private evidence.
+
+- [provider-accounts-implementation-20261023](work/provider-accounts-implementation-20261023.json): active; implement the approved account UI and complete source, owner integration and actual deployment. Preserve prior work and evidence.

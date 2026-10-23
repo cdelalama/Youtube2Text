@@ -10,6 +10,8 @@ const FORBIDDEN_ENV_PREFIX_RE = /\b(?:MEDIA2TEXT|M2T)_[A-Z0-9_]+\b/g;
 // Strip only its exact path; other tokens in the same file remain checked.
 const ALLOWED_DOCUMENT_REFERENCES = [
   "docs/operations/MEDIA2TEXT_CONSUMER_ACCEPTANCE_2026-10-07.md",
+  "MEDIA2TEXT_ACCOUNT_ACCESS_AUTHORITY_2026-10-23.md",
+  "MEDIA2TEXT_ACCOUNTS_DELIVERY_2026-10-23.md",
 ];
 
 const ALLOWED_FORBIDDEN_PREFIX_MENTIONS = new Set([

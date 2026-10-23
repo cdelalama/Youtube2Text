@@ -11,6 +11,18 @@ loader picks it up; the content stays LLM-neutral on purpose.
 
 ## Required reading (in this order)
 
+Project intake/adoption is mandatory for tests, reviews, betas, source preparation
+and VM/NAS previews. Use ForgeOS; a generic DocKit scaffold or a "source-only"
+label cannot create a homelab exclusion. Preserve existing files when adopting.
+Resolve the published Home Infra consumer policy, including Sentinel monitoring
+and the owner-selected authentication implementation and login method. Keep
+application-local authentication separate from identity-provider topology; never
+infer central SSO or a provider from a generic continuation. Planning does not
+claim a running service. Before runtime and delivery use the installed checks;
+a declaration, HTTP 401 or monitor self-health is not actual acceptance.
+Follow `home-infra-protocol/docs/COMPLETION_RULE.md` for current evidence and
+explicit migration gaps; never silently waive these obligations.
+
 1. `~/src/home-infra/docs/CONVENTIONS.md` — homelab build, deploy,
    secrets (Doppler), and NAS/QNAP quirks.
 2. `~/src/home-infra/docs/INVENTORY.md` — current observed state of
@@ -22,6 +34,17 @@ loader picks it up; the content stays LLM-neutral on purpose.
 5. `~/src/home-infra-protocol/docs/PROJECT_CONTRACTS.md` and
    `~/src/home-infra-protocol/SPEC.md` before completing or changing
    `infra.contract.yml`.
+
+## Operator access handoff
+
+Before delivery, follow the published Protocol
+`docs/COMPLETION_RULE.md#operator-first-access`. Give the operator the URL,
+account, exact approved retrieval/activation steps and recovery route in their
+language. Verify the route is usable by the operator and matches the login
+account/credential that was tested. Present the instructions before closure and
+repeat or link them in the final response. Agent-only secret custody is not
+delivery. Keep values out of source, consumers and logs; no silent reset or new
+sharing channel. Missing handoff evidence blocks current delivery.
 
 ## Mandatory updates
 

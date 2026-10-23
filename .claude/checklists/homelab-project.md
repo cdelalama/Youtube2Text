@@ -27,6 +27,17 @@ the owner-resolved integration plan and authentic scoped operator exclusions.
 - [ ] No secret values committed to this repo, to `infra.contract.yml`,
   or to any docs.
 
+## Operator first access
+
+- [ ] The operator received the URL, account, concrete approved credential
+  retrieval/activation instructions and usable recovery route in their language.
+- [ ] The operator can use that route; agent-only access does not qualify.
+- [ ] Account and non-secret credential identity match the actual login proof.
+- [ ] Independent review inspected the actual handoff; the current delivery gate
+  verifies exact protected-service coverage and published non-secret evidence.
+- [ ] The final response repeats the handoff or links its approved private
+  location. No password/token values enter Git, Portal, Dossier or logs.
+
 ## Runtime
 
 - [ ] `docker-compose.yml` placed at the standard path:
@@ -153,3 +164,12 @@ evidence distinguishes declaration, native capture, admitted reviewed publicatio
 fixed reader, exact history/permalink and coherent recovery. Source planning
 requires no live runtime. Legacy adoption follows explicit owner dispositions;
 no inferred new obligation or historical receipt rewrite.
+
+## Retiring an existing service
+
+For removals, follow the published Protocol `docs/COMPLETION_RULE.md#service-retirement`
+and the infrastructure owner's execution runbook. Verify all applicable current
+consumer surfaces, including a session opened before the change, and state any
+one-time reload needed for an older application version. A fresh page alone
+does not establish retirement completion. Preserve shared resources and historical
+evidence; delete data or recovery copies only within explicit operator authority.

@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "subject": "youtube2text",
-  "requirements_sha256": "6db24f25efab1f996ca942d225973bef92e0f7790c2a718ca69667e7f767a99b",
+  "requirements_sha256": "461aa99692b3c842ee4fa625f352015c3bbb0c1d715b7b72fb79e5e989b62d71",
   "policy": {
-    "commit": "02dd913a7c8062e5fdbaab2f043f5a49aba72b6e",
-    "profile_sha256": "b806c915acc2ae8945760765d39f62ccd6d35e3509d937ae6425cab734e4e4f1",
-    "subjects_sha256": "304256af5d2ab8bb93f9838ee347fa03dbc65e8ab2a2ec7a041c690ea02682bf"
+    "commit": "70e25b1e3dffd156b188c9335c40667794dd4b6a",
+    "profile_sha256": "98a0402279f707d252d75f882da414c260ddfba5a6af7aaaaabe16cbb35faf91",
+    "subjects_sha256": "2e386a2c41b746df7e41bd670946c6e0ca45d099988de6b3df596538bf38f15d"
   },
   "consumers": {
     "portal": {
@@ -45,8 +45,8 @@
         "rendered_access": "reviewer-assessed",
         "backend_functionality": "reviewer-assessed"
       },
-      "acceptance_ref": "docs/operations/MEDIA2TEXT_CONSUMER_ACCEPTANCE_2026-10-07.md",
-      "acceptance_sha256": "c234d420258228e6274a2be6f667bf009a47caccf841efac9bb1a7f6316cdb6e"
+      "acceptance_ref": "docs/operations/MEDIA2TEXT_ACCOUNTS_DELIVERY_2026-10-23.md",
+      "acceptance_sha256": "6aad021683cf575988a2a2d42182507db4a7b6a0f011be0c64ee659c4a83e12f"
     },
     "dossier": {
       "status": "required",
@@ -94,8 +94,8 @@
         "exact_permalink": "mechanical",
         "coherent_restore": "reviewer-assessed"
       },
-      "acceptance_ref": "docs/operations/MEDIA2TEXT_CONSUMER_ACCEPTANCE_2026-10-07.md",
-      "acceptance_sha256": "c234d420258228e6274a2be6f667bf009a47caccf841efac9bb1a7f6316cdb6e",
+      "acceptance_ref": "docs/operations/MEDIA2TEXT_ACCOUNTS_DELIVERY_2026-10-23.md",
+      "acceptance_sha256": "6aad021683cf575988a2a2d42182507db4a7b6a0f011be0c64ee659c4a83e12f",
       "source_plan": {
         "project_id": "youtube2text",
         "read_scope": "lan_technical",
@@ -104,6 +104,61 @@
         ]
       },
       "source_plan_ref": "docs/integration-source-plans/youtube2text.json"
+    },
+    "sentinel": {
+      "status": "required",
+      "owner": "sentinel",
+      "phases": {
+        "study": [
+          "availability_intent",
+          "owner_acceptance_plan"
+        ],
+        "birth": [
+          "resolved_plan"
+        ],
+        "build": [
+          "probe_spec"
+        ],
+        "delivery": [
+          "check_present",
+          "fresh_observation",
+          "unknown_on_loss",
+          "outage_classified",
+          "expected_stop_classified",
+          "recovery_observed"
+        ]
+      },
+      "exclusion_ref": null,
+      "assessment": {
+        "availability_intent": "mechanical",
+        "owner_acceptance_plan": "reviewer-assessed",
+        "resolved_plan": "mechanical",
+        "probe_spec": "mechanical",
+        "check_present": "mechanical",
+        "fresh_observation": "mechanical",
+        "unknown_on_loss": "reviewer-assessed",
+        "outage_classified": "reviewer-assessed",
+        "expected_stop_classified": "reviewer-assessed",
+        "recovery_observed": "reviewer-assessed"
+      },
+      "acceptance_ref": "docs/operations/MEDIA2TEXT_ACCOUNTS_DELIVERY_2026-10-23.md",
+      "acceptance_sha256": "6aad021683cf575988a2a2d42182507db4a7b6a0f011be0c64ee659c4a83e12f",
+      "probe_plan": {
+        "project_id": "youtube2text",
+        "availability_intent": "always_on",
+        "service_ids": [
+          "y2t"
+        ],
+        "target_ids": [
+          "youtube2text"
+        ],
+        "probe_url": "https://y2t.lamanoriega.com/api/status/media-pipeline",
+        "interval_seconds": 30,
+        "stale_after_seconds": 300,
+        "expected_stop_ref": "docs/operations/MEDIA2TEXT_ACCOUNTS_DELIVERY_2026-10-23.md"
+      },
+      "probe_plan_ref": "docs/integration-sentinel-plans/youtube2text.json",
+      "probe_plan_sha256": "4104c10ff31c2033d62fff03a78f13a1e119982e20d25ab4fef6b3981880bcf1"
     }
   }
 }

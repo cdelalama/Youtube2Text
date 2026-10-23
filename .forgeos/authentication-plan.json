@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "project": {
+    "name": "youtube2text"
+  },
+  "declaration": {
+    "mode": "application",
+    "implementation": "manual",
+    "stack": null,
+    "login_method": "local_credentials"
+  },
+  "public_contract": {
+    "reference": "home-infra-protocol@1c29249"
+  },
+  "origin": {
+    "created_at": "2026-10-23T20:48:49Z",
+    "forgeos_version": "0.43.0",
+    "created_command": "/home/cdelalama/src/.worktrees/forgeos/operator-access-handoff-20261021/scripts/project-auth-plan.py",
+    "login_method_migrations": [
+      {
+        "from": null,
+        "to": "local_credentials",
+        "at": "2026-10-23T20:48:49Z",
+        "authority_ref": "docs/operations/MEDIA2TEXT_ACCOUNT_ACCESS_AUTHORITY_2026-10-23.md",
+        "authority_sha256": "54cdfe48000a63125e68e8893944cbb1d5076132036f22d4b8b19d1d3335cf75",
+        "previous_immutable_sha256": "bd5cf5691d809bcbffc28de70269bec9b2f2c2d1eeacf7f9b0665683d89637aa"
+      }
+    ]
+  },
+  "module": {
+    "selected": null,
+    "evidence": null,
+    "runtime_source_generated": false
+  },
+  "tooling": {
+    "current_command": "/home/cdelalama/src/.worktrees/forgeos/operator-access-handoff-20261021/scripts/project-auth-plan.py",
+    "relocations": []
+  },
+  "lifecycle_observed": {
+    "state": "build_authorized",
+    "transition_index": 0
+  },
+  "planning_state": "declaration_only",
+  "integrity": {
+    "immutable_sha256": "22957f4969421051342f907f5bf7d52617ff6f6bbc05f71c256441f4338954aa"
+  }
+}

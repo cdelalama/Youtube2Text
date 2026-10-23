@@ -85,6 +85,27 @@
       "coverage_claim": "declared_corpus_only",
       "remaining_backfill": "Earlier historical backfill remains unchanged.",
       "cursor": "Recall before implementing provider account/token management in the operator UI."
+    },
+    {
+      "id": "B005-stt-account-implementation-20261023",
+      "date": "2026-10-23",
+      "sources": [
+        {
+          "path": "docs/operations/STT_ACCOUNT_UI_IMPLEMENTATION_2026-10-23.md"
+        },
+        {
+          "path": "docs/operations/MEDIA2TEXT_ACCOUNT_ACCESS_AUTHORITY_2026-10-23.md"
+        }
+      ],
+      "excluded": [
+        "Private account identities, credentials, recordings and raw native reviews."
+      ],
+      "unknown": [
+        "Historical coverage outside earlier declared batches."
+      ],
+      "coverage_claim": "declared_corpus_only",
+      "remaining_backfill": "Earlier historical queues remain unchanged.",
+      "cursor": "Resume accepted account implementation and actual owner delivery; preserve separate audio preparation and budget gates."
     }
   ],
   "entries": [
@@ -265,16 +286,21 @@
       },
       "batch": "B003-stt-provider-audit-20261023",
       "owner": "youtube2text",
-      "state": "proposed",
-      "recall_trigger": "Before selecting OpenAI, changing STT credentials or checking account balances: recall the blank alias, stored-key 401 and missing billing visibility; recheck live access before routing or long-audio preparation. The operator-facing solution must add and manage accounts/tokens in Media2Text rather than require Doppler edits.",
+      "state": "in_progress",
+      "recall_trigger": "Before changing account administration, default selection or credential custody; approved implementation is in progress and actual delivery remains pending.",
       "documentation_refs": [
         {
           "path": "docs/operations/STT_PROVIDER_AUDIT_2026-10-23.md"
         },
         {
           "path": "docs/operations/STT_ACCOUNT_UI_PROPOSAL_2026-10-23.md"
+        },
+        {
+          "path": "docs/operations/STT_ACCOUNT_UI_IMPLEMENTATION_2026-10-23.md"
         }
-      ]
+      ],
+      "authority": "Carlos approved the concrete multi-account UI proposal with Go on2026-10-23; D-028 and the attributed access authority retain the scope.",
+      "rationale": "Deliver easy account/token administration in the existing UI with encrypted custody and pinned manual selection; deployment and actual acceptance remain pending."
     },
     {
       "id": "IDEA-0006",
@@ -340,13 +366,41 @@
       },
       "batch": "B004-stt-account-ui-20261023",
       "owner": "youtube2text",
-      "state": "proposed",
-      "recall_trigger": "Before implementing STT account administration: review private storage, recent reauthentication, source precedence, selected-account execution and truthful provider copy. D-024 is a related producer-profile pattern, not implemented STT storage.",
+      "state": "in_progress",
+      "recall_trigger": "Before changing account administration, default selection or credential custody; approved implementation is in progress and actual delivery remains pending.",
       "documentation_refs": [
         {
           "path": "docs/operations/STT_ACCOUNT_UI_PROPOSAL_2026-10-23.md"
+        },
+        {
+          "path": "docs/operations/STT_ACCOUNT_UI_IMPLEMENTATION_2026-10-23.md"
         }
-      ]
+      ],
+      "authority": "Carlos approved the concrete multi-account UI proposal with Go on2026-10-23; D-028 and the attributed access authority retain the scope.",
+      "rationale": "Deliver easy account/token administration in the existing UI with encrypted custody and pinned manual selection; deployment and actual acceptance remain pending."
+    },
+    {
+      "id": "REF-D-028",
+      "record": "reference",
+      "kind": "accepted_decision",
+      "title": "Deliver approved multi-account STT administration",
+      "origin": {
+        "date": "2026-10-23",
+        "attribution": "Carlos approved the concrete multi-account UI proposal with Go after requesting Opus consensus.",
+        "sources": [
+          {
+            "path": "docs/llm/DECISIONS.md",
+            "contains": "D-028"
+          }
+        ]
+      },
+      "batch": "B005-stt-account-implementation-20261023",
+      "owner": "youtube2text",
+      "recall_trigger": "Before account implementation or delivery claims; preserve existing access and economic limits.",
+      "ref": {
+        "path": "docs/llm/DECISIONS.md",
+        "contains": "D-028"
+      }
     }
   ],
   "task_reconciliations": [
@@ -381,6 +435,15 @@
       "ideas": [
         "IDEA-0005",
         "IDEA-0008"
+      ],
+      "no_ideas_reason": null
+    },
+    {
+      "task": "docs/llm/work/provider-accounts-implementation-20261023.json",
+      "ideas": [
+        "IDEA-0005",
+        "IDEA-0008",
+        "REF-D-028"
       ],
       "no_ideas_reason": null
     }

@@ -1,4 +1,20 @@
 # Decisions (Rationale)
+## D-028 - Manage multiple STT accounts in the existing interface
+
+Accepted 2026-10-23: Carlos approved STT_ACCOUNT_UI_PROPOSAL_2026-10-23.md with
+"Go" after requesting easy account/token entry and exact Opus consensus.
+Implement the existing Settings workflow, encrypted private store, write-only
+credentials, recent authentication and explicit manual defaults for every API
+entry path. Pin accepted work; distinguish ordinary rotation/disable from local
+emergency revocation. Preserve the existing login under an exact owner
+qualification; no new identity provider or shared SSO. Import legacy keys only
+by explicit individual action. Access checks never establish credit; unknown
+balances remain unknown. The executor owns source, review and required delivery.
+No paid transcription, increased budget, automatic account failover or adaptive
+splitting is selected. M1/M2/M3 and the long-recording gate remain separate.
+See ../operations/STT_ACCOUNT_UI_IMPLEMENTATION_2026-10-23.md. Source preparation
+is not runtime acceptance; the owner consumer and actual access gates still apply.
+
 
 Keep this file stable and relatively compact. Put "why" here (tradeoffs, rejected options, pitfalls).
 
