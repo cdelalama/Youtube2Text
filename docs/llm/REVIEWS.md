@@ -51,6 +51,15 @@
   local L2 export was checked; current reader access was not asserted.
 
 
+- Publication readback: origin/main contains 172f878; installed task-workspace
+  verify-parent confirms all six exact records. Clean primary fast-forwarded.
+  Idea continuity CI39935749137 passes. General CI39935749214 fails on
+  existing Next.js dependency advisories GHSA-2464-fhr4-w9xw and
+  GHSA-p3m5-59mp-jv5r; web/package-lock.json is unchanged from 9df9de1
+  (SHA-256 3f2f4a9185d8ec37edd4ec5c2627d1ad9880682583e9f90b78e0631bef58ddc3).
+  Later test/build/contract steps were skipped. No production exploitability
+  claim, dependency correction or application deployment is inferred.
+
 ## 2026-10-01 - M0 operator acceptance receipt
 
 - Exact independent reviewer: `claude-opus-5-5`; high effort requested; returned modelUsage/canonicalModel verified. Read-only session `151ff611-275b-4ad9-bf7e-68e03cca6e7a`, prior complete owner onboarding retained, bounded primary receipt/diff review.

@@ -29,6 +29,14 @@ actual-device acceptance, M2 daily reliability, M3 and connection work retain
 current priorities. This documentation task does not close those product gates.
 
 
+Publication receipt: audit and task records are published at 172f878. Idea
+continuity CI39935749137 passed. General CI39935749214 stopped at the web
+dependency audit (Next.js critical advisory); its lockfile is byte-identical to
+the starting baseline. Subsequent test/build steps were skipped. This audit
+claims local documentation checks and independent source review, not a green
+application CI or runtime remediation. The existing application release/security
+follow-up remains open; no dependency bytes were changed here.
+
 ## Dedicated Dossier delivery - 2026-10-07
 
 Last Updated: 2026-10-07 - Codex.
