@@ -4,6 +4,30 @@
  */
 
 export interface paths {
+    "/provider-accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read masked provider account metadata from loopback
+         * @description Internal web-to-API route. Requires the operator API key and a loopback socket peer. No full saved key is returned. Cache-Control: no-store.
+         */
+        get: operations["getProviderAccounts"];
+        put?: never;
+        /**
+         * Administer provider accounts after recent operator authentication
+         * @description Internal loopback route. The web BFF checks same-origin and a signed session issued within five minutes, then creates a dedicated-secret HMAC over exact body bytes, fixed method/path, expiry and nonce. API key alone is insufficient. Proofs expire within thirty seconds and are single-use. Save/import never selects. Revocation is local; a provider may finish already accepted work. No automatic account failover.
+         */
+        post: operations["manageProviderAccounts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/status/media-pipeline": {
         parameters: {
             query?: never;
@@ -1534,6 +1558,127 @@ export interface components {
         CatalogDetailResponse: {
             catalog: components["schemas"]["CatalogDetail"];
         };
+        CredentialAccessCheck: {
+            /** @enum {string} */
+            state: "accepted" | "rejected" | "permission_unknown" | "unavailable";
+            /** Format: date-time */
+            checkedAt: string;
+        };
+        ProviderCredential: {
+            /** Format: uuid */
+            id: string;
+            hint: string;
+            revoked: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            access: components["schemas"]["CredentialAccessCheck"] | null;
+        };
+        ProviderAccount: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            provider: "assemblyai" | "deepgram" | "openai_whisper";
+            label: string;
+            enabled: boolean;
+            selected: boolean;
+            /** Format: uuid */
+            currentCredentialId: string;
+            /** Format: date-time */
+            createdAt: string;
+            balance: {
+                /** @constant */
+                state: "unknown";
+                /** @constant */
+                scope: "account";
+            };
+            keys: components["schemas"]["ProviderCredential"][];
+        };
+        ProviderAccountAction: {
+            /** @constant */
+            action: "create";
+            /** @enum {string} */
+            provider: "assemblyai" | "deepgram" | "openai_whisper";
+            label: string;
+            token: string;
+        } | {
+            /** @constant */
+            action: "import_legacy";
+            /** @enum {string} */
+            provider: "assemblyai" | "deepgram" | "openai_whisper";
+            label: string;
+            legacyIndex: number;
+        } | {
+            /** @constant */
+            action: "rename";
+            /** Format: uuid */
+            accountId: string;
+            label: string;
+        } | {
+            /** @constant */
+            action: "enable";
+            /** Format: uuid */
+            accountId: string;
+            enabled: boolean;
+        } | {
+            /** @constant */
+            action: "add_key";
+            /** Format: uuid */
+            accountId: string;
+            token: string;
+        } | {
+            /** @constant */
+            action: "use_key";
+            /** Format: uuid */
+            accountId: string;
+            /** Format: uuid */
+            credentialId: string;
+        } | {
+            /** @constant */
+            action: "revoke";
+            /** Format: uuid */
+            accountId: string;
+            /** Format: uuid */
+            credentialId: string;
+        } | {
+            /** @constant */
+            action: "select";
+            /** Format: uuid */
+            accountId: string;
+        } | {
+            /** @constant */
+            action: "use_legacy";
+            /** @enum {string} */
+            provider: "assemblyai" | "deepgram" | "openai_whisper";
+        } | {
+            /** @constant */
+            action: "probe";
+            /** Format: uuid */
+            accountId: string;
+        } | {
+            /** @constant */
+            action: "probe_unsaved";
+            /** @enum {string} */
+            provider: "assemblyai" | "deepgram" | "openai_whisper";
+            token: string;
+        };
+        ProviderAccountsSnapshot: {
+            configured: boolean;
+            /** @enum {string} */
+            activeProvider: "assemblyai" | "deepgram" | "openai_whisper";
+            selectedAccountId: string | null;
+            selectionReady: boolean;
+            accounts: components["schemas"]["ProviderAccount"][];
+            legacy: {
+                /** @enum {string} */
+                provider: "assemblyai" | "deepgram" | "openai_whisper";
+                keys: string[];
+                selected: boolean;
+            }[];
+            check?: components["schemas"]["CredentialAccessCheck"];
+            /** Format: uuid */
+            accountId?: string;
+            cancelledRuns?: number;
+        };
     };
     responses: {
         /** @description Rate limit exceeded */
@@ -1562,6 +1707,149 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    getProviderAccounts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Masked metadata only; access acceptance never establishes credit. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderAccountsSnapshot"];
+                };
+            };
+            /** @description Operator API key required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Loopback and fresh one-use admin proof required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Private store or authentication not configured */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    manageProviderAccounts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderAccountAction"];
+            };
+        };
+        responses: {
+            /** @description Masked metadata only; access acceptance never establishes credit. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderAccountsSnapshot"];
+                };
+            };
+            /** @description Invalid action */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Operator API key required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Loopback and fresh one-use admin proof required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Account or credential unavailable */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Body exceeds 16384 bytes */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limit */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Redacted operation failure */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Private store or authentication not configured */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     getMediaPipelineStatus: {
         parameters: {
             query?: never;

@@ -1,12 +1,5 @@
-<!-- doc-version: 0.41.4 -->
+<!-- doc-version: 0.42.0 -->
 # Project Context - Media2Text
-
-## Identity publication checkpoint - 2026-10-23
-
-v0.41.4 candidate publishes the existing-project Birth/access declarations and
-owner integration plan. The reviewed 0.42.0 account feature is retained for the
-next source publication after the build matrix passes. Runtime remains 0.39.3.
-This intermediate source does not add account administration to the running app.
 
 ## Vision
 Build a modular local-first pipeline to turn YouTube/video sources and direct
@@ -59,8 +52,9 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Storage | Persist outputs + idempotency | TBD | Layout: `output/<channel_title_slug>__<channel_id>/<basename>.*`. |
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
-## Current Status (2026-10-07)
-v0.41.3 stable in source retains the bounded offline M0 Markdown export for
+## Current Status (2026-10-23)
+v0.42.0 candidate in source adds account administration; publication/deployment
+remain pending. The existing product retains the bounded offline M0 Markdown export for
 existing Plaud transcripts. Carlos confirmed notes work on both actual devices
 on October 1 in response to the reading/search/offline question; M0 is accepted.
 A verified October 2 recording is now delivered as one private note, reusing
@@ -187,3 +181,33 @@ Optional / not yet implemented:
 - Deepgram API Docs: https://developers.deepgram.com/
 - OpenAI Whisper API: https://platform.openai.com/docs/guides/speech-to-text
 - yt-dlp Docs: https://github.com/yt-dlp/yt-dlp
+
+<!-- FORGEOS-PROJECT-BIRTH:START -->
+## ForgeOS Project Birth
+
+This repository was created by ForgeOS through `safe-existing-project-adoption` on 2026-10-23T20:47:45Z.
+Current lifecycle: `build_authorized`. This describes project authorization, not deployment or runtime health.
+Applied ecosystem profiles: `llm-dockit`, `home-infra-protocol`.
+Project planning and decisions are authoritative here at `.`.
+Framework-level learning returns to `ForgeOS`.
+Current tool command: /home/cdelalama/src/.worktrees/forgeos/operator-access-handoff-20261021/scripts/project-birth-contract.py
+<!-- FORGEOS-PROJECT-BIRTH:END -->
+
+<!-- FORGEOS-AUTH-PLAN:START -->
+## ForgeOS Authentication Plan
+
+- Public placement mode: `application`.
+- Project-local implementation owner: `manual`.
+- Application stack: `not declared`.
+- Login method: `local_credentials` (federated means OAuth 2.0/OIDC).
+- Planning state: `declaration_only`.
+- Project Birth lifecycle observed: `build_authorized` at transition #0.
+- Public contract reference: `home-infra-protocol@1c29249`.
+- No runtime protection is claimed by this plan.
+- This is declaration and implementation planning, not proof that anonymous access is blocked.
+- Exact check command:
+
+```sh
+/home/cdelalama/src/.worktrees/forgeos/operator-access-handoff-20261021/scripts/project-auth-plan.py check --project-root "$PWD"
+```
+<!-- FORGEOS-AUTH-PLAN:END -->

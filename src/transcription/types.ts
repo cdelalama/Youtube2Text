@@ -14,6 +14,8 @@ export type TranscriptJson = {
 };
 
 export type TranscriptionOptions = {
+  abortSignal?: AbortSignal;
+  beforeRequest?: () => void;
   languageCode?: string;
   languageDetection?: boolean;
   languageConfidenceThreshold?: number;

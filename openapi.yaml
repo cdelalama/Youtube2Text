@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Media2Text API
-  version: 0.41.4
+  version: 0.42.0
   description: |
     Minimal local HTTP API for Media2Text, backed by the youtube2text engine.
     Notes:
@@ -15,6 +15,91 @@ servers:
 security:
   - ApiKeyAuth: []
 paths:
+  /provider-accounts:
+    get:
+      operationId: getProviderAccounts
+      summary: Read masked provider account metadata from loopback
+      description: "Internal web-to-API route. Requires the operator API key and a
+        loopback socket peer. No full saved key is returned. Cache-Control:
+        no-store."
+      responses:
+        "200": &a1
+          description: Masked metadata only; access acceptance never establishes credit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderAccountsSnapshot"
+        "401": &a2
+          description: Operator API key required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403": &a3
+          description: Loopback and fresh one-use admin proof required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503": &a4
+          description: Private store or authentication not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: manageProviderAccounts
+      summary: Administer provider accounts after recent operator authentication
+      description: Internal loopback route. The web BFF checks same-origin and a
+        signed session issued within five minutes, then creates a dedicated-secret
+        HMAC over exact body bytes, fixed method/path, expiry and nonce. API key
+        alone is insufficient. Proofs expire within thirty seconds and are
+        single-use. Save/import never selects. Revocation is local; a provider may
+        finish already accepted work. No automatic account failover.
+      security:
+        - ApiKeyAuth: []
+          CredentialAdminProof: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProviderAccountAction"
+      responses:
+        "200": *a1
+        "400":
+          description: Invalid action
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401": *a2
+        "403": *a3
+        "409":
+          description: Account or credential unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          description: Body exceeds 16384 bytes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Redacted operation failure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503": *a4
   /status/media-pipeline:
     get:
       operationId: getMediaPipelineStatus
@@ -1185,6 +1270,11 @@ paths:
 
 components:
   securitySchemes:
+    CredentialAdminProof:
+      type: apiKey
+      in: header
+      name: x-m2t-admin-proof
+      description: Dedicated-secret one-use proof issued only by the authenticated web server.
     ApiKeyAuth:
       type: apiKey
       in: header
@@ -2528,3 +2618,283 @@ components:
       required: [catalog]
       properties:
         catalog: { $ref: "#/components/schemas/CatalogDetail" }
+
+    CredentialAccessCheck:
+      type: object
+      additionalProperties: false
+      required:
+        - state
+        - checkedAt
+      properties:
+        state:
+          type: string
+          enum:
+            - accepted
+            - rejected
+            - permission_unknown
+            - unavailable
+        checkedAt:
+          type: string
+          format: date-time
+    ProviderCredential:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - hint
+        - revoked
+        - createdAt
+        - access
+      properties:
+        id: &a1
+          type: string
+          format: uuid
+        hint:
+          type: string
+        revoked:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        access:
+          anyOf:
+            - $ref: "#/components/schemas/CredentialAccessCheck"
+            - type: "null"
+    ProviderAccount:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - provider
+        - label
+        - enabled
+        - selected
+        - currentCredentialId
+        - createdAt
+        - balance
+        - keys
+      properties:
+        id: *a1
+        provider: &a2
+          type: string
+          enum:
+            - assemblyai
+            - deepgram
+            - openai_whisper
+        label: &a3
+          type: string
+          minLength: 1
+          maxLength: 80
+        enabled:
+          type: boolean
+        selected:
+          type: boolean
+        currentCredentialId: *a1
+        createdAt:
+          type: string
+          format: date-time
+        balance:
+          type: object
+          additionalProperties: false
+          required:
+            - state
+            - scope
+          properties:
+            state:
+              const: unknown
+            scope:
+              const: account
+        keys:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/ProviderCredential"
+    ProviderAccountAction:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required:
+            - action
+            - provider
+            - label
+            - token
+          properties:
+            action:
+              type: string
+              const: create
+            provider: *a2
+            label: *a3
+            token: &a4
+              type: string
+              minLength: 8
+              maxLength: 4096
+              writeOnly: true
+        - type: object
+          additionalProperties: false
+          required:
+            - action
+            - provider
+            - label
+            - legacyIndex
+          properties:
+            action:
+              type: string
+              const: import_legacy
+            provider: *a2
+            label: *a3
+            legacyIndex:
+              type: integer
+              minimum: 0
+              maximum: 100
+        - type: object
+          additionalProperties: false
+          required:
+            - action
+            - accountId
+            - label
+          properties:
+            action:
+              type: string
+              const: rename
+            accountId: *a1
+            label: *a3
+        - type: object
+          additionalProperties: false
+          required:
+            - action
+            - accountId
+            - enabled
+          properties:
+            action:
+              type: string
+              const: enable
+            accountId: *a1
+            enabled:
+              type: boolean
+        - type: object
+          additionalProperties: false
+          required:
+            - action
+            - accountId
+            - token
+          properties:
+            action:
+              type: string
+              const: add_key
+            accountId: *a1
+            token: *a4
+        - type: object
+          additionalProperties: false
+          required:
+            - action
+            - accountId
+            - credentialId
+          properties:
+            action:
+              type: string
+              const: use_key
+            accountId: *a1
+            credentialId: *a1
+        - type: object
+          additionalProperties: false
+          required:
+            - action
+            - accountId
+            - credentialId
+          properties:
+            action:
+              type: string
+              const: revoke
+            accountId: *a1
+            credentialId: *a1
+        - type: object
+          additionalProperties: false
+          required:
+            - action
+            - accountId
+          properties:
+            action:
+              type: string
+              const: select
+            accountId: *a1
+        - type: object
+          additionalProperties: false
+          required:
+            - action
+            - provider
+          properties:
+            action:
+              type: string
+              const: use_legacy
+            provider: *a2
+        - type: object
+          additionalProperties: false
+          required:
+            - action
+            - accountId
+          properties:
+            action:
+              type: string
+              const: probe
+            accountId: *a1
+        - type: object
+          additionalProperties: false
+          required:
+            - action
+            - provider
+            - token
+          properties:
+            action:
+              type: string
+              const: probe_unsaved
+            provider: *a2
+            token: *a4
+    ProviderAccountsSnapshot:
+      type: object
+      additionalProperties: false
+      required:
+        - configured
+        - activeProvider
+        - selectedAccountId
+        - selectionReady
+        - accounts
+        - legacy
+      properties:
+        configured:
+          type: boolean
+        activeProvider: *a2
+        selectedAccountId:
+          anyOf:
+            - *a1
+            - type: "null"
+        selectionReady:
+          type: boolean
+        accounts:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/ProviderAccount"
+        legacy:
+          type: array
+          maxItems: 3
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - provider
+              - keys
+              - selected
+            properties:
+              provider: *a2
+              keys:
+                type: array
+                items:
+                  type: string
+              selected:
+                type: boolean
+        check:
+          $ref: "#/components/schemas/CredentialAccessCheck"
+        accountId: *a1
+        cancelledRuns:
+          type: integer
+          minimum: 0

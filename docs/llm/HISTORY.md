@@ -1,3 +1,21 @@
+## 2026-10-23 - Publish reviewed account administration 0.42.0
+
+- Role: executor
+- Sent: 2026-10-23 23:52:00 CEST (21:52:00 UTC)
+- Subject: existing Settings multi-account administration after identity gate.
+- Resulting state: version=0.42.0; gate=source-publication; reviewed feature, NAS still 0.39.3.
+- Repo state: identity f7aedf1 published; exact reviewed candidate restored, retained stash preserved.
+- Validation: actual build matrix PASS on published identity/owner70e25b1e; guidance CURRENT; 45 functional file hashes equal R2; 246 tests, builds, API contract and isolated UI pass.
+- Next gate: executor completes Sentinel enrollment, runtime check, private custody/recovery, immutable deployment and actual operator/consumer acceptance.
+- Dossier: refresh_required; native/shared history retained, feature update/readback pending.
+
+Exact Opus R2 SOURCE_GO and R3 identity-first SOURCE_GO conditions are met for
+source publication. Trusted ForgeOS tool provenance is published f754766d;
+identity0.41.4 passed version/naming/DocKit/idea/workspace on its exact tree.
+Hermes60 reader8c9b587 is installed with retained rollback files; its three
+actual views pass. Sentinel b53257f is published; guarded preparation is in
+progress. No Media2Text runtime/key change or paid STT is claimed here.
+
 ## 2026-10-23 - Publish existing-project identity before account feature
 
 - Role: executor

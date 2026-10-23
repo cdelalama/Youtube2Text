@@ -1,4 +1,4 @@
-<!-- doc-version: 0.41.4 -->
+<!-- doc-version: 0.42.0 -->
 # Versioning Rules
 
 ## Scope
@@ -27,7 +27,7 @@ The DocKit mirror must match the same version:
 
 The following prose markers must also mirror the same version:
 - `docs/llm/HANDOFF.md` (`Current Status -> Version`)
-- `docs/PROJECT_CONTEXT.md` (`Current Status -> vX.Y.Z stable`)
+- `docs/PROJECT_CONTEXT.md` (`Current Status -> vX.Y.Z stable` or `candidate`)
 
 Automated checks:
 - `npm run version:check`

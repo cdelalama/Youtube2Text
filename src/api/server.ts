@@ -39,7 +39,10 @@ import { WatchlistStore } from "./watchlist.js";
 import { getCatalogMetricsSnapshot } from "../youtube/catalogMetrics.js";
 import { listCachedCatalogs, readCatalogByChannelId, safeCatalogId } from "../youtube/catalogCache.js";
 import { getSettingsResponse, patchSettings } from "./settings.js";
-import { applySettingsToConfig, readSettingsFile, sanitizeNonSecretSettings } from "../config/settings.js";
+import { applySettingsToConfig, readSettingsFile, readSettingsFileSync, sanitizeNonSecretSettings } from "../config/settings.js";
+import { CredentialError, legacyKeys, openCredentialStore } from "../credentials/store.js";
+import { validateAdminProofSecret } from "../credentials/adminProof.js";
+import { credentialRoutes } from "../credentials/routes.js";
 import {
   normalizeConfigOverrides,
 } from "./validation.js";
@@ -281,7 +284,13 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
       : undefined;
   const maxEventBytes = Math.max(1024, parseEnvInt(process.env.Y2T_MAX_EVENT_BYTES, 65536));
 
+  if (process.env.Y2T_CREDENTIALS_DIR || process.env.Y2T_CREDENTIAL_MASTER_KEY) validateAdminProofSecret();
+  const credentialStore = openCredentialStore(config);
+  const effectiveConfigSync = () => applySettingsToConfig(config,
+    sanitizeNonSecretSettings(readSettingsFileSync(config.outputDir)?.settings));
   const manager = new RunManager(config, {
+    credentialStore,
+    effectiveConfig: effectiveConfigSync,
     maxBufferedEventsPerRun: opts.maxBufferedEventsPerRun,
     maxEventBytes,
     persistRuns: opts.persistRuns,
@@ -290,6 +299,7 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
     deps: opts.deps?.runPipeline ? { runPipeline: opts.deps.runPipeline } : undefined,
   });
   await manager.init();
+  const handleCredentials = credentialRoutes(credentialStore, config, manager, effectiveConfigSync);
 
   const watchlistStore = new WatchlistStore(config.outputDir);
   const usageLedger = new UsageLedger(config.outputDir);
@@ -310,7 +320,15 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
     audioFormat: config.audioFormat,
   });
   const transcriptStore = new TranscriptStore(config.outputDir);
-  const mediaJobStore = new MediaJobStore(config.outputDir);
+  const mediaJobStore = new MediaJobStore(config.outputDir, (intakeId) => {
+    if (!credentialStore) return;
+    const effective = effectiveConfigSync();
+    const provider = effective.sttProvider;
+    const pin = credentialStore.pin(provider);
+    if (pin) credentialStore.resolve(pin);
+    else if (!legacyKeys(effective, provider).length) throw new CredentialError("selected_account_unavailable");
+    credentialStore.recordWork(`intake:${intakeId}`, provider, pin);
+  });
   for (const transcript of (await transcriptStore.listAll()).reverse()) {
     mediaJobStore.enqueueTranscriptReady(transcript);
   }
@@ -324,7 +342,7 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
       parseEnvInt(process.env.Y2T_OUTBOX_TERMINAL_RETENTION_DAYS, 365)
     ),
   });
-  const intakeWorker = new IntakeWorker(mediaJobStore, manager, config);
+  const intakeWorker = new IntakeWorker(mediaJobStore, manager, config, (intakeId) => credentialStore?.workSelection(`intake:${intakeId}`));
   const outboxWorker = new TranscriptReadyOutboxWorker(mediaJobStore);
   const intakeStatusOutboxWorker = new IntakeStatusOutboxWorker(mediaJobStore);
   intakeWorker.start();
@@ -640,6 +658,10 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
     }
 
     try {
+      if (seg.length === 1 && seg[0] === "provider-accounts") {
+        await handleCredentials(req, res);
+        return;
+      }
       if (req.method === "GET" && seg.length === 1 && seg[0] === "health") {
         const parsed = parseUrl(req.url ?? "/health", true);
         const deepRaw = parsed.query?.deep;
@@ -1879,6 +1901,7 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
 
       return notFound(res);
     } catch (error) {
+      if (error instanceof CredentialError) { json(res, 409, { error: error.code }); return; }
       const err = error instanceof Error ? error : new Error(String(error));
       console.error("[api] Unhandled error:", err);
       json(res, 500, { error: "internal_error", message: "Internal server error" });
@@ -1892,9 +1915,10 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
     if (
       intakeWorker.isIdle() &&
       outboxWorker.isIdle() &&
-      intakeStatusOutboxWorker.isIdle()
+      intakeStatusOutboxWorker.isIdle() && manager.getActiveRunCount() === 0
     ) {
       mediaJobStore.close();
+      credentialStore?.close();
       return;
     }
     const deadline = Date.now() + 5_000;
@@ -1902,15 +1926,15 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
       if (
         (intakeWorker.isIdle() &&
           outboxWorker.isIdle() &&
-          intakeStatusOutboxWorker.isIdle()) ||
+          intakeStatusOutboxWorker.isIdle() && manager.getActiveRunCount() === 0) ||
         Date.now() >= deadline
       ) {
         clearInterval(closeWhenIdle);
         if (
           intakeWorker.isIdle() &&
           outboxWorker.isIdle() &&
-          intakeStatusOutboxWorker.isIdle()
-        ) mediaJobStore.close();
+          intakeStatusOutboxWorker.isIdle() && manager.getActiveRunCount() === 0
+        ) { mediaJobStore.close(); credentialStore?.close(); }
       }
     }, 25);
     closeWhenIdle.unref?.();

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { components } from "../lib/apiTypes.gen";
+import ProviderAccounts from "./settings/ProviderAccounts";
 
 type RunRecord = components["schemas"]["RunRecord"];
 type ChannelInfo = components["schemas"]["ChannelInfo"];
@@ -1090,7 +1091,11 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
     ] as ProviderCapability[];
     return (
       <section className="m2t-page">
-        <PageIntro title={t(lang, "Ajustes", "Settings")} text={t(lang, "Configuración no secreta live. Gestión visual de claves queda limitada por seguridad.", "Live non-secret configuration. Visual key management is constrained for security.")} />
+        <PageIntro title={t(lang, "Ajustes", "Settings")} text={t(lang, "Elige cómo transcribir y gestiona las cuentas de tus proveedores.", "Choose how to transcribe and manage your provider accounts.")} />
+        <ProviderAccounts lang={lang} settingsRevision={settings?.updatedAt} onProviderSelected={(provider) => {
+          setSettingsDraft((previous) => ({ ...previous, sttProvider: provider }));
+          void maybeJson<SettingsGetResponse>("/api/settings").then((next) => { if (next) setSettings(next); });
+        }} />
         <div className="m2t-settings-grid">
           <div className="m2t-panel">
             <div className="m2t-panel-head"><strong>{t(lang, "Proveedor", "Provider")}</strong><FeatureBadge state="LIVE" /></div>
@@ -1100,19 +1105,15 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
               ))}
             </div>
             <div className="m2t-provider-options">
-              <span>AssemblyAI: diarization · punctuation · PII redaction</span>
-              <span>Deepgram: nova-2 · smart format · keywords</span>
-              <span>Whisper: verbose_json · prompt · no diarization</span>
+              <span>AssemblyAI: diarization · punctuation</span>
+              <span>Deepgram: {settings?.effective?.deepgramModel ?? "nova-3"} · smart format</span>
+              <span>Whisper: verbose_json · no diarization</span>
             </div>
           </div>
           <div className="m2t-panel">
             <div className="m2t-panel-head"><strong>{t(lang, "Comentarios", "Comments")}</strong><FeatureBadge state="LIVE" /></div>
             <label className="m2t-form-row"><span>commentsEnabled</span><select value={settingsDraft.commentsEnabled ?? "true"} onChange={(e) => setSettingsDraft((p) => ({ ...p, commentsEnabled: e.target.value }))}><option value="true">true</option><option value="false">false</option></select></label>
             <label className="m2t-form-row"><span>commentsMax</span><input value={settingsDraft.commentsMax ?? "100"} onChange={(e) => setSettingsDraft((p) => ({ ...p, commentsMax: e.target.value }))} /></label>
-          </div>
-          <div className="m2t-panel">
-            <div className="m2t-panel-head"><strong>{t(lang, "Claves API", "API keys")}</strong><FeatureBadge state="PARCIAL" /></div>
-            <p>{t(lang, "El runtime soporta multi-key por env/Doppler. Añadir/quitar secretos desde UI no se implementa para no filtrar credenciales.", "Runtime supports multi-key through env/Doppler. Add/remove secrets from UI is not implemented to avoid leaking credentials.")}</p>
           </div>
           <div className="m2t-panel">
             <div className="m2t-panel-head"><strong>{t(lang, "Almacenamiento", "Storage")}</strong><FeatureBadge state="PARCIAL" /></div>

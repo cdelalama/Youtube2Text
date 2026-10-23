@@ -5,11 +5,20 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.42.0] - 2026-10-23
+
+### Added
+
+### Changed
+
+### Fixed
+
 ## [0.41.4] - 2026-10-23
 
 ### Changed
 - Publish existing-project identity, existing-password access declaration and the owner-derived integration plan before the separately reviewed account feature release.
 - Refresh pristine standard Protocol instructions and reviewed metadata checks for document version markers and exact authority filenames. No application behavior or runtime change.
+
 
 ## [0.41.3] - 2026-10-07
 

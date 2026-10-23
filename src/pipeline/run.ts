@@ -148,12 +148,15 @@ function getCreditsMinutesRemaining(
 
 export async function checkAssemblyAiCredits(
   config: AppConfig,
-  providerFactory: (config: AppConfig) => TranscriptionProvider = createTranscriptionProvider
+  providerFactory: (config: AppConfig) => TranscriptionProvider = createTranscriptionProvider,
+  assertCredentialAvailable?: () => void
 ): Promise<void> {
   if (config.assemblyAiCreditsCheck === "none" || config.sttProvider !== "assemblyai") {
     return;
   }
 
+  // Keep local revocation outside the optional credit-check warning fallback.
+  assertCredentialAvailable?.();
   try {
     const provider = providerFactory(config);
     if (!provider.getAccount) {
@@ -196,6 +199,7 @@ export async function runPipeline(
     emitter?: PipelineEventEmitter;
     abortSignal?: AbortSignal;
     runId?: string;
+    assertCredentialAvailable?: () => void;
     deps?: {
       createTranscriptionProvider?: (config: AppConfig) => TranscriptionProvider;
       getAudioDurationSeconds?: (audioPath: string) => Promise<number>;
@@ -242,7 +246,8 @@ export async function runPipeline(
   );
   const providerFactory = options.deps?.createTranscriptionProvider ?? createTranscriptionProvider;
   const getAudioDuration = options.deps?.getAudioDurationSeconds ?? getAudioDurationSeconds;
-  await checkAssemblyAiCredits(config, providerFactory);
+  abortSignal?.throwIfAborted();
+  await checkAssemblyAiCredits(config, providerFactory, options.assertCredentialAvailable);
 
   const ytDlpExtraArgs: string[] = [];
   const listing: YoutubeListing = audioInput
@@ -595,7 +600,10 @@ export async function runPipeline(
                   stageForError = "transcribe";
                   let chunkTranscript;
                   try {
+                    options.assertCredentialAvailable?.();
                     chunkTranscript = await provider.transcribe(chunk.path, {
+                      abortSignal,
+                      beforeRequest: options.assertCredentialAvailable,
                       languageCode: useProviderAutoLanguageDetection ? undefined : language.languageCode,
                       languageDetection: useProviderAutoLanguageDetection ? true : undefined,
                       pollIntervalMs: config.pollIntervalMs,
@@ -633,7 +641,10 @@ export async function runPipeline(
                 itemSeconds: itemAudioSeconds,
               });
               try {
+                options.assertCredentialAvailable?.();
                 transcript = await provider.transcribe(audioPath, {
+                  abortSignal,
+                  beforeRequest: options.assertCredentialAvailable,
                   languageCode: useProviderAutoLanguageDetection ? undefined : language.languageCode,
                   languageDetection: useProviderAutoLanguageDetection ? true : undefined,
                   pollIntervalMs: config.pollIntervalMs,

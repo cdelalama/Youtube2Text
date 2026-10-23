@@ -43,6 +43,8 @@ export type IntakeRequestV1 = {
   title?: string;
 };
 
+export type IntakeCredentialSelection = { provider: import("../config/schema.js").SttProviderId;
+  pin: import("../credentials/store.js").CredentialPin | null };
 export type IntakeRecord = {
   intakeId: string;
   request: IntakeRequestV1;
@@ -390,7 +392,7 @@ export class MediaJobStore {
   readonly dbPath: string;
   private db: DatabaseSync;
 
-  constructor(outputDir: string) {
+  constructor(outputDir: string, private selectCredentials?: (intakeId: string) => void) {
     this.dbPath = join(outputDir, "_jobs", "media2text.sqlite");
     mkdirSync(dirname(this.dbPath), { recursive: true });
     this.db = new DatabaseSync(this.dbPath);
@@ -603,6 +605,9 @@ export class MediaJobStore {
         this.db
           .prepare("UPDATE intakes SET local_path = ? WHERE intake_id = ?")
           .run(options.localPath, intakeId);
+      }
+      if (options?.status !== "held" && this.selectCredentials) {
+        this.selectCredentials(intakeId);
       }
       const row = this.db
         .prepare("SELECT * FROM intakes WHERE intake_id = ?")

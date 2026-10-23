@@ -81,7 +81,21 @@ export async function POST(request: NextRequest) {
 
   let passphrase = "";
   try {
-    const body = (await request.json()) as { passphrase?: unknown };
+    const reader = request.body?.getReader();
+    if (!reader) return NextResponse.json({ error: "invalid_request" }, { status: 400 });
+    const chunks: Uint8Array[] = [];
+    let bytes = 0;
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      bytes += value.length;
+      if (bytes > 4096) {
+        await reader.cancel();
+        return NextResponse.json({ error: "payload_too_large" }, { status: 413 });
+      }
+      chunks.push(value);
+    }
+    const body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as { passphrase?: unknown };
     if (typeof body.passphrase === "string" && body.passphrase.length <= 512) {
       passphrase = body.passphrase;
     }

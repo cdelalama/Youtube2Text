@@ -137,6 +137,15 @@ export async function getWebAuthState(request: Request): Promise<WebAuthState> {
   return (await verifyWebSessionToken(token)) ? "authenticated" : "unauthenticated";
 }
 
+export async function hasRecentOperatorAuth(request: Request, nowMs = Date.now()): Promise<boolean> {
+  const token = cookieValue(request, WEB_SESSION_COOKIE);
+  if (!(await verifyWebSessionToken(token, nowMs))) return false;
+  try {
+    const payload = JSON.parse(new TextDecoder().decode(fromBase64Url(token!.split(".")[0]!))) as SessionPayload;
+    return Number.isInteger(payload.iat) && payload.iat <= nowMs / 1000 && payload.iat > nowMs / 1000 - 300;
+  } catch { return false; }
+}
+
 function lastForwardedValue(value: string | null): string | undefined {
   const values = value?.split(",").map((part) => part.trim()).filter(Boolean) ?? [];
   return values[values.length - 1];

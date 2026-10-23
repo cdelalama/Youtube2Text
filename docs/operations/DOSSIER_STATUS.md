@@ -1,19 +1,41 @@
 # Media2Text curated project status
 
-Observed: 2026-10-07. This is the sole source admitted to the dedicated technical
+Observed: 2026-10-23. This is the sole source admitted to the dedicated technical
 Dossier. It contains no media content, personal titles, raw conversations or
 credentials. Engineering documentation remains English; the operator reader is
 curated in Spanish. It is a project status, not a complete operational archive.
 
-## Useful outcome and current state
+## Current account-management increment
+
+Carlos approved easy multi-account token management in the existing interface
+on October23. The executor is implementing Settings > Transcription accounts:
+provider, recognizable name and write-only key, optional access check, then
+explicit selection for new work. Saving never starts a transcription. Keys are
+stored in dedicated encrypted private state; balances remain unknown unless
+separately verified. Accepted work keeps its selected credential version.
+
+Candidate 0.42.0 passes the complete 246-test suite, including fifteen focused
+credential/API/intake-worker tests with synthetic providers, backend/web builds
+and isolated mobile/desktop component checks. Exact independent Opus source
+review returned SOURCE_GO. It is not published or deployed; runtime 0.39.3
+remains available. The executor next completes owner access/monitoring
+qualification, guarded deployment and actual operator/reader acceptance. This does not require another general Go or a new login provider.
+Local revocation cannot guarantee cancellation at an external provider.
+
+The long-recording economic block, adaptive audio preparation/report proposal
+and M1/M2/M3 acceptance remain separate. No provider spend, budget increase or
+automatic account routing is part of this qualification. Previous dedicated
+Dossier history remains retained; this new status still requires reviewed native
+and shared publication and actual reader verification.
+
+## Previously delivered product and retained acceptance
 
 Media2Text converts YouTube/video and direct audio into structured and readable
 transcripts. The existing Plaud connection can process new recordings under its
 current limits. M0 is accepted: Carlos confirmed reading, phrase search and
-offline use on computer and Android on October 1. The published source baseline
-was 0.41.2; this integration versions the source as 0.41.3. The active
-application runtime remains 0.39.3. This documentation work
-does not deploy a newer application.
+offline use on computer and Android on October 1. The October 7 integration brought its then-published source from 0.41.2 to
+0.41.3. The current account candidate is 0.42.0; production remains 0.39.3
+until the separately verified deployment completes.
 
 A post-M0 recording has already been transcribed and delivered as the separate
 M1 note package, reusing its result with zero incremental transcription cost.
@@ -71,6 +93,7 @@ Portal image/configuration and all other service/contract bytes are preserved.
 Same-NAS restoration does not establish physically independent recovery. Native
 Windows/fleet acceptance and personal phone acceptance are not inferred.
 
-M1 device confirmation is the next product step. No replay, new provider call,
+M1 device confirmation remains an independent operator acceptance step.
+The executor is currently delivering the approved account-management increment. No replay, new provider call,
 budget increase, scheduler change, product deployment or Cortex activation is
 part of this documentation task.

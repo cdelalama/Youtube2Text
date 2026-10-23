@@ -5,6 +5,7 @@ import { RunManager } from "../src/api/runManager.js";
 test("RunManager emits global run:created events", async () => {
   const manager = new RunManager(
     {
+      sttProvider: "assemblyai",
       assemblyAiApiKey: "test",
       outputDir: "output",
       audioDir: "audio",

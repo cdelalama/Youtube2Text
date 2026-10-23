@@ -1,4 +1,4 @@
-<!-- doc-version: 0.41.4 -->
+<!-- doc-version: 0.42.0 -->
 # Media2Text
 
 Media2Text is the visible product name for the `youtube2text` engine: a
@@ -737,3 +737,19 @@ The authenticated library is available at the configured operator origin.
 For a verified private Markdown/Obsidian copy, use the
 [M0 reading runbook](docs/operations/M0_MARKDOWN_READING.md).
 The offline tooling does not transcribe audio or enable device synchronization.
+
+### Multiple transcription accounts
+
+The 0.42.0 candidate adds Settings > Transcription accounts. Add a provider, alias
+and API key; saving does not select or transcribe. Access checks do not verify
+credit. Saved credentials are masked, and changing keys/defaults affects new
+work while accepted jobs retain their version. Local revocation does not revoke
+the provider's key or cancel already accepted provider billing.
+
+Server bootstrap requires Y2T_CREDENTIALS_DIR (absolute private0700 directory,
+outside output/audio), Y2T_CREDENTIAL_MASTER_KEY (64-hex, API only) and distinct
+Y2T_CREDENTIAL_ADMIN_PROOF_SECRET (64-hex, web/API). Store bootstrap values in the
+approved secret manager; never in source or shell arguments. After deployment,
+manage provider tokens in the UI without container recreation. Legacy keys remain
+read-only until explicit individual import. The CLI retains environment/YAML
+credentials. See [implementation and recovery](docs/operations/STT_ACCOUNT_UI_IMPLEMENTATION_2026-10-23.md).

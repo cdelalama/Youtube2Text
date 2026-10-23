@@ -1,3 +1,5 @@
+import { CredentialError } from "../credentials/store.js";
+import type { IntakeCredentialSelection } from "./store.js";
 import { randomUUID } from "node:crypto";
 import type { RunManager, RunRecord } from "../api/runManager.js";
 import type { AppConfig } from "../config/schema.js";
@@ -53,7 +55,8 @@ export class IntakeWorker {
   constructor(
     private store: MediaJobStore,
     private manager: RunManager,
-    private config: AppConfig
+    private config: AppConfig,
+    private credentialSelection?: (intakeId: string) => IntakeCredentialSelection | undefined
   ) {}
 
   start(): void {
@@ -165,7 +168,10 @@ export class IntakeWorker {
       );
       return;
     }
+    const selection = this.credentialSelection?.(intake.intakeId);
     const runRequest = {
+      credentialSelection: selection?.pin,
+      config: selection ? { sttProvider: selection.provider } : undefined,
       audioId: intake.intakeId,
       audioPath: providerAudioPath,
       sourceArtifact: {
@@ -184,7 +190,14 @@ export class IntakeWorker {
       sourceCreatedAtType: request.source.createdAtType,
       force: false,
     };
-    const run = this.manager.createRun(runRequest);
+    let run;
+    try { run = this.manager.createRun(runRequest); }
+    catch (error) {
+      if (!(error instanceof CredentialError)) throw error;
+      this.store.markIntakeFailed(intake.intakeId, owner, "running",
+        error.code === "credential_revoked_local" ? error.code : "stt_account_unavailable", error.code);
+      return;
+    }
     this.store.markIntakeRun(intake.intakeId, owner, run.runId);
     const renewal = setInterval(
       () => this.store.renewIntakeLease(intake.intakeId, owner, this.leaseMs),
@@ -209,7 +222,7 @@ export class IntakeWorker {
           intake.intakeId,
           owner,
           "running",
-          "transcription_failed",
+          finished.error === "credential_revoked_local" ? "credential_revoked_local" : "transcription_failed",
           finished.error ?? `Run ended with ${finished.status}`
         );
       }

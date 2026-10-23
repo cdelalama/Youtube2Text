@@ -10,6 +10,7 @@ export function sanitizeConfigOverrides(
     "__proto__",
     "prototype",
     "constructor",
+    "credentialRegistryEnabled",
     "assemblyAiApiKey",
     "assemblyAiApiKeys",
     "deepgramApiKey",

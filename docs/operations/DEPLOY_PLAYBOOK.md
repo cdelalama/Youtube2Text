@@ -300,6 +300,36 @@ flags; arbitrary yt-dlp args are intentionally not exposed through Settings/UI/A
 
 ### Deploy a new version
 
+For the 0.42.0 account registry, complete the owner authentication and Sentinel
+plan before building or starting a candidate. Prepare the existing NAS compose
+directory's `private-credentials` child **before** Compose: real directory,
+mode `0700`, owner UID `1000` (the API image's `node` user), no symlink or broad
+inherited ACL. Verify the exact image UID and effective access on QNAP. Docker's
+automatic root-owned `0755` directory and QNAP's default `0770` are rejected.
+The API mounts it at `/data/private-credentials`; the web container never mounts
+it. Keep it outside output/audio and all transcript/export mounts.
+
+Provision independent random 64-hex `Y2T_CREDENTIAL_MASTER_KEY` and
+`Y2T_CREDENTIAL_ADMIN_PROOF_SECRET` in Doppler project `youtube2text`, config
+`prd`, using the existing authorized route without printing values. Require
+distinctness from operator, intake, profile, reader and web session secrets.
+The master goes only to the API; the proof secret goes to API and web. The
+Compose required-variable checks intentionally refuse an incomplete bootstrap.
+Confirm protected backup and isolated restore of both registry and matching
+master before adding real credentials. Follow
+`STT_ACCOUNT_UI_IMPLEMENTATION_2026-10-23.md` for exact custody and acceptance.
+
+Keep existing legacy provider keys during qualification and rollback. The
+previous deployed 0.39.3 ignores the private registry and needs its existing
+legacy keys. A rollback preserves the new private directory and exact master;
+it must not export, erase or reinitialize that state. Drain accepted work before
+switching versions. UI selection after upgrade does not remove Doppler keys.
+
+Verify the canonical edge rejects `/provider-accounts`: a local reverse proxy
+appears as loopback, so route allowlisting, operator authentication and the
+dedicated proof remain necessary. Qualify anonymous/read/write/reauth/logout
+through the real web origin, including the five-minute administration window.
+
 ```bash
 # From a clean, committed release tree. This runs all gates, builds and pushes
 # both images to registry.lamanoriega.com, installs versioned NAS runtime files,

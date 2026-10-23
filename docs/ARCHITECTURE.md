@@ -1,4 +1,4 @@
-<!-- doc-version: 0.41.4 -->
+<!-- doc-version: 0.42.0 -->
 # Media2Text Architecture (youtube2text Engine)
 
 > Version: 0.41.1 source; 0.39.3 NAS runtime
@@ -375,3 +375,14 @@ Phase D - UX/observability:
 Low priority:
 7) AI text cleaning post-process.
 8) Telegram bot monitoring (redundant with webhooks + SSE).
+
+## Private STT account administration (0.42.0 candidate)
+
+The authenticated web BFF owns recent-password/origin checks and a dedicated
+one-use proof to the loopback API. The API's private encrypted CredentialStore
+holds accounts, immutable key versions and private run/intake references outside
+exported output/audio. RunManager snapshots live settings and pins credentials;
+IntakeWorker uses the admission reference after restart. Providers recheck local
+revocation before each outbound operation. Public jobs/events never include keys
+or account references. See operations/STT_ACCOUNT_UI_IMPLEMENTATION_2026-10-23.md
+for source modes, recovery and deployment gates. CLI environment use is separate.

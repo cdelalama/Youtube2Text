@@ -17,8 +17,8 @@ function loadEnvConfig(): PartialConfig {
   dotenv.config();
   const env = process.env;
   const getEnv = (primary: string, legacy?: string): string | undefined => {
-    if (env[primary] !== undefined) return env[primary];
-    if (legacy && env[legacy] !== undefined) return env[legacy];
+    if (env[primary]?.trim()) return env[primary];
+    if (legacy && env[legacy]?.trim()) return env[legacy];
     return undefined;
   };
   const parseOptionalBool = (raw: string | undefined): boolean | undefined => {
@@ -40,6 +40,7 @@ function loadEnvConfig(): PartialConfig {
     return values.length > 0 ? values : undefined;
   };
   return {
+    credentialRegistryEnabled: Boolean(env.Y2T_CREDENTIALS_DIR?.trim() && env.Y2T_CREDENTIAL_MASTER_KEY?.trim()) || undefined,
     assemblyAiApiKey: env.ASSEMBLYAI_API_KEY,
     assemblyAiApiKeys: parseCsvList(getEnv("Y2T_ASSEMBLYAI_API_KEYS", "ASSEMBLYAI_API_KEYS")),
     assemblyAiKeyFailureThreshold: parseOptionalNumber(

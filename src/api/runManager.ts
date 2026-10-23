@@ -18,6 +18,7 @@ import {
   writeRunRecord,
 } from "./persistence.js";
 import { ensureDir } from "../utils/fs.js";
+import { applyCredential, CredentialError, legacyKeys, type CredentialPin, type CredentialStore } from "../credentials/store.js";
 
 export type RunStatus = "queued" | "running" | "done" | "error" | "cancelled";
 
@@ -60,6 +61,8 @@ export type GlobalEvent =
     };
 
 export type RunCreateRequest = {
+  // Internal intake metadata only; never accepted from the public run request schema.
+  credentialSelection?: CredentialPin | null;
   url?: string;
   audioId?: string;
   audioPath?: string;
@@ -84,6 +87,8 @@ export type RunCreateRequest = {
 };
 
 export type RunManagerOptions = {
+  credentialStore?: CredentialStore;
+  effectiveConfig?: () => AppConfig;
   maxBufferedEventsPerRun: number;
   maxEventBytes?: number;
   persistRuns: boolean;
@@ -110,6 +115,8 @@ export class RunManager {
   private runPipelineFn: typeof runPipeline;
   private activeRunPromises = new Map<string, Promise<void>>();
   private runTimeoutMs?: number;
+  private credentialSelections = new Map<string, CredentialPin>();
+  private acceptedConfigs = new Map<string, AppConfig>();
 
   constructor(
     private baseConfig: AppConfig,
@@ -161,12 +168,25 @@ export class RunManager {
     await this.persistChain;
   }
 
-  createRun(req: RunCreateRequest): RunRecord {
+  createRun(req: RunCreateRequest, cacheOnly = false): RunRecord {
     const runId = randomUUID();
     const inputUrl = req.url ?? (req.audioId ? `audio:${req.audioId}` : "");
     if (!inputUrl) {
       throw new Error("Run must include url or audioId");
     }
+    const config = { ...(this.options.effectiveConfig?.() ?? this.baseConfig), ...sanitizeConfigOverrides(req.config) };
+    const credentialSelection = cacheOnly || req.credentialSelection === null ? undefined
+      : req.credentialSelection ?? this.options.credentialStore?.pin(config.sttProvider);
+    if (credentialSelection) {
+      if (!this.options.credentialStore) throw new Error("credential_store_unavailable");
+      this.options.credentialStore.resolve(credentialSelection);
+      config.sttProvider = credentialSelection.provider;
+    } else if (!cacheOnly && !legacyKeys(config, config.sttProvider).length) {
+      throw new CredentialError("selected_account_unavailable");
+    }
+    this.acceptedConfigs.set(runId, config);
+    if (credentialSelection) this.credentialSelections.set(runId, credentialSelection);
+    if (!cacheOnly) this.options.credentialStore?.recordWork(`run:${runId}`, config.sttProvider, credentialSelection);
     const record: RunRecord = {
       runId,
       status: "queued",
@@ -190,10 +210,11 @@ export class RunManager {
   }
 
   createCachedRun(req: RunCreateRequest, plan: RunPlan): RunRecord {
-    const record = this.createRun(req);
+    const record = this.createRun(req, true);
     const now = new Date().toISOString();
 
     record.status = "done";
+    this.acceptedConfigs.delete(record.runId);
     record.startedAt = now;
     record.finishedAt = now;
     record.channelId = plan.channelId;
@@ -240,6 +261,8 @@ export class RunManager {
     const now = new Date().toISOString();
 
     if (run.status === "queued") {
+      this.acceptedConfigs.delete(runId);
+      this.credentialSelections.delete(runId);
       run.status = "cancelled";
       run.cancelRequested = true;
       run.finishedAt = now;
@@ -258,6 +281,17 @@ export class RunManager {
     }
 
     return run;
+  }
+
+  revokeCredential(credentialId: string): number {
+    let count = 0;
+    for (const run of this.runs.values()) {
+      if (this.credentialSelections.get(run.runId)?.credentialId === credentialId && (run.status === "queued" || run.status === "running")) {
+        run.error = "credential_revoked_local";
+        this.cancelRun(run.runId); count += 1;
+      }
+    }
+    return count;
   }
 
   listRuns(): RunRecord[] {
@@ -325,8 +359,9 @@ export class RunManager {
     if (!run) throw new Error("Unknown run");
     if (run.status !== "queued") throw new Error("Run already started");
 
-    const sanitizedOverrides = sanitizeConfigOverrides(req.config);
-    const config = { ...this.baseConfig, ...sanitizedOverrides };
+    // New defaults and rotations cannot change work that has already been accepted.
+    let config = this.acceptedConfigs.get(runId) ?? { ...this.baseConfig, ...sanitizeConfigOverrides(req.config) };
+    const credentialSelection = this.credentialSelections.get(runId);
     const emitter: PipelineEventEmitter = {
       emit: (event) => this.onEvent(runId, event),
     };
@@ -361,11 +396,20 @@ export class RunManager {
           }
         : (req.url as string);
 
-    const p = this.runPipelineFn(pipelineInput, config, {
+    const p = Promise.resolve().then(() => {
+      if (credentialSelection) {
+        if (!this.options.credentialStore) throw new CredentialError("credential_store_unavailable");
+        config = applyCredential(config, credentialSelection, this.options.credentialStore);
+      }
+      return this.runPipelineFn(pipelineInput, config, {
       force: Boolean(req.force),
       emitter,
       abortSignal: controller.signal,
       runId,
+      assertCredentialAvailable: credentialSelection ? () => {
+        this.options.credentialStore!.resolve(credentialSelection);
+      } : undefined,
+      });
     })
       .then(() => {
         const updated = this.runs.get(runId);
@@ -398,7 +442,8 @@ export class RunManager {
         if (!updated) return;
         updated.status = "error";
         updated.finishedAt = new Date().toISOString();
-        updated.error = error instanceof Error ? error.message : String(error);
+        updated.error = updated.error === "credential_revoked_local" ? updated.error
+          : error instanceof Error ? error.message : String(error);
         this.persistRun(updated);
         this.emitGlobal({
           type: "run:updated",
@@ -408,6 +453,8 @@ export class RunManager {
         void deliverRunTerminalWebhook(updated, "run:error");
       })
       .finally(() => {
+        this.acceptedConfigs.delete(runId);
+        this.credentialSelections.delete(runId);
         this.abortControllers.delete(runId);
         this.activeRunPromises.delete(runId);
         const handle = this.runTimeouts.get(runId);

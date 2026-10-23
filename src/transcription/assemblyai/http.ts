@@ -37,6 +37,7 @@ export async function requestJson<T>(
       },
     }, timeoutMs);
   } catch (error) {
+    if (init.signal?.aborted) throw new Error("Transcription cancelled locally");
     if (isAbortError(error)) {
       throw new Error("AssemblyAI request timed out");
     }
@@ -58,17 +59,23 @@ export async function requestJson<T>(
 export async function uploadFile(
   apiKey: string,
   audioPath: string,
-  timeoutMs?: number
+  timeoutMs?: number,
+  signal?: AbortSignal,
+  beforeRequest?: () => void
 ): Promise<{ upload_url: string }> {
   const buffer = await readFile(audioPath);
   let response: Response;
   try {
+    signal?.throwIfAborted();
+    beforeRequest?.();
     response = await fetchWithTimeout(`${API_BASE}/upload`, {
       method: "POST",
+      signal,
       headers: { Authorization: apiKey },
       body: buffer,
     }, timeoutMs);
   } catch (error) {
+    if (signal?.aborted) throw new Error("Transcription cancelled locally");
     if (isAbortError(error)) {
       throw new Error("AssemblyAI upload timed out");
     }

@@ -1,21 +1,34 @@
-<!-- doc-version: 0.41.4 -->
+<!-- doc-version: 0.42.0 -->
 
-## Current identity publication - 2026-10-23
+## Current continuation - approved STT account administration, 2026-10-23
 
-Last Updated: 2026-10-23 - Codex.
-Carlos approved the account feature. This 0.41.4 source publication contains only
-existing-project Birth/access declarations, current standard guidance and the
-plan resolved from published Home Infra 70e25b1e. Runtime stays 0.39.3.
-The complete 0.42.0 feature candidate is retained separately and reviewed by
-exact Opus 5.5/high; it is not part of this intermediate tree.
+Carlos approved the concrete account UI proposal with Go. Continue
+`docs/operations/STT_ACCOUNT_UI_IMPLEMENTATION_2026-10-23.md` and D-028.
+The candidate 0.42.0 implements encrypted accounts, write-only keys, recent
+password confirmation, manual defaults and pinned URL/upload/intake/scheduler
+selection. All 246 tests and backend/web production builds pass. Exact
+claude-opus-5-5/high R2 returned SOURCE_GO after R1-R4 corrections; see REVIEWS.
+The real component passes isolated synthetic mobile/tablet/desktop use. Actual
+deployed UI, owner/consumer acceptance and private NAS restore remain pending.
+Identity0.41.4/f7aedf1 and owner70e25b1e are published; the actual build
+matrix passes with current guidance. The 0.42.0 functional bytes remain exact
+R2 reviewed source. No product NAS deployment, secret provisioning, legacy
+import or paid STT has occurred. Existing NAS0.39.3 stays available.
 
-### Open work - next concrete step
+The executor owns the remaining work: qualify/publish the exact existing-login
+owner disposition and required Sentinel/consumer integration, finish responsive
+UI and private restore proof, then deploy immutable reviewed artifacts and verify
+real access/use/logout. No additional general Go or provider choice is pending.
+Dossier refresh is required for the accepted feature/next-step change; shared
+publication must preserve its actual reader limits and prior history. The new
+Birth/auth records are an existing-project retrofit, not permission to bypass
+runtime checks. Their build-only constraint does not replace the separate
+operational authority and required delivery ledger.
 
-Follow `docs/operations/STT_ACCOUNT_UI_IMPLEMENTATION_2026-10-23.md`.
-The executor validates the build matrix on the published identity, then publishes
-the unchanged reviewed feature and completes installed consumer/private recovery/
-operator acceptance. No further general Go is pending. Existing M1-M3 and long
-recording economic limits retain their scope. Dossier refresh remains pending.
+The earlier proposal-only statements below retain their dated scope and are
+superseded only by D-028. Adaptive audio preparation/reporting, the long-file
+budget gate and M1/M2/M3 acceptance retain their prior owners and scope.
+
 
 ## Multiple provider accounts in the UI - 2026-10-23
 

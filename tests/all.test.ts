@@ -77,3 +77,5 @@ import "./apiCatalog.test.js";
 import "./versionCheck.test.js";
 
 import "./markdownVault.test.mjs";
+
+import "./providerAccounts.test.js";

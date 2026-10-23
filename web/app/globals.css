@@ -1807,3 +1807,37 @@ button.m2t-tr {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+/* Provider accounts reuse the console's colors, typography and square controls. */
+.m2t-accounts { margin-block-end: 24px; min-width: 0; }
+.m2t-accounts h2 { font-size: 18px; margin: 0; }
+.m2t-accounts h3 { font-size: 16px; margin: 0; overflow-wrap: anywhere; }
+.m2t-accounts p { line-height: 1.6; }
+.m2t-accounts .m2t-panel-head { flex-wrap: wrap; gap: 16px; }
+.m2t-accounts button, .m2t-accounts summary { min-height: 44px; cursor: pointer; }
+.m2t-accounts button { border: 1px solid var(--border); padding: 10px 14px; color: var(--text); background: var(--panel2); white-space: normal; }
+.m2t-accounts button.m2t-button { color: var(--accent-fg); background: var(--accent); border-color: var(--accent); }
+.m2t-accounts button:disabled { opacity: .5; cursor: not-allowed; }
+.m2t-accounts :is(button, input, select, summary):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.m2t-account-row { border-top: 1px solid var(--border); padding-block: 24px; }
+.m2t-account-form { margin-block: 20px; max-width: 560px; display: grid; gap: 10px; }
+.m2t-accounts fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
+.m2t-account-form fieldset { display: grid; gap: 10px; }
+.m2t-account-form legend { font-weight: 600; padding: 0 0 16px; }
+.m2t-account-form label { margin-top: 8px; }
+.m2t-account-form input, .m2t-account-form select { width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; background: var(--input); border: 1px solid var(--border); color: var(--text); border-radius: 0; font-size: 16px; }
+.m2t-account-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-block: 12px; }
+.m2t-account-details { border-top: 1px solid var(--hair); margin-top: 16px; }
+.m2t-account-details summary { padding-block: 12px; line-height: 1.5; }
+.m2t-account-feedback:empty { display: none; }
+.m2t-account-feedback { color: var(--text); border-left: 3px solid var(--accent); padding: 12px; margin-block: 16px; }
+.m2t-account-error { color: var(--err); padding-block: 12px; overflow-wrap: anywhere; }
+.m2t-account-keys { list-style: none; margin: 16px 0 0; padding: 0; }
+.m2t-account-keys li { padding-block: 16px; border-top: 1px solid var(--hair); overflow-wrap: anywhere; }
+.m2t-account-keys small { display: block; color: var(--dim); margin-top: 8px; }
+.m2t-account-legacy { display: grid; gap: 8px; padding-block: 16px; border-top: 1px solid var(--hair); }
+.m2t-account-revoke { border-left: 3px solid var(--err); padding-left: 16px; }
+@media (max-width: 600px) {
+  .m2t-accounts .m2t-panel-head { align-items: stretch; }
+  .m2t-account-actions { flex-direction: column; }
+  .m2t-account-actions button { width: 100%; text-align: center; }
+}

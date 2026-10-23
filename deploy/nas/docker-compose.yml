@@ -12,6 +12,9 @@ services:
       Y2T_API_PERSIST_RUNS: "true"
       Y2T_API_PERSIST_DIR: /data/output/_runs
       Y2T_API_KEY: ${Y2T_API_KEY}
+      Y2T_CREDENTIAL_ADMIN_PROOF_SECRET: ${Y2T_CREDENTIAL_ADMIN_PROOF_SECRET:?Y2T_CREDENTIAL_ADMIN_PROOF_SECRET is required}
+      Y2T_CREDENTIALS_DIR: /data/private-credentials
+      Y2T_CREDENTIAL_MASTER_KEY: ${Y2T_CREDENTIAL_MASTER_KEY:?Y2T_CREDENTIAL_MASTER_KEY is required}
       Y2T_ALLOW_INSECURE_NO_API_KEY: "false"
       Y2T_CORS_ORIGINS: ${Y2T_CORS_ORIGINS:-https://y2t.lamanoriega.com}
       Y2T_TRUST_PROXY: "false"
@@ -114,6 +117,7 @@ services:
     volumes:
       - ./data/output:/data/output
       - ./data/audio:/data/audio
+      - ./private-credentials:/data/private-credentials
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
@@ -132,6 +136,7 @@ services:
     environment:
       Y2T_API_BASE_URL: http://127.0.0.1:8787
       Y2T_API_KEY: ${Y2T_API_KEY}
+      Y2T_CREDENTIAL_ADMIN_PROOF_SECRET: ${Y2T_CREDENTIAL_ADMIN_PROOF_SECRET:?Y2T_CREDENTIAL_ADMIN_PROOF_SECRET is required}
       Y2T_WEB_AUTH_SECRET: ${Y2T_WEB_AUTH_SECRET}
       Y2T_WEB_AUTH_PASSPHRASE: ${Y2T_WEB_AUTH_PASSPHRASE}
       Y2T_WEB_AUTH_SESSION_HOURS: ${Y2T_WEB_AUTH_SESSION_HOURS:-12}

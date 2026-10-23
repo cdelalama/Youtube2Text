@@ -6,6 +6,7 @@ import type { AppConfig } from "../src/config/schema.js";
 
 function baseConfig(): AppConfig {
   return {
+    sttProvider: "assemblyai",
     assemblyAiApiKey: "test",
     outputDir: "output",
     audioDir: "audio",

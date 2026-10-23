@@ -76,12 +76,10 @@ function computeNonSecretSettingSources(
   };
 
   const sourceFor = (key: keyof NonSecretSettings): NonSecretSettingSource => {
-    // env wins (if the env var is set and it produced a defined config value)
-    if (envHas(key) && (envConfig as any)[key] !== undefined) return "env";
-    // yaml wins over settings file
-    if ((yamlConfig as any)[key] !== undefined) return "config.yaml";
-    // settings file is lowest
+    // The running API applies persisted UI settings on top of the startup config.
     if ((settingsConfig as any)[key] !== undefined) return "settingsFile";
+    if (envHas(key) && (envConfig as any)[key] !== undefined) return "env";
+    if ((yamlConfig as any)[key] !== undefined) return "config.yaml";
     // otherwise: schema default or unset optional
     return (effective as any)[key] === undefined ? "unset" : "default";
   };

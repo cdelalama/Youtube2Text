@@ -80,3 +80,10 @@ test("empty optional numeric env values remain unset", async () => {
     }
   );
 });
+
+test("blank primary OpenAI credential does not mask a configured legacy alias", async () => {
+  await withEnv({ Y2T_OPENAI_API_KEY: "  ", OPENAI_API_KEY: "synthetic-legacy-token" }, () => {
+    const snap = loadConfigSourceSnapshots(tempConfigPath(), { outputDirOverride: "output" });
+    assert.equal(snap.envConfig.openaiApiKey, "synthetic-legacy-token");
+  });
+});

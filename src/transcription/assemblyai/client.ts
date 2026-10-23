@@ -1,4 +1,5 @@
 import { retry } from "../../utils/retry.js";
+import { setTimeout as delay } from "node:timers/promises";
 import { logStep } from "../../utils/logger.js";
 import { TranscriptJson, TranscriptionOptions } from "../types.js";
 import { InsufficientCreditsError, ProviderHttpError } from "../errors.js";
@@ -23,8 +24,8 @@ export class AssemblyAiClient {
     );
   }
 
-  async uploadAudio(audioPath: string, timeoutMs?: number): Promise<string> {
-    const data = await uploadFile(this.apiKey, audioPath, timeoutMs ?? this.timeoutMs);
+  async uploadAudio(audioPath: string, timeoutMs?: number, signal?: AbortSignal, beforeRequest?: () => void): Promise<string> {
+    const data = await uploadFile(this.apiKey, audioPath, timeoutMs ?? this.timeoutMs, signal, beforeRequest);
     return data.upload_url;
   }
 
@@ -34,10 +35,12 @@ export class AssemblyAiClient {
       TranscriptionOptions,
       "languageCode" | "languageDetection" | "languageConfidenceThreshold"
     >,
-    timeoutMs?: number
+    timeoutMs?: number,
+    signal?: AbortSignal
   ): Promise<CreateResponse> {
     return await requestJson<CreateResponse>(this.apiKey, "/transcript", {
       method: "POST",
+      signal,
       body: JSON.stringify({
         ...buildCreateTranscriptRequestBody({
           audioUrl,
@@ -49,12 +52,13 @@ export class AssemblyAiClient {
     }, timeoutMs ?? this.timeoutMs);
   }
 
-  async getTranscript(id: string, timeoutMs?: number): Promise<TranscriptJson> {
+  async getTranscript(id: string, timeoutMs?: number, signal?: AbortSignal): Promise<TranscriptJson> {
     return await requestJson<TranscriptJson>(
       this.apiKey,
       `/transcript/${id}`,
       {
       method: "GET",
+      signal,
       },
       timeoutMs ?? this.timeoutMs
     );
@@ -65,6 +69,7 @@ export class AssemblyAiClient {
     opts: TranscriptionOptions
   ): Promise<TranscriptJson> {
     const timeoutMs = opts.providerTimeoutMs ?? this.timeoutMs;
+    const guard = () => { opts.abortSignal?.throwIfAborted(); opts.beforeRequest?.(); };
     const retryOptions = {
       retries: opts.retries,
       baseDelayMs: this.retryBaseDelayMs,
@@ -74,30 +79,31 @@ export class AssemblyAiClient {
 
     logStep("upload", `Uploading to AssemblyAI: ${audioPath}`);
     const uploadUrl = await retry(
-      () => this.uploadAudio(audioPath, timeoutMs),
+      () => { guard(); return this.uploadAudio(audioPath, timeoutMs, opts.abortSignal, guard); },
       retryOptions
     );
 
     // A timed-out create response may still have created billable work.
+    guard();
     const created = await this.createTranscript(uploadUrl, {
       languageCode: opts.languageCode,
       languageDetection: opts.languageDetection,
       languageConfidenceThreshold: opts.languageConfidenceThreshold,
-    }, timeoutMs);
+    }, timeoutMs, opts.abortSignal);
     const deadline = Date.now() + opts.maxPollMinutes * 60 * 1000;
 
     logStep("transcribe", `Transcription started: ${created.id}`);
 
     while (Date.now() < deadline) {
       const current = await retry(
-        () => this.getTranscript(created.id, timeoutMs),
+        () => { guard(); return this.getTranscript(created.id, timeoutMs, opts.abortSignal); },
         retryOptions
       );
       if (current.status === "completed") return current;
       if (current.status === "error") {
         throw new Error(`Transcription error: ${JSON.stringify(current)}`);
       }
-      await new Promise((resolve) => setTimeout(resolve, opts.pollIntervalMs));
+      await delay(opts.pollIntervalMs, undefined, { signal: opts.abortSignal });
     }
 
     throw new Error(

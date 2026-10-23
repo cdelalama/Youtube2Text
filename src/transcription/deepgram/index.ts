@@ -128,10 +128,13 @@ export class DeepgramProvider implements TranscriptionProvider {
 
     let res: Response;
     try {
+      opts.abortSignal?.throwIfAborted();
+      opts.beforeRequest?.();
       res = await fetchWithTimeout(
         url,
         {
           method: "POST",
+          signal: opts.abortSignal,
           headers: {
             Authorization: `Token ${this.apiKey}`,
             "Content-Type": contentType,
@@ -141,6 +144,7 @@ export class DeepgramProvider implements TranscriptionProvider {
         timeoutMs
       );
     } catch (error) {
+      if (opts.abortSignal?.aborted) throw new Error("Transcription cancelled locally");
       if (isAbortError(error)) {
         throw new Error("Deepgram request timed out");
       }

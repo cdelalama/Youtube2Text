@@ -84,14 +84,18 @@ export class OpenAiWhisperProvider implements TranscriptionProvider {
 
     let res: Response;
     try {
+      opts.abortSignal?.throwIfAborted();
+      opts.beforeRequest?.();
       res = await fetchWithTimeout("https://api.openai.com/v1/audio/transcriptions", {
         method: "POST",
+        signal: opts.abortSignal,
         headers: {
           Authorization: `Bearer ${this.apiKey}`,
         },
         body: form,
       }, timeoutMs);
     } catch (error) {
+      if (opts.abortSignal?.aborted) throw new Error("Transcription cancelled locally");
       if (isAbortError(error)) {
         throw new Error("OpenAI Whisper request timed out");
       }

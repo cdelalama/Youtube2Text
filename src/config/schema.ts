@@ -8,6 +8,7 @@ const safePathString = z
   });
 
 const configObjectSchema = z.object({
+  credentialRegistryEnabled: z.boolean().optional(),
   sttProvider: z.enum(["assemblyai", "deepgram", "openai_whisper"]).default("assemblyai"),
   assemblyAiApiKey: z.string().min(1).optional(),
   assemblyAiApiKeys: z.array(z.string().min(1)).optional(),
@@ -53,6 +54,8 @@ const configObjectSchema = z.object({
 });
 
 export const configSchema = configObjectSchema.superRefine((cfg, ctx) => {
+  // API bootstrap may have only a private registry. Resolution still fails closed before work.
+  if (cfg.credentialRegistryEnabled) return;
   if (cfg.sttProvider === "assemblyai" && !cfg.assemblyAiApiKey) {
     if (!cfg.assemblyAiApiKeys || cfg.assemblyAiApiKeys.length === 0) {
       ctx.addIssue({

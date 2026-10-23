@@ -13,8 +13,10 @@ No application runtime behavior changes. Source tools match published trusted
 ForgeOS f754766d, also pinned by the owner gate. Protocol guidance is CURRENT.
 R3 strict native capture accepted without warnings; manifest
 c24774498fb9f4aae13986fbeea164f5ed497ba65f3cd4367468ff05a2ad6004.
-Hook outcome unknown, zero recorded errors. Functional source must remain exact
-R2 bytes; actual runtime/operator/consumer/Dossier acceptance remains pending.
+Hook outcome unknown, zero recorded errors. Identity f7aedf1 passed its exact source checks and was published. The subsequent
+actual build matrix is PASS with CURRENT guidance, owner70e25b1e. Restored
+functional source matches all 45 R2 file hashes; retained candidate stash is
+preserved. Actual runtime/operator/consumer/Dossier acceptance remains pending.
 
 ## 2026-10-23 - STT account implementation 0.42.0
 

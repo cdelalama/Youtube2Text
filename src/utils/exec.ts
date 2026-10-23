@@ -28,10 +28,14 @@ export function execCommand(
   options: { cwd?: string; maxBufferBytes?: number } = {}
 ): Promise<ExecResult> {
   return new Promise((resolve, reject) => {
+    const childEnv = { ...process.env };
+    delete childEnv.Y2T_CREDENTIAL_MASTER_KEY;
+    delete childEnv.Y2T_CREDENTIAL_ADMIN_PROOF_SECRET;
     const child = spawn(command, args, {
       cwd: options.cwd,
       shell: false,
       windowsHide: true,
+      env: childEnv,
     });
 
     let stdout = "";
