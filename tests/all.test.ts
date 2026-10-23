@@ -79,3 +79,4 @@ import "./versionCheck.test.js";
 import "./markdownVault.test.mjs";
 
 import "./providerAccounts.test.js";
+import "./configOverrideDefaults.test.js";

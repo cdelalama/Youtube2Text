@@ -1,4 +1,4 @@
-<!-- doc-version: 0.42.0 -->
+<!-- doc-version: 0.42.1 -->
 # Project Context - Media2Text
 
 ## Vision
@@ -53,7 +53,7 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
 ## Current Status (2026-10-23)
-v0.42.0 candidate in source adds account administration; publication/deployment
+v0.42.1 candidate in source adds account administration; publication/deployment
 remain pending. The existing product retains the bounded offline M0 Markdown export for
 existing Plaud transcripts. Carlos confirmed notes work on both actual devices
 on October 1 in response to the reading/search/offline question; M0 is accepted.

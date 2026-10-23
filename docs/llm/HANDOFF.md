@@ -1,4 +1,27 @@
-<!-- doc-version: 0.42.0 -->
+## Account release dependency correction - 2026-10-23
+
+Last Updated: 2026-10-23 - Codex.
+
+- Version: 0.42.1 candidate; published account source3aa63de is0.42.0 and the usable NAS console remains0.39.3.
+
+Published 0.42.0 is superseded for release by candidate 0.42.1 after a fresh Zod HIGH advisory. Fixed Zod 4.6.7 preserves explicit-only overrides and bounds invalid arrays. All 248 tests, focused regression checks, typecheck, backend/web builds, API contract and both dependency audits pass. Exact Opus R5/R7 returned SOURCE_GO for core and deployment tooling. The NAS Compose qualification and six private release tests pass. Sentinel b53257f is active; Hermes 60 views, owner runtime admission and actual Portal mobile/desktop surveillance readback pass. No product containers or bootstrap secrets changed yet. Existing login remains available.
+
+### Open work - next concrete step
+
+The executor publishes the qualified source and immutable images and the existing private credential/deployment/browser/consumer plan in `docs/operations/STT_ACCOUNT_UI_IMPLEMENTATION_2026-10-23.md`. Keep the5-hour recording economically blocked and reuse the prior2-hour transcript; no paid STT or budget increase. Earlier M1-M3 and adaptive audio/report work retain their owners and priority. Carlos has no setup command. Operator credential-version and reviewed Dossier readback remain separate gates.
+
+### Trace Anchor
+
+- Role: executor
+- Sent: 2026-10-24 00:39:26 CEST (22:39:26 UTC)
+- Subject: bounded dependency correction before account deployment
+- Resulting state: HEAD=3aa63de69f156141de249ab3906c9f79b0cc93a8; version=0.42.1; gate=source-publication; product runtime unchanged
+- Repo state: managed task checkout with local correction; primary and reviewed recovery stash retained
+- Validation: 248 tests, builds, audits, exact Opus R5/R7 and six release tests pass
+- Next gate: executor qualifies focused review and actual deployment/access/recovery
+- Dossier: refresh_required; previous native/shared history retained; new reader revision unavailable
+
+<!-- doc-version: 0.42.1 -->
 
 ## Current continuation - approved STT account administration, 2026-10-23
 

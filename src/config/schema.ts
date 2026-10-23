@@ -49,7 +49,7 @@ const configObjectSchema = z.object({
   // Channel catalog cache TTL for exact planning. When exceeded, we force a full refresh.
   // Set <= 0 to disable TTL (cache never expires).
   catalogMaxAgeHours: z.number().int().default(168),
-  videoIds: z.array(z.string().min(1)).optional(),
+  videoIds: z.array(z.string().min(1)).max(5000).optional(),
   ytDlpPath: safePathString.optional(),
 });
 

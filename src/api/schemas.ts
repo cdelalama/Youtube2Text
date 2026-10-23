@@ -104,8 +104,11 @@ const optionalEnumOrNull = <T extends [string, ...string[]]>(values: T) =>
 
 const safeConfigRecord = () =>
   z
-    .record(z.unknown())
+    .record(z.string(), z.unknown())
     .superRefine((value, ctx) => {
+      if (Array.isArray(value.videoIds) && value.videoIds.length > 5000) {
+        ctx.addIssue({ code: "custom", message: "config.videoIds must contain at most 5000 entries" });
+      }
       for (const key of ["__proto__", "constructor", "prototype"]) {
         if (Object.prototype.hasOwnProperty.call(value, key)) {
           ctx.addIssue({

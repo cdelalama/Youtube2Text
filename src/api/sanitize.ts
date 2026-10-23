@@ -23,5 +23,10 @@ export function sanitizeConfigOverrides(
     }
   }
   const parsed = configSchemaBase.partial().safeParse(copy);
-  return parsed.success ? parsed.data : {};
+  // Zod 4 applies nested defaults even inside partial objects. Overrides must
+  // never reset the effective provider, credential pin or configured paths.
+  return parsed.success
+    ? Object.fromEntries(Object.entries(parsed.data).filter(([key]) =>
+      Object.prototype.hasOwnProperty.call(copy, key) && copy[key] !== undefined))
+    : {};
 }

@@ -1,3 +1,35 @@
+## 2026-10-23 - Product R5/R6/R7: qualified 0.42.1 source
+
+Exact claude-opus-5-5/high, canonical firstParty metadata verified, independent
+session e0d88e64-79d2-4f5c-840f-c134dafb83a5 and original parent session retained.
+R5 returned SOURCE_GO for fixed Zod 4.6.7, explicit-only overrides and bounded
+arrays, conditional on the web build, which passed. All 248 tests, seven focused
+cases, typecheck, backend/web builds, contract and root/web audits (zero) pass.
+R6 required four bounded deployment corrections. R7 returned SOURCE_GO after
+checking restoration on start/verification failure, unconditional source
+provenance, immutable registry content/config/OCI labels and explicit build guards.
+Actual NAS Compose 5.1.1-qnap3 passes legacy and digest interpolation with its
+existing loopback overlay. Three installation and three hardening tests pass.
+The web build context excludes environment files. Doppler cannot override release
+identity or the owner compose file. Partial build, digest mismatch or failed
+restoration must be reconciled from retained evidence; never replay blindly.
+One admitted sequential image-build job is allowed; default Docker storage can
+retain local images. No capacity-floor bypass or broad cleanup is authorized.
+The exact reviewed functional hashes are retained before source publication.
+Strict schema-2 capture accepted R5/R6/R7 without warnings. Hook outcome remains
+unknown, zero recorded errors. Capture manifest hashes:
+- R5: 973e274c4fb813523846b3a6780817b6e9971fa32f904cce1177313c5f3127a3.
+- R6: 2be066857c0f0b3f0e09f21f9782ae2ac92aef9a91cc55144c4fbc918c6135a3.
+- R7: 2a61bdf5fe51489ed8d9ae4c253d679a7f1a083d8c5c0fd845f9b8e3f0523d41.
+
+SOURCE_GO is source/tooling acceptance, not deployed login/use/logout, recovery
+or complete consumer/Dossier delivery. Earlier audio/economic and M1-M3 gates
+remain unchanged. No paid STT, automatic import or account selection occurred.
+
+## 2026-10-23 - Product R4 dependency gate
+
+Exact claude-opus-5-5/high, canonicalModel firstParty verified, independent session e0d88e64-79d2-4f5c-840f-c134dafb83a5. R4 blocks the0.42.0 release after a fresh HIGH Zod advisory; accounts object schema is unaffected, but existing authenticated run arrays and project audit gate require a fixed main API. Requires preserving explicit-only overrides under v4 defaults, bounded arrays, Plaud contract compatibility, all tests/builds/audits and focused review. No risk exception or legacy-v3 import workaround. Strict schema2 capture accepted without warnings; manifest88051dd7a134eca0882f21e27541fa3503dff0aeb3ef15a89c040e522ed7bc5b; hook outcome unknown with zero recorded errors. Full private native evidence retained.
+
 ## 2026-10-23 - Identity publication prerequisite (R3)
 
 Exact same independent product reviewer e0d88e64-79d2-4f5c-840f-c134dafb83a5,

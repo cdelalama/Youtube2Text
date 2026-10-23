@@ -14,12 +14,14 @@ explicit selection for new work. Saving never starts a transcription. Keys are
 stored in dedicated encrypted private state; balances remain unknown unless
 separately verified. Accepted work keeps its selected credential version.
 
-Candidate 0.42.0 passes the complete 246-test suite, including fifteen focused
-credential/API/intake-worker tests with synthetic providers, backend/web builds
-and isolated mobile/desktop component checks. Exact independent Opus source
-review returned SOURCE_GO. It is not published or deployed; runtime 0.39.3
-remains available. The executor next completes owner access/monitoring
-qualification, guarded deployment and actual operator/reader acceptance. This does not require another general Go or a new login provider.
+Account source 0.42.0 is published. Corrected 0.42.1 is qualified after a fresh
+Zod security advisory: 248 tests, backend/web builds, dependency audits and
+exact independent Opus R5/R7 pass. Product runtime remains 0.39.3 until guarded
+deployment. Sentinel observes availability; the actual Portal mobile/desktop
+view shows that scope and disabled notifications. Existing processing failures
+remain visible. The executor next publishes immutable images and verifies the
+private credential store, recovery and actual login/account use/logout. No new
+general Go or login provider is required.
 Local revocation cannot guarantee cancellation at an external provider.
 
 The long-recording economic block, adaptive audio preparation/report proposal
@@ -34,7 +36,7 @@ Media2Text converts YouTube/video and direct audio into structured and readable
 transcripts. The existing Plaud connection can process new recordings under its
 current limits. M0 is accepted: Carlos confirmed reading, phrase search and
 offline use on computer and Android on October 1. The October 7 integration brought its then-published source from 0.41.2 to
-0.41.3. The current account candidate is 0.42.0; production remains 0.39.3
+0.41.3. The current account candidate is 0.42.1; production remains 0.39.3
 until the separately verified deployment completes.
 
 A post-M0 recording has already been transcribed and delivered as the separate

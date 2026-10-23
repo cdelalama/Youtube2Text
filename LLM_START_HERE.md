@@ -1,4 +1,4 @@
-<!-- doc-version: 0.42.0 -->
+<!-- doc-version: 0.42.1 -->
 
 ## Current continuation - approved STT account administration, 2026-10-23
 

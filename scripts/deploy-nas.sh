@@ -7,6 +7,8 @@ NAS_DIR="${NAS_DIR:-/share/Container/compose/youtube2text}"
 REGISTRY="${REGISTRY:-registry.lamanoriega.com}"
 API_URL="${Y2T_DEPLOY_API_URL:-http://10.0.0.220:8787}"
 WEB_URL="${Y2T_DEPLOY_WEB_URL:-https://y2t.lamanoriega.com}"
+API_DIGEST="${Y2T_DEPLOY_API_DIGEST:-}"
+WEB_DIGEST="${Y2T_DEPLOY_WEB_DIGEST:-}"
 MODE="deploy"
 SKIP_CHECKS=false
 SKIP_BUILD=false
@@ -59,20 +61,29 @@ if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   echo "ERROR: invalid version: $VERSION" >&2
   exit 2
 fi
+if [[ -n "$API_DIGEST$WEB_DIGEST" ]]; then
+  if [[ ! "$API_DIGEST" =~ ^sha256:[a-f0-9]{64}$ || ! "$WEB_DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]]; then
+    echo "ERROR: supply both exact API and web sha256 digests" >&2
+    exit 2
+  fi
+fi
 
 REMOTE_DOCKER_PATH='/share/ZFS530_DATA/.qpkg/container-station/bin'
 
-run_release_checks() {
+check_source_provenance() {
   local source_version
   source_version="$(tr -d '[:space:]' < VERSION)"
   if [[ "$VERSION" != "$source_version" ]]; then
     echo "ERROR: deploy version $VERSION does not match source VERSION $source_version" >&2
     exit 1
   fi
-  if ! git diff --quiet || ! git diff --cached --quiet; then
+  if [[ -n "$(git status --porcelain --untracked-files=all)" ]]; then
     echo "ERROR: release deployment requires a clean worktree" >&2
     exit 1
   fi
+}
+
+run_release_checks() {
   npm test
   npm run build
   npm --prefix web run build
@@ -150,6 +161,11 @@ install_runtime_files() {
     mv '$NAS_DIR/start.sh.new' '$NAS_DIR/start.sh'
     mv '$NAS_DIR/stop.sh.new' '$NAS_DIR/stop.sh'
     printf 'Y2T_IMAGE_TAG=%s\\n' '$VERSION' > '$NAS_DIR/release.env'
+    if [ -n '$API_DIGEST' ]; then
+      printf 'Y2T_API_IMAGE=%s\\nY2T_WEB_IMAGE=%s\\n' \
+        '$REGISTRY/youtube2text-api:$VERSION@$API_DIGEST' \
+        '$REGISTRY/youtube2text-web:$VERSION@$WEB_DIGEST' >> '$NAS_DIR/release.env'
+    fi
     chmod 644 '$NAS_DIR/docker-compose.yml' '$NAS_DIR/release.env'
     chmod 755 '$NAS_DIR/start.sh' '$NAS_DIR/stop.sh'
   "
@@ -170,6 +186,11 @@ restore_backup() {
       rm -f '$NAS_DIR/release.env'
     fi
     cd '$NAS_DIR'
+    export COMPOSE_FILE='$NAS_DIR/docker-compose.yml'
+    if [ -L '$NAS_DIR/docker-compose.home-infra.override.yml' ]; then exit 1; fi
+    if [ -f '$NAS_DIR/docker-compose.home-infra.override.yml' ]; then
+      export COMPOSE_FILE=\"\$COMPOSE_FILE:$NAS_DIR/docker-compose.home-infra.override.yml\"
+    fi
     /bin/sh start.sh
   "
 }
@@ -186,6 +207,11 @@ verify_release() {
 }
 
 if [[ "$MODE" == "deploy" ]]; then
+  check_source_provenance
+  if [[ "$SKIP_BUILD" == true && -z "$API_DIGEST$WEB_DIGEST" ]]; then
+    echo "ERROR: --skip-build requires both immutable image digests" >&2
+    exit 2
+  fi
   if [[ "$SKIP_CHECKS" != true ]]; then run_release_checks; fi
   if [[ "$SKIP_BUILD" != true ]]; then build_and_push; fi
 else
@@ -197,13 +223,20 @@ else
   done
 fi
 
+if [[ "$MODE" == "deploy" ]]; then
+  # Always bind the runtime files and both registry images to this exact commit.
+  image_digests="$(python3 scripts/verify-release-images.py \
+    --registry "$REGISTRY" --version "$VERSION" --revision "$(git rev-parse HEAD)" \
+    --api-digest "$API_DIGEST" --web-digest "$WEB_DIGEST")"
+  read -r API_DIGEST WEB_DIGEST <<< "$image_digests"
+fi
+
 PREVIOUS_VERSION="$(previous_version)"
 if [[ "$MODE" == "deploy" ]]; then preserve_legacy_rollback_images "$PREVIOUS_VERSION"; fi
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 install_runtime_files "$STAMP"
 
-ssh -o BatchMode=yes "$NAS_HOST" "cd '$NAS_DIR' && /bin/sh start.sh"
-if ! verify_release; then
+if ! ssh -o BatchMode=yes "$NAS_HOST" "cd '$NAS_DIR' && /bin/sh start.sh" || ! verify_release; then
   restore_backup "$STAMP"
   exit 1
 fi

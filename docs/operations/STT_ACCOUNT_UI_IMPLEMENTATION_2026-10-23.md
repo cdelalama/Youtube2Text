@@ -1,7 +1,7 @@
 # STT account administration implementation - 2026-10-23
 
-State: local implementation and qualification in progress; not published or
-deployed. Baseline: 977ab9b84685edce796303d477c1f68b9c91a7c7 (0.41.3).
+State: account source 0.42.0 published; corrected 0.42.1 qualified for publication.
+Product runtime remains 0.39.3 until actual guarded deployment. Baseline: 977ab9b84685edce796303d477c1f68b9c91a7c7 (0.41.3).
 Carlos approved the exact account UI proposal with Go. The attributed scope is
 in MEDIA2TEXT_ACCOUNT_ACCESS_AUTHORITY_2026-10-23.md. D-028 owns this increment.
 
@@ -149,3 +149,28 @@ not raise limits or start transcription of the long recording.
 Dossier assessment: refresh_required for accepted implementation and changed
 next step. Curate only the admitted project status; retain private review,
 credential, audio, account and runtime evidence outside shared publication.
+
+## Dependency release gate correction - 2026-10-23
+
+A fresh image build/audit observed the updated HIGH Zod advisory GHSA-mrhx-c7xc-m3w5, despite an earlier zero-audit result. Exact independent Opus product R4 blocks releasing0.42.0: the new credential object surface is unaffected, but existing authenticated run arrays are reachable and the project audit gate disallows the finding. No risk exception was invented. The API candidate was never deployed; its published source, complete logs, registry digest and native NAS recovery are retained.
+
+Candidate0.42.1 pins the fixed main Zod4.6.7 API, updates the record key schema, bounds config.videoIds at5000 and rejects oversized nested run arrays before their element schema. Override sanitization retains only explicitly supplied non-undefined fields, preventing Zod4 partial defaults from replacing effective provider, paths or credential selection. Full248 tests, no-emit typecheck and backend build pass; seven focused default/array/environment/Plaud cases pass. Web production build also passes. Focused independent review receipt and publication remain before release. No provider call or account selection was performed.
+
+Upstream evidence: https://github.com/advisories/GHSA-mrhx-c7xc-m3w5 ; https://github.com/colinhacks/zod/pull/6652 ; https://zod.dev/v4/changelog .
+
+## 0.42.1 release qualification
+
+A newly published HIGH Zod advisory blocked 0.42.0 before product deployment.
+Zod 4.6.7 passes 248 tests, seven focused cases, typecheck, backend/web builds,
+API contract and zero-finding root/web audits. Exact Opus R5/R7 SOURCE_GO covers
+the correction and deployment tooling. Six private tests and actual NAS Compose
+5.1.1-qnap3 prove existing loopback overlay preservation, start/verification
+failure restoration, digest input and source-provenance guards. Both images are
+verified against registry content/config hashes and exact source/version labels.
+A partial build, post-push digest mismatch or failed restoration is a manual
+reconciliation gate; do not retry blindly. No failed candidate is deployed.
+The API 0.42.0 candidate remains in registry/NAS custody with matching layers;
+only its specifically reviewed disposable DEV artifacts were finalized.
+Current Portal mobile/desktop readback correctly shows Media2Text monitored,
+notifications disabled and the retained processing/delivery issues. This is
+availability acceptance only, not proof of successful new transcriptions.

@@ -1,6 +1,6 @@
 services:
   youtube2text-api:
-    image: registry.lamanoriega.com/youtube2text-api:${Y2T_IMAGE_TAG:?Y2T_IMAGE_TAG is required}
+    image: ${Y2T_API_IMAGE:-registry.lamanoriega.com/youtube2text-api:${Y2T_IMAGE_TAG:?Y2T_IMAGE_TAG is required}}
     network_mode: host
     container_name: youtube2text-api
     restart: unless-stopped
@@ -126,7 +126,7 @@ services:
       start_period: 15s
 
   youtube2text-web:
-    image: registry.lamanoriega.com/youtube2text-web:${Y2T_IMAGE_TAG:?Y2T_IMAGE_TAG is required}
+    image: ${Y2T_WEB_IMAGE:-registry.lamanoriega.com/youtube2text-web:${Y2T_IMAGE_TAG:?Y2T_IMAGE_TAG is required}}
     network_mode: host
     container_name: youtube2text-web
     restart: unless-stopped

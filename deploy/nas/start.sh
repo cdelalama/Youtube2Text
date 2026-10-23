@@ -6,6 +6,16 @@ COMPOSE="/usr/local/lib/docker/cli-plugins/docker-compose"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SECRETS_FILE="$SCRIPT_DIR/.env.doppler"
 RELEASE_FILE="$SCRIPT_DIR/release.env"
+COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yml"
+OWNER_OVERLAY="$SCRIPT_DIR/docker-compose.home-infra.override.yml"
+if [ -L "$OWNER_OVERLAY" ]; then
+    echo "ERROR: owner compose overlay must not be a symlink" >&2
+    exit 1
+fi
+if [ -f "$OWNER_OVERLAY" ]; then
+    COMPOSE_FILE="$COMPOSE_FILE:$OWNER_OVERLAY"
+fi
+export COMPOSE_FILE
 
 umask 077
 cleanup() {
@@ -48,6 +58,12 @@ fi
 echo "Fetching production secrets from Doppler..."
 docker run --rm -e "DOPPLER_TOKEN=$DOPPLER_TOKEN" \
     dopplerhq/cli secrets download --no-file --format env > "$SECRETS_FILE"
+
+# Release identity and owner overlay are controlled by reviewed runtime files.
+if grep -Eq '^(Y2T_IMAGE_TAG|Y2T_API_IMAGE|Y2T_WEB_IMAGE|COMPOSE_FILE)=' "$SECRETS_FILE"; then
+    echo "ERROR: Doppler must not override release identity or compose files" >&2
+    exit 1
+fi
 
 require_file_value Y2T_API_KEY
 require_file_value Y2T_WEB_AUTH_SECRET
