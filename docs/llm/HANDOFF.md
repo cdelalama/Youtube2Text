@@ -1,3 +1,26 @@
+## Media2Text account delivery readback - 2026-10-24
+
+Last Updated: 2026-10-24 - Codex.
+
+The account UI is installed and usable. Reviewed native/shared reader and recovery
+receipts are retained in docs/operations/STT_ACCOUNT_UI_IMPLEMENTATION_2026-10-23.md. Full owner delivery remains incomplete;
+functional installation is not generalized to unresolved access/documentary gates.
+
+### Open work - next concrete step
+
+Installed account UI is usable. Complete the existing-password event binding and owner delivery witness after Home/Sentinel documentary holds are resolved; no audio or budget change is authorized.
+
+### Trace Anchor
+
+- Role: executor
+- Sent: 2026-10-24 02:39:11 CEST (00:39:11 UTC)
+- Subject: actual account and documentary readback; retained formal gates
+- Resulting state: HEAD=f1ceaba62003e936152b081d3b27bcd7c8cc3d70; version=0.42.2; gate=pending-integration
+- Repo state: published task source clean before this receipt; primaries and peers preserved
+- Validation: actual browser, private recovery, native/shared history and bounded previews verified; complete owner delivery FAIL retained
+- Next gate: Installed account UI is usable. Complete the existing-password event binding and owner delivery witness after Home/Sentinel documentary holds are resolved; no audio or budget change is authorized.
+- Dossier: no_change after reviewed curation; P shared3/R shared9 actual readers pass; H/S shared holds retained
+
 ## Account interface installed and tested - 2026-10-24
 
 Last Updated: 2026-10-24 - Codex.

@@ -17,4 +17,4 @@ This index records custody and disposition, not permission to delete a checkout.
 
 - [provider-accounts-ui-20261023](work/provider-accounts-ui-20261023.json): closed proposal; authenticated UI inspection and exact Opus consensus/source review complete. Multi-account credential management remains unimplemented; retain checkout and private evidence.
 
-- [provider-accounts-implementation-20261023](work/provider-accounts-implementation-20261023.json): active; implement the approved account UI and complete source, owner integration and actual deployment. Preserve prior work and evidence.
+- [provider-accounts-implementation-20261023](work/provider-accounts-implementation-20261023.json): pending-integration; Installed account UI is usable. Complete the existing-password event binding and owner delivery witness after Home/Sentinel documentary holds are resolved; no audio or budget change is authorized.

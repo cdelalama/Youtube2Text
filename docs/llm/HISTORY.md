@@ -1,3 +1,7 @@
+## 2026-10-24 - Media2Text account reader receipts
+
+- Trace: 2026-10-24 02:39:11 CEST (00:39:11 UTC); source f1ceaba62003e936152b081d3b27bcd7c8cc3d70; pending-integration. Actual reader/history/restore evidence retained; full owner delivery remains incomplete. See docs/operations/STT_ACCOUNT_UI_IMPLEMENTATION_2026-10-23.md.
+
 2026-10-24 - Codex - Media2Text 0.42.2 installed from8c3f0a5, actual browser/expiry/reauth/logout, private custody and isolated recovery pass; exact OpusR10FUNCTIONAL_UI_GO. Add Spanish operator guide; preserve formal access marker, Dossier and M1-M3 gates. Trace: executor; 2026-10-24 02:03:05 CEST (00:03:05 UTC); gate=documentary-closeout; Dossier refresh_required.
 
 2026-10-24 - Codex - Correct deployment verifier startup and absolute canonical login redirects after two reconciled rollbacks to0.39.3. Candidate0.42.2 retains account behavior and private custody. Trace: executor; 2026-10-24 01:27:04 CEST (23:27:04 UTC); gate=source-review; Dossier refresh required.

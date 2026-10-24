@@ -287,7 +287,7 @@
       "batch": "B003-stt-provider-audit-20261023",
       "owner": "youtube2text",
       "state": "in_progress",
-      "recall_trigger": "Before changing account administration, default selection or credential custody; approved implementation is in progress and actual delivery remains pending.",
+      "recall_trigger": "Before changing accounts, custody, credit reporting or adaptive audio preparation; account runtime is installed, while formal delivery and separate audio proposals retain their gates.",
       "documentation_refs": [
         {
           "path": "docs/operations/STT_PROVIDER_AUDIT_2026-10-23.md"
@@ -300,7 +300,7 @@
         }
       ],
       "authority": "Carlos approved the concrete multi-account UI proposal with Go on2026-10-23; D-028 and the attributed access authority retain the scope.",
-      "rationale": "Deliver easy account/token administration in the existing UI with encrypted custody and pinned manual selection; deployment and actual acceptance remain pending."
+      "rationale": "Account management is implemented and actually installed in 0.42.2, with browser and private recovery proof. Formal credential-event/owner delivery remains pending; detailed balances and adaptive preparation are not implied."
     },
     {
       "id": "IDEA-0006",
@@ -366,8 +366,8 @@
       },
       "batch": "B004-stt-account-ui-20261023",
       "owner": "youtube2text",
-      "state": "in_progress",
-      "recall_trigger": "Before changing account administration, default selection or credential custody; approved implementation is in progress and actual delivery remains pending.",
+      "state": "implemented",
+      "recall_trigger": "Before changing accounts, custody, credit reporting or adaptive audio preparation; account runtime is installed, while formal delivery and separate audio proposals retain their gates.",
       "documentation_refs": [
         {
           "path": "docs/operations/STT_ACCOUNT_UI_PROPOSAL_2026-10-23.md"
@@ -377,7 +377,25 @@
         }
       ],
       "authority": "Carlos approved the concrete multi-account UI proposal with Go on2026-10-23; D-028 and the attributed access authority retain the scope.",
-      "rationale": "Deliver easy account/token administration in the existing UI with encrypted custody and pinned manual selection; deployment and actual acceptance remain pending."
+      "rationale": "Account management is implemented and actually installed in 0.42.2, with browser and private recovery proof. Formal credential-event/owner delivery remains pending; detailed balances and adaptive preparation are not implied.",
+      "acceptance": {
+        "state": "pending",
+        "reason": "Functional UI and private recovery pass; formal credential-event and complete owner/documentary delivery remain incomplete."
+      },
+      "evidence": [
+        {
+          "path": "src/credentials/store.ts",
+          "revision": "8c3f0a542691144a80c0c1819dbf4d350b36f43f"
+        },
+        {
+          "path": "web/app/MediaConsole.tsx",
+          "revision": "8c3f0a542691144a80c0c1819dbf4d350b36f43f"
+        },
+        {
+          "path": "src/jobs/transcriptionProfile.ts",
+          "revision": "8c3f0a542691144a80c0c1819dbf4d350b36f43f"
+        }
+      ]
     },
     {
       "id": "REF-D-028",

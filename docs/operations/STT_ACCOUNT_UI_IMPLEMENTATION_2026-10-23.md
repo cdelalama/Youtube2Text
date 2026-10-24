@@ -180,3 +180,51 @@ only its specifically reviewed disposable DEV artifacts were finalized.
 Current Portal mobile/desktop readback correctly shows Media2Text monitored,
 notifications disabled and the retained processing/delivery issues. This is
 availability acceptance only, not proof of successful new transcriptions.
+
+## Documentary readback and retained gates - 2026-10-24
+
+Media2Text 0.42.2 remains installed from release source 8c3f0a5. Actual account
+administration, real five-minute reauthentication, logout, restart persistence
+and isolated matching/wrong-master recovery pass. No provider audio, account
+selection/import, economic override or automatic routing occurred. The existing
+password works. Its exact Doppler activity event remains unresolved; Carlos was
+optionally asked for the timestamp, never the secret or a reset. This prevents
+formal first-access completion, not use of Settings.
+
+At qualification, Portal read published owner f1595b39 and the exact image digest. The actual
+390/1440 views show Media2Text observed, with availability-only scope and no
+notifications; existing processing failures remain visible. A retained cosmetic
+limitation is that Portal's image badge shows the digest suffix instead of the
+version when the image reference contains @sha256. The exact 0.42.2 identity is
+verified in the catalog and running application; no Portal renderer change is
+part of this account delivery.
+
+Four native captures and isolated state copies preserve every prior record:
+Media2Text L3, Home Infra L107, Sentinel L52 and Hermes L10. Home native export
+is refused by the unchanged 2 MB bound. Native previews for P/S/R passed all
+five sections at 390/1440 and all 3/52/10 exact historical links. The first
+preview stopped with exit143 during history navigation; the complete bounded
+rerun passed and its temporary loopback server was stopped. These are temporary
+local reader proofs, not persistent native publication.
+
+Media2Text shared revision3 and Hermes shared revision9 are published; actual
+five-section mobile/desktop readers and all 3/9 historical links pass. Standard
+backups, private archive custody and isolated same-NAS restores validate current
+and every historical revision. Home shared current d7a5558 and pending cff33a3,
+and Sentinel shared current b5b27e3 and pending bd37b0b, remain unchanged. Home's
+shared read still fails; Sentinel's standard shared backup remains refused.
+No shared capacity waiver, pending-candidate disposal or history deletion occurred.
+
+The owner delivery checker actually returns FAIL: no complete owner evidence for
+the exact project revision. A complete ledger entry is not manufactured while the
+credential event and documentary holds remain unresolved. Source/build checks
+are separate from full delivery acceptance. The retained mutable matrix below
+states the actual qualified surfaces and remaining gates.
+
+Dossier assessment: no_change after the reviewed account curation. These are
+publication/readback receipts for that same content, not a new product decision
+or recursive receipt snapshot. Earlier M1-M3 and other owner priorities remain.
+
+Actual shared readers: [Media2Text revision 3](https://infra.lamanoriega.com/dossier/shared/youtube2text?revision=shared%3Abca19556b2db23c62ac56dbc20943c7356d9209479a95a3b7f96416d39583e6e), [Hermes revision 9](https://infra.lamanoriega.com/dossier/shared/hermes-lab?revision=shared%3A9c833eb25dc06a66760b02c33df662b5e2ebfcfcb3d03b0ee7c9fee84ab09d2d).
+
+Evidence is retained privately under /home/cdelalama/.local/state/youtube2text/provider-accounts-implementation-20261023, including exact review native capture, runtime/browser, backup/restore, publication and reader receipts. No secret values belong in these documents.

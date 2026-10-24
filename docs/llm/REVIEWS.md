@@ -1,3 +1,24 @@
+## 2026-10-24 - Account delivery actual-view review and curation
+
+Strict schema2 native capture accepted without warnings. Manifest SHA-256: product R10 448d3dc2f67025cdda3f1b78866e1475298a9b3674f2101d577705127206140d; integration R14 fe6f5128e169cca3e3742739a0091a481c03764cbe2a26f9faa0401a7bb0db54.
+
+Exact claude-opus-5-5/high/firstParty product session e0d88e64-79d2-4f5c-840f-c134dafb83a5
+R10 returned FUNCTIONAL_UI_GO after actual screenshots. G1 private recovery and
+G2 explicit cookie lifetime/logout limits are fulfilled. Integration session
+fab90ca9-da32-4b7e-9764-9fd527bfc6b8 retained R6/R7 readiness recovery, R8-R10
+bounded artifact/private-recovery reviews, and R11 required curation corrections.
+R12 returned CURATION_GO/SOURCE_DOCS_GO/HELPERS_GO; R13 accepted the sharing
+preflight correction after the private-URL rejection proved no native write.
+All exact native rounds are strictly captured. Hook check-status remains unknown
+with zero recorded errors (exit3), not asserted successful. Source and history
+are preserved. R14 returned SCOPED_CLOSEOUT_GO after inspecting actual P/R shared and S native
+reader views, Portal, restore/publication receipts and the owner matrix. Required
+C1 is incorporated in Home and Sentinel receipts: Sentinel self-surveillance is
+unconfirmed with a missing snapshot; Sentinel/Portal retain diagnosis, with no
+claim that it is or is not a regression. The nonblocking image-badge regression
+is retained as HI-PORTAL-DIGEST-BADGE. R14 explicitly requires no further review
+after this receipt correction. This is not whole-delivery acceptance.
+
 ## 2026-10-24 - Product R8/R9: deployment verification correction
 
 Exact claude-opus-5-5/high, firstParty canonical metadata verified, same independent
