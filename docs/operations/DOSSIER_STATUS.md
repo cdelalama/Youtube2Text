@@ -7,29 +7,23 @@ curated in Spanish. It is a project status, not a complete operational archive.
 
 ## Current account-management increment
 
-Carlos approved easy multi-account token management in the existing interface
-on October23. The executor is implementing Settings > Transcription accounts:
-provider, recognizable name and write-only key, optional access check, then
-explicit selection for new work. Saving never starts a transcription. Keys are
-stored in dedicated encrypted private state; balances remain unknown unless
-separately verified. Accepted work keeps its selected credential version.
+Media2Text 0.42.2 is installed from reviewed source 8c3f0a5. Settings supports
+named provider accounts, write-only masked keys, explicit selection, rotation
+and local revocation. The actual mobile/desktop flow, five-minute reauthentication
+and logout pass. A coherent private copy restores with the matching master across
+reopen and rejects a different master in an isolated container without network.
+This is same-NAS recovery. The installation-test account remains disabled,
+unselected and unprobed; legacy selections and all spending limits are unchanged.
 
-Account source 0.42.0 is published. Corrected 0.42.1 is qualified after a fresh
-Zod security advisory: 248 tests, backend/web builds, dependency audits and
-exact independent Opus R5/R7 pass. Two guarded attempts restored production to 0.39.3 after verifier
-startup/redirect defects. Candidate 0.42.2 corrects those checks before a fresh
-qualified deployment. Private custody remains preserved. Sentinel observes availability; the actual Portal mobile/desktop
-view shows that scope and disabled notifications. Existing processing failures
-remain visible. The executor next publishes immutable images and verifies the
-private credential store, recovery and actual login/account use/logout. No new
-general Go or login provider is required.
-Local revocation cannot guarantee cancellation at an external provider.
+Exact independent Opus review covers source and actual operator clarity.
+The usable existing login is preserved. Formal password activity metadata remains
+unresolved, and reviewed Dossier publication/readback is still in progress.
+Home reader 503 and Sentinel standard backup refusal retain their separate scope.
+The executor owns feasible documentary closure; Carlos can use Settings now.
 
-The long-recording economic block, adaptive audio preparation/report proposal
-and M1/M2/M3 acceptance remain separate. No provider spend, budget increase or
-automatic account routing is part of this qualification. Previous dedicated
-Dossier history remains retained; this new status still requires reviewed native
-and shared publication and actual reader verification.
+The long-recording economic block, existing shorter result, adaptive audio/report
+proposal and M1-M3 acceptance remain separate. No provider spend, automatic routing
+or imported credentials were part of qualification. Previous history is retained.
 
 ## Previously delivered product and retained acceptance
 
@@ -37,8 +31,7 @@ Media2Text converts YouTube/video and direct audio into structured and readable
 transcripts. The existing Plaud connection can process new recordings under its
 current limits. M0 is accepted: Carlos confirmed reading, phrase search and
 offline use on computer and Android on October 1. The October 7 integration brought its then-published source from 0.41.2 to
-0.41.3. The current account candidate is 0.42.2; production remains 0.39.3
-until the separately verified deployment completes.
+0.41.3. Production 0.42.2 now has actual account/login/recovery proof; formal delivery remains separate.
 
 A post-M0 recording has already been transcribed and delivered as the separate
 M1 note package, reusing its result with zero incremental transcription cost.
@@ -48,9 +41,8 @@ acceptance and does not update itself when new notes arrive.
 
 The service is available, with retained processing failures and downstream
 delivery work still requiring follow-up. Those limitations are not repaired by
-adding documentation. The existing source-only dependency correction and version
-documentation fixes are published; production security/runtime upgrades and the
-tested upstream-tool update remain separately owned follow-up.
+adding documentation. The account release includes qualified dependency corrections. Other runtime
+security and upstream-tool changes retain their separately reviewed scope.
 
 ## Roadmap and next action
 
@@ -97,6 +89,6 @@ Same-NAS restoration does not establish physically independent recovery. Native
 Windows/fleet acceptance and personal phone acceptance are not inferred.
 
 M1 device confirmation remains an independent operator acceptance step.
-The executor is currently delivering the approved account-management increment. No replay, new provider call,
-budget increase, scheduler change, product deployment or Cortex activation is
-part of this documentation task.
+The account runtime 0.42.2 is delivered; reviewed documentary closure remains.
+No replay, new provider call, budget increase, scheduler change or Cortex
+activation is part of this closeout.

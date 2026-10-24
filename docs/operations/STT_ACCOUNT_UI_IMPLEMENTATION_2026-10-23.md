@@ -1,7 +1,11 @@
+## Actual delivery receipt - 2026-10-24
+
+248 application tests and4 deployment regressions pass; exact sourceR9SOURCE_GO and actual-viewR10FUNCTIONAL_UI_GO. Immutable API/web identities, actual login/account/real expiry/reauth/logout, private coherent backup and isolated matching/wrong-key recovery pass. Active source 8c3f0a5, version0.42.2; session12hours/admin freshness5minutes. Test account stays disabled with its audit; legacy selections unchanged. Master/private bind are API-only. No provider probes/submissions, budget changes or adaptive splitting. Formal credential event and reviewed Dossier/consumer closure remain separate.
+
 # STT account administration implementation - 2026-10-23
 
-State: account source 0.42.0 published; corrected 0.42.1 qualified for publication.
-Product runtime remains 0.39.3 until actual guarded deployment. Baseline: 977ab9b84685edce796303d477c1f68b9c91a7c7 (0.41.3).
+State:0.42.2 installed and actual browser/private recovery verified on2026-10-24.
+Deployed source:8c3f0a542691144a80c0c1819dbf4d350b36f43f. Baseline:977ab9b84685edce796303d477c1f68b9c91a7c7.
 Carlos approved the exact account UI proposal with Go. The attributed scope is
 in MEDIA2TEXT_ACCOUNT_ACCESS_AUTHORITY_2026-10-23.md. D-028 owns this increment.
 
@@ -138,9 +142,11 @@ legacy-key failure until provider construction if registry environment variables
 are present. This does not activate registry use from CLI. Existing legacy
 failover remains separate. Exact independent source R2 returned SOURCE_GO, closing R1-R4. Owner publication,
 Sentinel/Hermes installation, private NAS recovery, immutable deployment and
-actual consumer/operator/Dossier readback remain execution work.
+actual consumer/operator/Dossier readback were pending at R2. The October24
+receipt above supersedes those installed/browser/recovery gates; formal access
+metadata and reviewed documentary readback remain open.
 
-Sentinel will observe only current web/API availability, not successful speech
+Sentinel observes only current web/API availability, not successful speech
 recognition, billing, login, transcript correctness or completed delivery.
 The earlier adaptive audio preparation/report proposal, long-recording economic
 block and M1/M2/M3 acceptance retain their separate scopes. This feature does

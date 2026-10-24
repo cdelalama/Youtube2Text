@@ -1,3 +1,42 @@
+## Account interface installed and tested - 2026-10-24
+
+Last Updated: 2026-10-24 - Codex.
+
+- Version: 0.42.2 deployed from 8c3f0a542691144a80c0c1819dbf4d350b36f43f.
+
+Settings > Transcription accounts now supports named accounts for Deepgram,
+AssemblyAI and OpenAI, masked write-only keys, rotation, local revocation and
+explicit selection. Saving does not submit audio or select the account.
+The actual390/1440browser flow passes creation/reload/rename/rotation/revocation/
+disable, same-origin denial, real five-minute expiry, reauthentication and logout.
+Exact Opus R10 returns FUNCTIONAL_UI_GO; both guide corrections are fulfilled
+by the actual recovery receipt and the explicit12-hour stateless-cookie scope.
+The retained installation-test account is disabled, never selected/probed/imported.
+
+Both runtime images match the reviewed source. API-only master/private mount,
+separate proof secret,0700directory/0600database and edge/peer restrictions pass.
+A coherent stopped-writer copy restores in a network-isolated container, decrypts
+with the matching master across reopen and rejects another master. Recovery is
+same-NAS only. Two prior verifier failures restored0.39.3 exactly;0.42.2 fixes
+startup waiting and canonical redirects. No paid STT or budget increase occurred.
+
+### Open work - next concrete step
+
+Read docs/operations/STT_ACCOUNTS_OPERATOR_GUIDE_2026-10-24.md.
+The executor completes reviewed source/curation publication and actual reader/history/restore checks. The existing password activity marker remains unresolved; no password reset is inferred. Existing Home reader 503 and Sentinel standard backup refusal remain separate. Carlos can use the existing application access; no extra general Go is pending. Earlier M1-M3, long-recording economics and adaptive audio/report work retain their scope and priority.
+
+### Trace Anchor
+
+- Role: executor
+- Sent: 2026-10-24 02:03:05 CEST (00:03:05 UTC)
+- Subject: Media2Text account UI installed and actual custody/use verified
+- Resulting state: HEAD=8c3f0a542691144a80c0c1819dbf4d350b36f43f; version=0.42.2; gate=documentary-closeout; functional slice verified
+- Repo state: managed task from published baseline; primary and peer work preserved
+- Validation: real browser and private recovery pass; source/consumer evidence retained
+- Next gate: executor completes reviewed documentary delivery; operator supplies only nonsecret credential-event time if available
+- Dossier: refresh_required; previous native/shared history retained; new reader revision pending
+
+
 ## Deployment verification correction - 2026-10-24
 
 Last Updated: 2026-10-24 - Codex.

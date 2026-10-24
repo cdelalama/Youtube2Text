@@ -1,3 +1,5 @@
+Operator guide: docs/operations/STT_ACCOUNTS_OPERATOR_GUIDE_2026-10-24.md explains actual account use, custody, existing access and remaining formal metadata.
+
 # Repository Structure Guide
 
 This document describes the current repository layout for Media2Text. The

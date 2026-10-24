@@ -52,17 +52,19 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Storage | Persist outputs + idempotency | TBD | Layout: `output/<channel_title_slug>__<channel_id>/<basename>.*`. |
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
-## Current Status (2026-10-23)
-v0.42.2 candidate in source adds account administration; publication/deployment
-remain pending. The existing product retains the bounded offline M0 Markdown export for
-existing Plaud transcripts. Carlos confirmed notes work on both actual devices
-on October 1 in response to the reading/search/offline question; M0 is accepted.
-A verified October 2 recording is now delivered as one private note, reusing
-its existing transcript at USD 0 incremental cost. Carlos next confirms reading,
-search and offline use on both devices; M1 stays in progress. The source-only
-0.41.1 dependency patch and exact audit do not establish runtime acceptance.
-The NAS remains 0.39.3. No live contract, provider execution, delivery or
-scheduler changes are included. See docs/operations/M0_MARKDOWN_READING.md.
+## Current Status (2026-10-24)
+v0.42.2 stable runtime includes the reviewed account interface. Actual mobile/
+desktop administration, login/reauth/logout, private custody and same-NAS
+isolated recovery pass. Formal credential-event metadata and reviewed documentary
+closure remain separate; no complete integration acceptance is inferred.
+
+M0 is accepted: Carlos confirmed reading, search and offline use on both devices
+on October1. M1 reuses an existing recording at zero incremental STT cost and
+still needs his personal device confirmation. M2 daily reliability and M3 Cortex
+retain their original requirements. Existing processing failures remain visible.
+No paid transcription, budget increase or scheduler activation was part of this
+delivery. The adaptive audio/report proposal and long-recording economic gate
+are unchanged. See docs/operations/STT_ACCOUNTS_OPERATOR_GUIDE_2026-10-24.md.
 
 ## Historical implementation checkpoint (2026-07-30)
 v0.40.1 stable in source preserves the v0.40.0 provenance, cursor, lifecycle,

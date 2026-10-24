@@ -1,3 +1,7 @@
+## Current account delivery - 2026-10-24
+
+Media2Text 0.42.2 is installed and its real account/login/recovery checks pass. Follow docs/llm/HANDOFF.md and the operator guide; formal access metadata and reviewed documentary delivery remain open. Earlier independent priorities are unchanged.
+
 <!-- doc-version: 0.42.2 -->
 
 ## Current continuation - approved STT account administration, 2026-10-23
@@ -219,21 +223,18 @@ Recommended reading order:
 
 ## Current Focus (Snapshot)
 
-Source of truth: docs/llm/HANDOFF.md.
-- Last Updated: 2026-10-01
-- Source 0.41.0 prepares M0 private Markdown reading for desktop and mobile.
-  The offline exporter excludes the known bad source attribution, preserves
-  canonical evidence, and blocks modified generated notes. Carlos accepted
-  reading/search/offline use on both actual devices on October 1; see
-  docs/operations/M0_ACCEPTANCE_2026-10-01.md.
-- The NAS stays on 0.39.3. The canonical authenticated browser entry remains
-  https://y2t.lamanoriega.com. No scheduler, replay, new transcription, runtime
-  deployment or Cortex delivery is enabled. D-025 ingress reconciliation is
-  still required after every future deploy/rollback.
-- The historical 0.40.1 Transcript Ready pin is final-frozen; do not dispatch
-  that gate again. Current version markers are not new consumer acceptance.
-- M0 is followed by M1 new recording, M2 daily reliability, then M3 Cortex.
-  D-024 bilateral provisioning remains accepted backlog, independently gated.
+Source of truth: docs/llm/HANDOFF.md. Last Updated:2026-10-24.
+Media2Text 0.42.2 is installed with actual account/login/recovery proof.
+The executor completes reviewed documentation/readers and the exact formal
+access witness; Carlos can use Settings through his existing access.
+The Spanish operator guide is docs/operations/STT_ACCOUNTS_OPERATOR_GUIDE_2026-10-24.md.
+
+M0 personal reading/search/offline acceptance is retained. M1 new recording,
+M2 reliability and M3 Cortex keep their separate gates and priorities.
+D-024 bilateral provisioning remains accepted backlog, independently gated.
+D-025 ingress reconciliation remains required after future deploy/rollback.
+The historical0.40.1 Transcript Ready pin is final-frozen; do not dispatch
+that gate again. No paid STT, budget increase or scheduler activation occurred.
 
 ## Getting Started Checklist
 - [ ] Read this entire file and update placeholders
