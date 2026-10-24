@@ -18,7 +18,7 @@ unselected and unprobed; legacy selections and all spending limits are unchanged
 Exact independent Opus review covers source and actual operator clarity.
 The usable existing login is preserved. Formal password activity metadata remains
 unresolved, and reviewed Dossier publication/readback is still in progress.
-Home reader 503 and Sentinel standard backup refusal retain their separate scope.
+Home shared reader HTTP503 and Sentinel standard shared backup refusal retain their separate scope.
 The executor owns feasible documentary closure; Carlos can use Settings now.
 
 The long-recording economic block, existing shorter result, adaptive audio/report
@@ -92,3 +92,12 @@ M1 device confirmation remains an independent operator acceptance step.
 The account runtime 0.42.2 is delivered; reviewed documentary closure remains.
 No replay, new provider call, budget increase, scheduler change or Cortex
 activation is part of this closeout.
+
+## Account closeout clarification - 2026-10-24
+
+Until an explicit account selection, legacy environment credentials remain active.
+Existing access is preserved, with no new routes, automatic scheduling or paid audio.
+D-028 records Carlos's accepted Go for encrypted accounts with explicit selection.
+The current password works; only its formal event identity remains unresolved.
+Carlos was optionally asked for the exact Doppler activity date/time to complete
+that record; this is not required to use the application and never requests a secret.

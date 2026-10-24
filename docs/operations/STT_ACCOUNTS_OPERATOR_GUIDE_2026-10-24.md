@@ -24,7 +24,6 @@ una petición que ese proveedor ya haya aceptado.
 Tras cinco minutos desde el acceso, la aplicación pide confirmar la contraseña
 antes de modificar las cuentas. Cerrar sesión borra la cookie de ese navegador;
 una copia de esa cookie sigue siendo válida hasta su caducidad, a las 12 horas desde que se emitió.
-Modificar cuentas exige una confirmación de contraseña de los últimos cinco minutos.
 
 **Comprobar acceso** es opcional y no envía audio. Su resultado no acredita
 saldo ni permiso para transcribir: **Saldo: desconocido** sigue siendo correcto.
@@ -53,11 +52,16 @@ Doppler ni recrear contenedores.
 ## Recuperar el acceso habitual
 
 Si no recuerdas la contraseña de Media2Text, abre el panel de Doppler con tu
-identidad habitual y entra en youtube2text > prd. La contraseña está en
-Y2T_WEB_AUTH_PASSPHRASE; es también la ruta de recuperación existente.
+identidad habitual, selecciona el espacio **Xibstar** y entra en youtube2text > prd. La contraseña está en
+Y2T_WEB_AUTH_PASSPHRASE; usa su control de revelar/copiar. Es también la ruta de recuperación existente.
 Localizador: doppler://youtube2text/prd/Y2T_WEB_AUTH_PASSPHRASE.
 La aplicación pide solo contraseña, sin nombre de usuario.
 
 El agente ha comprobado la pertenencia del operador al almacén y el acceso de
 la aplicación. La identificación formal del evento de modificación de esta
 contraseña sigue pendiente; no se ha cambiado la contraseña para generar uno.
+
+Se ha solicitado a Carlos, de forma opcional para usar la aplicación, la fecha y
+hora exactas del evento de cambio de esa entrada en Doppler > Activity. Permitiría
+completar el registro formal de la versión probada; no se pide la contraseña
+ni cambiarla. El agente conserva el resto del cierre.
