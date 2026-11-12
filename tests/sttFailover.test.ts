@@ -952,8 +952,18 @@ test("disclosure: a provider body and key characters never reach logs, run recor
     assert.equal(second.result.error, "Automatic account change stopped: deepgram refused the request (exhausted, HTTP 402) " +
       "and no other enabled, healthy key or account is left.");
 
+    // With the switch off nothing moves, so the refusal itself becomes the job
+    // error and reaches logs, events and run records: fixed codes only there too.
+    f.store.setFailover(false);
+    answers.set(K1, () => new Response(echo(K1, REFUSAL_BODY), { status: 401 }));
+    const off = await captureLogs(() => withFetch(deepgram, () => f.job()));
+    assert.equal(off.result.stats?.failed, 1);
+    assert.equal(f.events.flatMap((event) => event.type === "video:error" ? [event.error] : []).at(-1),
+      "Deepgram API error (401): key or permission rejected");
+    assert.ok(off.lines.some((line) => line.includes("Deepgram API error (401): key or permission rejected")));
+
     for (const [label, value] of [
-      ["logs", [...first.lines, ...second.lines].join("\n")], ["run records", f.manager.listRuns()], ["pipeline events", f.events],
+      ["logs", [...first.lines, ...second.lines, ...off.lines].join("\n")], ["run records", f.manager.listRuns()], ["pipeline events", f.events],
       ["audit trail, events and stored notices", f.storedTrail()], ["failover events", f.store.failoverEvents()],
     ] as const) {
       assertClean(label, value, label === "logs" || label === "pipeline events" || label === "run records" ? [REFUSAL_BODY] : [REFUSAL_BODY, OTHER_BODY]);

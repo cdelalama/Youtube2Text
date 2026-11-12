@@ -35,7 +35,7 @@ ficticias. Conserva la evidencia de instalación y no debe usarse para transcrib
 
 ## Cambio automático de clave o cuenta
 
-**Todavía no está instalado.** Llega con la versión 0.43.2, que está preparada
+**Todavía no está instalado.** Llega con la versión 0.43.3, que está preparada
 en el código y pendiente de una nueva revisión independiente y de
 instalación. El NAS sigue con la 0.42.2, donde esta sección no aparece. Cuando
 se instale, nada cambia hasta que actives el interruptor: viene desactivado.

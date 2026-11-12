@@ -71,7 +71,15 @@ Tests added for B to E as the reviewer's scenarios and for the disclosure rule
 of A. tests/sttFailover.test.ts now has 29 tests; exact totals are in the
 HISTORY entry for 0.43.2.
 
-Not done: review of 0.43.2; any browser exercise of the screen; deployment.
+0.43.3, test-only follow-up, same day: a mutation check showed that the
+end-to-end disclosure test did not exercise the switch-off path, where a
+refusal becomes the job error and reaches logs, events and run records (the
+adapter tests already pinned the exact fixed messages). The test now covers it.
+No product code changed after 0.43.2. The web production build of the 0.43.2
+web source finished with exit 0.
+
+Not done: review of 0.43.2/0.43.3; any browser exercise of the screen;
+deployment.
 
 ## 2026-11-12 - Automatic account failover: independent review of 0.43.0 and fixes in 0.43.1
 

@@ -1,9 +1,10 @@
 # Automatic key and account failover with operator notice - 2026-11-12
 
 State: source prepared on task branch `work/stt-failover-20261112`, candidate
-0.43.2. NOT deployed: the NAS still runs 0.42.2. Two independent reviews by
+0.43.3. NOT deployed: the NAS still runs 0.42.2. Two independent reviews by
 Codex (of 0.43.0 and of 0.43.1) said do not merge or deploy yet; 0.43.2 answers
-the second one and waits for a third (see `docs/llm/REVIEWS.md`). The switch is
+the second one, 0.43.3 adds one test and no product change, and the candidate
+waits for a third review (see `docs/llm/REVIEWS.md`). The switch is
 off by default, so installing this release changes no routing until Carlos
 turns it on.
 Decision: `docs/llm/DECISIONS.md` D-029. Operator guide (Spanish):
@@ -316,9 +317,10 @@ Recovery is natural: when he dismisses the notices the check returns to ok.
 
 Nothing below was done. The NAS runs 0.42.2.
 
-1. Re-review of 0.43.1 by a different model family (the requesting session
-   obtains it from Codex), then merge to `main`.
-2. Build and publish immutable 0.43.1 API and web images and deploy with
+1. Review of the current candidate by a different model family (the requesting
+   session obtains it from Codex), then merge to `main`.
+2. Build and publish immutable API and web images of the reviewed version and
+   deploy with
    `docs/operations/DEPLOY_PLAYBOOK.md`. No new secret, environment variable,
    port or mount. The private database gains five tables on first start
    (`CREATE TABLE IF NOT EXISTS`); 0.42.2 ignores them, so rollback is safe.
@@ -347,7 +349,8 @@ Nothing below was done. The NAS runs 0.42.2.
   audit rows.
 - The CLI and legacy environment key pools are unchanged, including the pool's
   own round-robin; only its log line no longer shows key characters.
-- The UI was type-checked and built, not exercised in a browser.
+- The UI was type-checked and built (production build of the 0.43.2 web source,
+  unchanged since), not exercised in a browser.
 
 ## Validation
 

@@ -2,7 +2,7 @@
 
 Last Updated: 2026-11-12 - Claude (Fable 5.2).
 
-- Version: 0.43.2 candidate in source on task branch work/stt-failover-20261112. Not deployed: the NAS still runs 0.42.2 from 8c3f0a542691144a80c0c1819dbf4d350b36f43f.
+- Version: 0.43.3 candidate in source on task branch work/stt-failover-20261112. Not deployed: the NAS still runs 0.42.2 from 8c3f0a542691144a80c0c1819dbf4d350b36f43f.
 
 Carlos decided on 2026-11-12 (D-029) that Media2Text must move by itself when a
 key is rejected or out of credit: first to the next key of the same account,
@@ -21,8 +21,9 @@ key hints confined to the authenticated accounts screen and its notice, errors
 built from fixed codes, exhaustion kept as its own latched mark, every move's
 destination chosen and audited at that moment, refused keys excluded before a
 move, older screen reads no longer replacing newer changes, and notices worded
-in the past tense. Findings and fixes are in docs/llm/REVIEWS.md. 0.43.2 has not
-been reviewed, so the gate stays closed.
+in the past tense. Findings and fixes are in docs/llm/REVIEWS.md. 0.43.3 adds one
+test for the switch-off path and no product change. Neither has been reviewed,
+so the gate stays closed.
 
 What the release adds once installed, all inside Settings > Transcription
 accounts: one switch (off by default), an ordered list of the accounts allowed
@@ -37,7 +38,7 @@ One visible difference with the switch off: an authentication, permission or
 no-credit refusal now reads with a fixed reason instead of the provider's own
 text, so that no key fragment can reach an error message or a log.
 
-Not done: review of 0.43.2; deployment; a browser exercise of the new screen;
+Not done: review of this candidate; deployment; a browser exercise of the new screen;
 the immediate phone message, which needs separate Home Infra and Sentinel work
 and Carlos's choice to receive it. No paid transcription, budget increase,
 secret, login or runtime change occurred.
@@ -45,7 +46,7 @@ secret, login or runtime change occurred.
 ### Open work - next concrete step
 
 The requesting session sends branch work/stt-failover-20261112 back to Codex for
-review of 0.43.2 against docs/llm/REVIEWS.md, then merges and deploys it with
+review of the current candidate against docs/llm/REVIEWS.md, then merges and deploys it with
 docs/operations/DEPLOY_PLAYBOOK.md. After that Carlos opens Settings > Cuentas de
 transcripcion, adds his accounts to the list, orders them and turns on the
 switch; he should see the switch stay on and the list in his order. Earlier work
@@ -55,12 +56,12 @@ long-recording economics.
 ### Trace Anchor
 
 - Role: executor
-- Sent: 2026-11-12 16:10:39 CET (15:10:39 UTC)
-- Subject: D-029 automatic key and account failover, second review answered as source 0.43.2
-- Resulting state: branch work/stt-failover-20261112; version=0.43.2; gate=independent review of 0.43.2; not deployed
+- Sent: 2026-11-12 16:34:36 CET (15:34:36 UTC)
+- Subject: D-029 automatic key and account failover, second review answered; source 0.43.3
+- Resulting state: branch work/stt-failover-20261112; version=0.43.3; gate=independent review of this candidate; not deployed
 - Repo state: managed task worktree from published baseline 139b0c5aac1d4d8fe0e6c8c02b5526b27ca7633a; primary and peer checkouts untouched
-- Validation: npm test 277 of 277 pass, 0 fail (248 existing plus 29 in tests/sttFailover.test.ts, all with local fakes; run of 2026-11-12 15:04 UTC on this source); backend and web tsc --noEmit exit 0; api:contract:check exit 0; version:check, check-version-sync, naming:check and the idea check against baseline 139b0c5 pass. The web production build of this source had not finished when this was written. No provider was called. The screen was not exercised in a browser.
-- Next gate: requesting session obtains the Codex review of 0.43.2, then merge and deployment; Carlos turns the switch on afterwards
+- Validation: npm test 277 of 277 pass, 0 fail (248 existing plus 29 in tests/sttFailover.test.ts, all with local fakes; run of 2026-11-12 15:26 UTC on this source); backend tsc --noEmit and api:contract:check exit 0 on this source; web tsc --noEmit and the web production build exit 0 on the 0.43.2 source, whose web files are unchanged here; version:check, check-version-sync, naming:check and the idea check against baseline 139b0c5 pass; mutation checks confirm the tests for latched exhaustion, excluded keys and provider text in a refusal. No provider was called. The screen was not exercised in a browser.
+- Next gate: requesting session obtains the Codex review of this candidate, then merge and deployment; Carlos turns the switch on afterwards
 - Dossier: refresh_required after acceptance of the reviewed change; not refreshed from this unreviewed task branch
 
 ## Media2Text account delivery readback - 2026-10-24
@@ -180,7 +181,7 @@ The executor publishes the qualified source and immutable images and the existin
 - Next gate: executor qualifies focused review and actual deployment/access/recovery
 - Dossier: refresh_required; previous native/shared history retained; new reader revision unavailable
 
-<!-- doc-version: 0.43.2 -->
+<!-- doc-version: 0.43.3 -->
 
 ## Current continuation - approved STT account administration, 2026-10-23
 

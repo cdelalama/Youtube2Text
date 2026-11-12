@@ -5,17 +5,17 @@ Last Updated: 2026-11-12 - Claude (Fable 5.2).
 Carlos decided (D-029) that Media2Text must move by itself to the next key of
 the same account, then to the next account, when a key is rejected or out of
 credit, and must tell him every time, above all when the service changes.
-Source 0.43.2 for this is prepared on task branch work/stt-failover-20261112.
+Source 0.43.3 for this is prepared on task branch work/stt-failover-20261112.
 It is NOT deployed (the NAS runs 0.42.2). Two independent reviews (of 0.43.0 and
-0.43.1) said do not merge or deploy yet; 0.43.2 answers the second one and
-awaits a third (docs/llm/REVIEWS.md). The switch is off by default. Read
+0.43.1) said do not merge or deploy yet; 0.43.2 answers the second one, 0.43.3
+adds one test, and the candidate awaits a third review (docs/llm/REVIEWS.md). The switch is off by default. Read
 docs/operations/STT_FAILOVER_2026-11-12.md before touching account routing; the
 safety rule there must not be weakened.
 
 ### Open work - next concrete step
 
 The requesting session sends branch work/stt-failover-20261112 back to Codex
-for review of 0.43.2, then merges and deploys it with
+for review of the current candidate, then merges and deploys it with
 docs/operations/DEPLOY_PLAYBOOK.md. After that Carlos orders his accounts and
 turns the switch on in Settings. The Telegram message needs separate Home Infra
 and Sentinel work. Details and Trace Anchor: docs/llm/HANDOFF.md.
@@ -47,7 +47,7 @@ Installed account UI is usable. Complete the existing-password event binding and
 
 Media2Text 0.42.2 is installed and its real account/login/recovery checks pass. Follow docs/llm/HANDOFF.md and the operator guide; formal access metadata and reviewed documentary delivery remain open. Earlier independent priorities are unchanged.
 
-<!-- doc-version: 0.43.2 -->
+<!-- doc-version: 0.43.3 -->
 
 ## Current continuation - approved STT account administration, 2026-10-23
 
@@ -269,7 +269,7 @@ Recommended reading order:
 ## Current Focus (Snapshot)
 
 Source of truth: docs/llm/HANDOFF.md. Last Updated:2026-11-12.
-Source 0.43.2 (task branch work/stt-failover-20261112, not deployed, third review
+Source 0.43.3 (task branch work/stt-failover-20261112, not deployed, third review
 pending) adds automatic key and account failover with operator notice, D-029.
 Media2Text 0.42.2 is installed with actual account/login/recovery proof.
 The reviewed shared reader, full history and same-NAS restore are verified.

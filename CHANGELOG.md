@@ -5,6 +5,20 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.43.3] - 2026-11-12
+
+Test-only follow-up to 0.43.2; no product code changed. Still source on task
+branch `work/stt-failover-20261112`; not deployed; review pending.
+
+### Added
+
+- The disclosure test now also covers the switch-off path, where a provider
+  refusal becomes the job error itself and reaches logs, events and run records.
+
+### Changed
+
+### Fixed
+
 ## [0.43.2] - 2026-11-12
 
 Answers the second independent review (of 0.43.1: do not merge yet). Still
