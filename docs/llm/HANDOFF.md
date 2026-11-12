@@ -91,8 +91,8 @@ at .deploy-backups/pre-0.43.5-credentials-20261112T195301Z (owner only).
 
 Not done: a browser exercise of the new screen; the three follow-ups of the
 fifth review; the immediate phone message, which needs separate Home Infra and
-Sentinel work and Carlos's choice to receive it; the Dossier refresh for this
-release. Home Infra's reconciliation script was not run after this deployment:
+Sentinel work and Carlos's choice to receive it; publication of the refreshed
+Dossier (L4, captured locally) to the shared reader. Home Infra's reconciliation script was not run after this deployment:
 the product start script already applies the owner's loopback overlay, and the
 script would have replaced the live edge configuration with a source that
 lacks a route now in use (reported to Home Infra). No paid transcription,
@@ -122,7 +122,7 @@ long-recording economics.
 - Repo state: primary checkout on main, equal to origin/main; task branch work/stt-failover-20261112 merged
 - Validation: release gates on 6bab5a2 (279 of 279 tests, 4 of 4 verifier tests, builds, contract checks); scripts/deploy-nas.sh verification passed; read-back of the stored switch (off), anonymous refusals and loopback bind
 - Next gate: executing agent fixes the notice-limit follow-up with independent review; Carlos then turns the switch on
-- Dossier: refresh_required for the deployed release; not refreshed
+- Dossier: native local capture L4 (observed 2026-11-12T21:03:44Z, Spanish, local:4bb0259c9a4cb57c77a0a5c477b6f51194488b4ebc9c443ade7a3cd8842a16b8) from the curated source at 6dc5faf, reviewed by Codex gpt-6-astra (session 01a1d188-5b63-7a40-ab16-011d33019c98, GO WITH FIXES, ten wording findings applied with the reviewer's text and not reviewed again); export verified by trace; read back through Portal's temporary local reader (four records, new headline, page 200). Not shared: publication to the shared reader was not attempted
 
 ## Media2Text account delivery readback - 2026-10-24
 
