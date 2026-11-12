@@ -57,11 +57,11 @@ witness, M1-M3 and the long-recording economics.
 ### Trace Anchor
 
 - Role: executor
-- Sent: 2026-11-12 17:13:56 CET (16:13:56 UTC)
+- Sent: 2026-11-12 17:47:15 CET (16:47:15 UTC)
 - Subject: D-029 automatic key and account failover, third review answered; source 0.43.4
 - Resulting state: branch work/stt-failover-20261112; version=0.43.4; gate=independent review of this candidate; not deployed
 - Repo state: managed task worktree from published baseline 139b0c5aac1d4d8fe0e6c8c02b5526b27ca7633a; primary and peer checkouts untouched
-- Validation: VALIDATION-PENDING: at this commit tests/sttFailover.test.ts 31 of 31 and tests/assemblyAiSafety.test.ts 3 of 3 pass, backend and web tsc --noEmit exit 0; the full suite, api:contract:check and the web production build were still running. No provider was called. The screen was not exercised in a browser.
+- Validation: observed on source commit 34164d7 (0.43.4): npm test 279 tests, 279 pass, 0 fail (248 existing plus 31 in tests/sttFailover.test.ts); backend tsc --noEmit exit 0; web tsc --noEmit exit 0; npm run api:contract:check exit 0; web production build (next build) exit 0. No provider was called. The screen was not exercised in a browser.
 - Next gate: requesting session obtains the Codex review of this candidate, then merge and deployment; Carlos turns the switch on afterwards
 - Dossier: refresh_required after acceptance of the reviewed change; not refreshed from this unreviewed task branch
 
