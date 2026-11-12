@@ -37,7 +37,7 @@ export interface paths {
         };
         /**
          * Get sanitized Home Infra media-pipeline status
-         * @description The default response keeps exactly three checks. An automatic transcription account change awaiting operator review degrades the aggregate condition and summary. The named, machine-readable stt_account_failover check (pending_notices, service_changed, blocked) is added only with include=stt_account_failover, so consumers that pin the default shape are unaffected. No account alias or key hint is exposed.
+         * @description The default response keeps exactly three checks. An automatic transcription account change awaiting operator review, no healthy key or account left, or a selected account that cannot take work (new work is refused, also with the automatic switch off) degrades the aggregate condition and summary. The named, machine-readable stt_account_failover check (pending_notices, service_changed, blocked, selection_unavailable) is added only with include=stt_account_failover, so consumers that pin the default shape are unaffected. No account alias or key hint is exposed.
          */
         get: operations["getMediaPipelineStatus"];
         put?: never;
@@ -1638,8 +1638,10 @@ export interface components {
             /** Format: date-time */
             lastAt: string;
         };
-        /** @description Pending notices and where new work goes now. A key hint appears only inside a notice. */
+        /** @description Pending notices and where new work goes now. A key hint appears only inside a notice. `view` marks this answer, so a reader can tell it from the account listing that a release before 0.43.0 returns for the same request. */
         FailoverNoticesView: {
+            /** @enum {string} */
+            view: "notices";
             notices: components["schemas"]["FailoverNotice"][];
             routing: {
                 enabled: boolean;

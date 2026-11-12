@@ -89,8 +89,10 @@ export default function ProviderAccounts({ lang, settingsRevision, onProviderSel
       if (!response.ok) throw new Error();
       const next = normalize(await response.json());
       if (gate.accepts(read)) setData(next);
+      return true;
     } catch {
       if (gate.accepts(read)) setError(lang === "es" ? "No se pudieron cargar las cuentas. Reintenta la consulta." : "Could not load accounts. Retry the request.");
+      return false;
     }
   }, [lang, gate]);
   useEffect(() => { void load(); }, [load, settingsRevision]);
@@ -134,7 +136,7 @@ export default function ProviderAccounts({ lang, settingsRevision, onProviderSel
           const body = await response.json();
           gate.changed(); // and so does any read that began while it ran
           if (response.ok) { setData(normalize(body)); check = body.check; }
-          return { ok: response.ok, body };
+          return { ok: response.ok, status: response.status, body };
         },
         // Selecting an account also makes its provider the active one.
         activateProvider: action.action !== "select" ? undefined : async (snapshot) => {
@@ -151,6 +153,12 @@ export default function ProviderAccounts({ lang, settingsRevision, onProviderSel
       });
       if (result.outcome === "refused") { setError(failure(result.error)); return false; }
       if (result.outcome === "unreachable") { gate.changed(); setError(failure("api_unreachable")); return false; }
+      if (result.outcome === "uncertain") {
+        // The change was not sent again; the list now shows what is stored.
+        setError(t("No llegó la confirmación del cambio. La lista muestra lo que está guardado ahora: compruébalo antes de repetir la acción.",
+          "The change was not confirmed. The list now shows what is stored: check it before repeating the action."));
+        return false;
+      }
       if (result.outcome === "provider_not_activated") {
         setError(t("La cuenta quedó elegida para su proveedor, pero no se pudo activar ese proveedor: los trabajos nuevos siguen yendo al proveedor anterior. La línea «Nuevos trabajos» muestra el estado real. Revisa Proveedor y guarda los cambios.",
           "The account was selected for its provider, but that provider could not be activated: new jobs still go to the previous provider. The New jobs line shows the real state. Check Provider and save changes."));

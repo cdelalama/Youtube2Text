@@ -4,7 +4,8 @@ import { randomUUID } from "node:crypto";
 import { TranscriptionProvider, type ProviderCapabilities } from "../provider.js";
 import { TranscriptJson, TranscriptionOptions } from "../types.js";
 import {
-  acceptProviderToken,
+  DEEPGRAM_ERROR_LABELS,
+  fixedLabel,
   jsonField,
   ProviderError,
   ProviderHttpError,
@@ -172,11 +173,11 @@ export class DeepgramProvider implements TranscriptionProvider {
     }
 
     if (!res.ok) {
-      // The body is read only to pick one machine code; none of its text is kept.
-      const token = acceptProviderToken(jsonField(await res.text().catch(() => ""), ["err_code"]), [this.apiKey]);
+      // The body is read only to recognise its code; nothing the provider wrote is kept.
+      const label = fixedLabel(DEEPGRAM_ERROR_LABELS, jsonField(await res.text().catch(() => ""), ["err_code"]));
       const kind = classifyDeepgramRefusal(res.status);
-      if (kind) throw new ProviderRefusalError({ provider: "deepgram", kind, status: res.status }, PROVIDER, token);
-      throw new ProviderHttpError(PROVIDER, res.status, { token });
+      if (kind) throw new ProviderRefusalError({ provider: "deepgram", kind, status: res.status }, PROVIDER, label);
+      throw new ProviderHttpError(PROVIDER, res.status, { label });
     }
 
     let data: DeepgramResponse;

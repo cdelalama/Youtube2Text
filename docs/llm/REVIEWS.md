@@ -1,3 +1,88 @@
+## 2026-11-12 - Automatic account failover: fourth independent review (0.43.4) and fixes in 0.43.5
+
+Review, as relayed by the requesting Cortex session: Codex gpt-6-astra,
+reasoning effort max, read-only, session
+01a1d0ae-34a8-7193-9ae3-3a696f72ad03, candidate commit `34164d7` (0.43.4). The
+requesting session also reported its own run of `559021c`: backend and web type
+checks clean, 279 of 279 tests. Provenance limit as before: the executor
+(Claude, claude-fable-5-2) received the findings through the requesting session
+and did not see the review session or verify its model metadata.
+
+Marked RESOLVED by the reviewer: the unavailable-selection state, the refresh
+after a complete selection, and the proxy evidence. Still no automatic second
+paid submission. Verdict: do not merge or deploy; two release blockers and two
+tracked follow-ups. 0.43.5 below is the executor's answer and has NOT been
+reviewed.
+
+Release blockers:
+
+1. Provider tokens in outward text (acceptProviderToken, providerErrorText). A
+   provider string with a separated key fragment still passed ("AB-CD" for a
+   key ending "ABCD"; a whole 32-character key split with dots fits the
+   64-character limit) and reached errors, logs and events. Fixed by removing
+   provider-supplied strings from every outward message: acceptProviderToken
+   and the token field are gone. A recognised provider code is mapped to a
+   label owned by the code (DEEPGRAM_ERROR_LABELS, OPENAI_ERROR_LABELS,
+   fixedLabel in src/transcription/errors.ts); anything else the provider sends
+   becomes the fixed label "other"; no code, no label. The label type is a
+   union of those constants, so a raw string cannot be passed by mistake. No
+   routing decision uses a label. Upstream job identifiers stay internal: the
+   AssemblyAI job id is used only to poll and is no longer in the "Transcription
+   started" log line or in the job-failed and polling-timeout errors. The
+   disclosure test now also compares with every separator removed, and covers a
+   separated fragment and a dotted key as an error code and as a job identifier.
+   Assumed, not read in documentation: the OpenAI labels invalid_api_key and
+   rate_limit_exceeded (the error-codes guide does not list them).
+   Not changed, for the reviewer to judge: the identifier a provider returns
+   with a finished transcript remains inside the stored transcript file, as
+   before this work; it is transcript content, not a message, log, run record
+   or event.
+2. Mixed rollout (proxyFailoverNotices). The proxy forwarded the upstream body
+   unchanged; an API before 0.43.0 ignores view=notices and returns the full
+   account snapshot, so a new web in front of an old API would have sent
+   account data and legacy key hints to every screen's banner read. Fixed: the
+   API marks the answer with view "notices"; the proxy (readNoticesView in
+   web/lib/failoverNoticesProxy.ts) accepts only a body whose top level is
+   exactly view, notices and routing, validates every allowed field and builds
+   a new response from those fields only. Anything else gets a fixed 502
+   (api_answer_not_notices_view, or api_refused_notices when the API did not
+   answer 200) and nothing upstream is forwarded. Tested with a fake upstream
+   that answers like 0.42.2, with the listing carrying the mark, with the view
+   carrying an account listing, without the mark, with a whole key as a hint,
+   with non-JSON and with API errors; and the API's real answer is checked
+   against the web's reader.
+   Judgement for the reviewer: an unknown top-level field refuses the answer;
+   an unknown field inside a notice or the routing is left behind and the rest
+   is passed on, so that a later API field does not blank the band.
+
+Tracked follow-ups, both done now:
+
+3. runAccountAction. If the POST threw after the server committed (also while
+   reading its JSON), neither reload nor notification happened. Fixed: a lost
+   answer, and a 5xx answer, are treated as "may be stored". The change is not
+   sent again; the snapshot is read back, the banner is told, and the outcome
+   is "uncertain" with a Spanish message that says the list shows what is
+   stored ("unreachable" when the read-back fails too). Only a 4xx counts as
+   the API saying it changed nothing. Limit: a half-made selection is shown,
+   not completed.
+4. sttFailoverStatus. It ignored selection.state "unavailable". Fixed: the
+   public status reports degraded with one fixed sentence, no alias, reason or
+   identifier, also with the switch off and no notice pending. The default
+   response keeps the shape the deployed probe requires; the opt-in check gains
+   selection_unavailable.
+
+Also done: the operator guide states in Spanish the reviewer's conditions
+before turning the switch on (a saved account selected, the fallback order
+reviewed, because the legacy configuration does not take part).
+
+The new behaviour changes with the switch off are listed in CHANGELOG 0.43.5,
+in the operator guide and in docs/operations/STT_FAILOVER_2026-11-12.md.
+
+tests/sttFailover.test.ts still has 31 tests; four of them were extended.
+Exact totals are in the HISTORY entry for 0.43.5.
+
+Not done: review of 0.43.5; any browser exercise of the screen; deployment.
+
 ## 2026-11-12 - Automatic account failover: third independent review (0.43.3) and fixes in 0.43.4
 
 Review, as relayed by the requesting Cortex session: Codex gpt-6-astra,
@@ -12,7 +97,7 @@ second pass, exhaustion latching, sibling validation and repeated candidates.
 No automatic second paid submission is demonstrated. The reviewer accepts that
 behaviour changes with the switch off, provided the release notes say so.
 Verdict: still do not merge or deploy, also with the switch off, for four
-points. 0.43.4 below is the executor's answer and has NOT been reviewed.
+points. 0.43.4 below is the executor's answer; it was reviewed afterwards (entry above).
 
 1. Disclosure boundary on the older provider error paths (the reason for
    holding the release). sanitizeProviderErrorText still forwarded up to 200

@@ -533,12 +533,15 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
    * only, never an account alias, key hint or identifier.
    */
   function sttFailoverStatus() {
-    const check = (attention: boolean, summary: string, pending = 0, serviceChanged = false, blocked = false) => ({
+    const check = (attention: boolean, summary: string, pending = 0, serviceChanged = false, blocked = false,
+      selectionUnavailable = false) => ({
       attention,
       // One short sentence for the aggregate summary of the default response.
-      headline: blocked
-        ? "No healthy transcription key or account is left; new work fails until the operator acts."
-        : "An automatic transcription account change needs operator review.",
+      headline: selectionUnavailable
+        ? "The selected transcription account cannot take work; new work is refused until the operator acts."
+        : blocked
+          ? "No healthy transcription key or account is left; new work fails until the operator acts."
+          : "An automatic transcription account change needs operator review.",
       check: {
         name: "stt_account_failover",
         label: "Transcription account failover",
@@ -548,6 +551,7 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
         pending_notices: pending,
         service_changed: serviceChanged,
         blocked,
+        selection_unavailable: selectionUnavailable,
       },
     });
     if (!credentialStore) return check(false, "Account registry is not configured; automatic account change is unavailable.");
@@ -561,6 +565,14 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
     }
     const pending = state.notices.length;
     const serviceChanged = state.notices.some((notice) => notice.serviceChanged);
+    // The selected account is disabled, its current key is revoked or it belongs
+    // to another service: admission refuses new work whatever the switch says,
+    // so this is reported even with the switch off and no notice pending. The
+    // sentence is fixed: no account name, no reason, no identifier.
+    if (state.selection.state === "unavailable") {
+      return check(true, "The selected transcription account cannot take work; new work is refused until the operator acts.",
+        pending, serviceChanged, false, true);
+    }
     if (state.blocked) {
       return check(true, "No enabled, healthy transcription key or account is left; new work fails until the operator acts.",
         pending, serviceChanged, true);

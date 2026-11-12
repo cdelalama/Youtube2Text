@@ -28,7 +28,9 @@ import {
   definitiveRefusalOf,
   InsufficientCreditsError,
   ProviderHttpError,
-  acceptProviderToken,
+  DEEPGRAM_ERROR_LABELS,
+  fixedLabel,
+  OPENAI_ERROR_LABELS,
   ProviderError,
   ProviderRefusalError,
   type ProviderRefusalKind,
@@ -43,7 +45,7 @@ import { proxyPublicMediaStatus } from "../web/lib/publicStatusProxy.js";
 import { proxyCredentials } from "../web/lib/credentialProxy.js";
 import { failoverNoticeText, failoverNoticeTitle, failoverRoutingText, routingRefusesNewWork, type FailoverNotice, type FailoverRouting } from "../web/lib/failoverNotices.js";
 import { runAccountAction } from "../web/lib/accountAction.js";
-import { isExactNoticesQuery } from "../web/lib/failoverNoticesProxy.js";
+import { isExactNoticesQuery, readNoticesView } from "../web/lib/failoverNoticesProxy.js";
 import { createSnapshotGate } from "../web/lib/snapshotGate.js";
 import { issueWebSessionToken, WEB_SESSION_COOKIE } from "../web/lib/webAuth.js";
 
@@ -916,25 +918,35 @@ test("disclosure: no provider text and no key characters reach logs, run records
   const BODY = "PROVIDER-FREE-TEXT";
   const echo = (key: string, code?: string) => JSON.stringify({ err_code: code,
     err_msg: `${BODY} for key ${key.slice(0, 8)}****${key.slice(-4)} and ****${key.slice(-4)}`, request_id: `${BODY}-${key.slice(-4)}` });
+  // Two ways a provider could write a key and still look like a plain identifier: a fragment with a separator
+  // ("QZ-X1" for a key ending "QZX1") and a whole key with a dot between its characters.
+  const separated = (key: string) => `${key.slice(-4, -2)}-${key.slice(-2)}`;
+  const dotted = (key: string) => [...key].join(".");
+  const bare = (text: string) => text.replace(/[^A-Za-z0-9]/g, "");
+  assert.equal(separated(K1), "QZ-X1");
   // What a key must never leave behind outside the authenticated accounts screen and its notice.
   const fragments = [K1, K2, K3].flatMap((key) => [key, key.slice(-4), key.slice(0, 4), key.slice(0, 8)]);
   const assertClean = (label: string, value: unknown) => {
     const text = typeof value === "string" ? value : JSON.stringify(value);
     for (const fragment of [...fragments, BODY]) assert.equal(text.includes(fragment), false, `${label} must not contain ${fragment}`);
+    // Nor written with separators: the comparison is repeated with everything but letters and digits removed.
+    for (const fragment of fragments) {
+      assert.equal(bare(text).includes(bare(fragment)), false, `${label} must not contain ${fragment} in separated form`);
+    }
   };
 
-  // The one provider-supplied value that may leave an adapter: a machine token.
-  assert.equal(acceptProviderToken("ASR_PAYMENT_REQUIRED", [K1]), "ASR_PAYMENT_REQUIRED");
-  assert.equal(acceptProviderToken("insufficient_quota", [K1]), "insufficient_quota");
-  assert.equal(acceptProviderToken("Bad Request", [K1]), undefined, "free text is not a machine token");
-  assert.equal(acceptProviderToken("x".repeat(65), []), undefined); assert.equal(acceptProviderToken("", []), undefined);
-  assert.equal(acceptProviderToken(42, []), undefined); assert.equal(acceptProviderToken({ code: "x" }, []), undefined);
-  assert.equal(acceptProviderToken(`CODE_${K1.slice(-4)}`, [K1]), undefined, "a token carrying four key characters is dropped");
-  assert.equal(acceptProviderToken(`code_${K1.slice(-4).toLowerCase()}`, [K1]), undefined, "also in another letter case");
-  assert.equal(acceptProviderToken(`CODE_${K1.slice(-3)}`, [K1]), `CODE_${K1.slice(-3)}`, "three shared characters are not a run of four");
-  // A secret shorter than the old eight-character threshold is still protected; one shorter than four is compared whole.
-  assert.equal(acceptProviderToken("ERR_zq5T", ["zq5T7"]), undefined); assert.equal(acceptProviderToken("ERR_q5T7", ["zq5T7"]), undefined);
-  assert.equal(acceptProviderToken("ERR_ab9", ["ab9"]), undefined); assert.equal(acceptProviderToken("ERR_ab", ["ab9"]), "ERR_ab");
+  // No string supplied by a provider leaves an adapter. A recognised code becomes this code base's own constant;
+  // anything else the provider sends, whatever its shape, is the fixed label "other".
+  assert.equal(fixedLabel(DEEPGRAM_ERROR_LABELS, "ASR_PAYMENT_REQUIRED"), "ASR_PAYMENT_REQUIRED");
+  assert.equal(fixedLabel(OPENAI_ERROR_LABELS, "insufficient_quota"), "insufficient_quota");
+  assert.equal(fixedLabel(OPENAI_ERROR_LABELS, "not_listed", "rate_limit_error"), "rate_limit_error", "the first recognised candidate");
+  assert.equal(fixedLabel(DEEPGRAM_ERROR_LABELS, undefined, null), undefined, "no code sent, no label");
+  const key32 = "Nb4WxQ7LpZ2VtK9RcJ5HmD8GsY3FgB6T";
+  assert.equal(key32.length, 32); assert.equal(dotted(key32).length, 63, "a dotted 32-character key fits in 64 characters");
+  for (const sent of ["Bad Request", "", 42, { code: "x" }, "invalid_api_key", `CODE_${K1.slice(-4)}`, separated(K1), dotted(key32), key32, K1]) {
+    assert.equal(fixedLabel(DEEPGRAM_ERROR_LABELS, sent), "other", `a provider string is never passed on: ${JSON.stringify(sent)}`);
+  }
+  for (const label of [...DEEPGRAM_ERROR_LABELS, ...OPENAI_ERROR_LABELS]) assert.match(label, /^[A-Za-z_]+$/, "labels are plain words of this code base");
 
   const f = fixture(policy(), {}, undefined, (config) => new DeepgramProvider(config.deepgramApiKey ?? "", "nova-3", true, undefined, 1000));
   try {
@@ -943,7 +955,7 @@ test("disclosure: no provider text and no key characters reach logs, run records
     f.store.select(a); f.store.setFailoverOrder([b]); f.store.setFailover(true);
     const answers = new Map<string, () => Response>([
       [K1, () => new Response(echo(K1, "ASR_PAYMENT_REQUIRED"), { status: 402 })],
-      [K2, () => new Response(echo(K2, `LEAK_${K2.slice(-4)}`), { status: 401 })], // a "code" that carries key characters
+      [K2, () => new Response(echo(K2, separated(K2)), { status: 401 })], // a "code" that is a key fragment with a separator
       [K3, () => new Response(echo(K3), { status: 500 })],
     ]);
     const deepgram = async (_url: string, init?: RequestInit) => {
@@ -962,7 +974,9 @@ test("disclosure: no provider text and no key characters reach logs, run records
     // The other older paths, each as its own job on the third key: fixed parts only, whatever the provider or the network says.
     const older: Array<[() => Response, string]> = [
       [() => new Response(echo(K3, "TOO_MANY_REQUESTS"), { status: 429 }), "Deepgram error: rate-limit (HTTP 429) [TOO_MANY_REQUESTS]"],
-      [() => new Response(echo(K3, "Bad Request"), { status: 418 }), "Deepgram error: invalid-request (HTTP 418)"],
+      [() => new Response(echo(K3, dotted(K3)), { status: 400 }), "Deepgram error: invalid-request (HTTP 400) [other]"],
+      [() => new Response(echo(K3, `LEAK_${K3.slice(-4)}`), { status: 422 }), "Deepgram error: invalid-request (HTTP 422) [other]"],
+      [() => new Response(echo(K3, "Bad Request"), { status: 418 }), "Deepgram error: invalid-request (HTTP 418) [other]"],
       [() => new Response(echo(K3), { status: 302 }), "Deepgram error: unclassified (HTTP 302)"],
       [() => new Response(`<html>${BODY} ${K3}</html>`, { status: 200 }), "Deepgram error: invalid-response (HTTP 200)"],
       [() => { throw new TypeError(`fetch failed for ${K3} ${BODY}`); }, "Deepgram error: network"],
@@ -986,6 +1000,10 @@ test("disclosure: no provider text and no key characters reach logs, run records
     assert.equal((await job()).stats?.failed, 1);
     assert.equal(lastError(), "Deepgram error: authentication (HTTP 401) [INVALID_AUTH]");
     assert.ok(logs.some((line) => line.includes("Deepgram error: authentication (HTTP 401) [INVALID_AUTH]")));
+    // The same refusal carrying a separated key fragment as its "code": the label is the fixed word, nothing else.
+    answers.set(K1, () => new Response(echo(K1, separated(K1)), { status: 401 }));
+    assert.equal((await job()).stats?.failed, 1);
+    assert.equal(lastError(), "Deepgram error: authentication (HTTP 401) [other]");
     assert.ok(logs.some((line) => line.includes("Automatic account change: deepgram refused the request (exhausted, HTTP 402)")));
 
     for (const [label, value] of [["logs", logs.join("\n")], ["run records", f.manager.listRuns()], ["pipeline events", f.events],
@@ -1008,23 +1026,26 @@ test("disclosure: no provider text and no key characters reach logs, run records
       async () => { try { await new AssemblyAiClient(short, 1000, 0).transcribe(clip.source, transcribeOptions); } catch (error) { return error as Error; } return undefined; }));
       return { message: run.result?.message ?? "", logs: run.lines.join("\n") };
     };
+    const failed = "AssemblyAI error: transcription-failed; the accepted job ended in error at the provider";
     const outcomes = [
       [await drive(() => new Response(`Authentication error ${BODY} token ${short} is invalid`, { status: 401 }), "job-41"), "AssemblyAI error: authentication (HTTP 401)"],
       [await drive(() => new Response(JSON.stringify({ error: `${BODY} ${short}` }), { status: 503 }), "job-42"), "AssemblyAI error: server-error (HTTP 503)"],
-      [await drive(() => Response.json({ id: "job-43", status: "error", error: `${BODY}: download failed for ${short}` }), "job-43"),
-        "AssemblyAI error: transcription-failed [job-43]; the accepted job ended in error at the provider"],
-      // A job identifier that carries key characters is withheld, in the error and in the log line.
-      [await drive(() => Response.json({ id: `job-${short}`, status: "error", error: BODY }), `job-${short}`),
-        "AssemblyAI error: transcription-failed; the accepted job ended in error at the provider"],
+      [await drive(() => Response.json({ id: "job-43", status: "error", error: `${BODY}: download failed for ${short}` }), "job-43"), failed],
+      // The job identifier is the provider's string too. Plain, carrying the key, a separated fragment or a dotted key:
+      // it is used to poll and never written to an error or a log line.
+      [await drive(() => Response.json({ id: `job-${short}`, status: "error", error: BODY }), `job-${short}`), failed],
+      [await drive(() => Response.json({ id: "zq-5T-7", status: "error", error: BODY }), "zq-5T-7"), failed],
+      [await drive(() => Response.json({ id: dotted(short), status: "error", error: BODY }), dotted(short)), failed],
     ] as const;
     for (const [result, expected] of outcomes) {
       assert.equal(result.message, expected);
       for (const text of [result.message, result.logs]) {
-        assert.equal(text.includes(BODY), false); assert.equal(text.includes(short), false); assert.equal(text.toLowerCase().includes("zq5t"), false);
+        assert.equal(text.includes(BODY), false); assert.equal(text.includes(short), false);
+        assert.equal(bare(text).toLowerCase().includes("zq5t"), false, "nor in separated form");
+        assert.equal(/job-4\d/.test(text), false, "no upstream job identifier in an error or a log line");
       }
+      assert.ok(result.logs.includes("Transcription started: AssemblyAI accepted the job"));
     }
-    assert.ok(outcomes[3]![0].logs.includes("Transcription started: (job identifier withheld)"));
-    assert.ok(outcomes[2]![0].logs.includes("Transcription started: job-43"));
   } finally { clip.cleanup(); }
 });
 
@@ -1068,22 +1089,27 @@ test("failover: a selected account that cannot take work is reported as unavaila
   } finally { f.cleanup(); }
 });
 
-test("screen order: the banner is told once, after the whole selection, also when it fails part-way", async () => {
+test("screen order: the banner is told once, after the whole selection, also when it fails part-way or its answer is lost", async () => {
   type Snapshot = { accounts: string[] };
-  const scenario = async (options: { post?: "refused" | "offline"; activate?: boolean | "offline"; select?: boolean }) => {
+  const scenario = async (options: { post?: "refused" | "offline" | "unreadable" | "server_error"; activate?: boolean | "offline"; select?: boolean;
+    reload?: false | "offline" }) => {
     const calls: string[] = [];
     const result = await runAccountAction<Snapshot>({
       post: async () => {
         calls.push("post");
         if (options.post === "offline") throw new Error("offline");
-        return options.post === "refused" ? { ok: false, body: { accounts: [], error: "recent_auth_required" } } : { ok: true, body: { accounts: ["a"] } };
+        // The server stored the change and answered, but the answer could not be read.
+        if (options.post === "unreadable") throw new SyntaxError("Unexpected end of JSON input");
+        if (options.post === "server_error") return { ok: false, status: 502, body: { accounts: [], error: "api_unreachable" } };
+        return options.post === "refused" ? { ok: false, status: 403, body: { accounts: [], error: "recent_auth_required" } }
+          : { ok: true, status: 200, body: { accounts: ["a"] } };
       },
       activateProvider: options.select === false ? undefined : async () => {
         calls.push("activate");
         if (options.activate === "offline") throw new Error("offline");
         return options.activate !== false;
       },
-      reload: async () => { calls.push("reload"); },
+      reload: async () => { calls.push("reload"); if (options.reload === "offline") throw new Error("offline"); return options.reload !== false; },
       notifyChanged: () => { calls.push("notify"); },
     });
     return { calls, outcome: result.outcome };
@@ -1093,11 +1119,21 @@ test("screen order: the banner is told once, after the whole selection, also whe
   // The account was selected but its provider could not be activated: say so, show the real state, then tell the banner.
   assert.deepEqual(await scenario({ activate: false }), { calls: ["post", "activate", "reload", "notify"], outcome: "provider_not_activated" });
   assert.deepEqual(await scenario({ activate: "offline" }), { calls: ["post", "activate", "reload", "notify"], outcome: "unreachable" });
-  // Nothing changed: the banner is not disturbed.
+  // The API said it changed nothing: the banner is not disturbed.
   assert.deepEqual(await scenario({ post: "refused" }), { calls: ["post"], outcome: "refused" });
-  assert.deepEqual(await scenario({ post: "offline" }), { calls: ["post"], outcome: "unreachable" });
   // Every other action is a single request.
   assert.deepEqual(await scenario({ select: false }), { calls: ["post", "notify"], outcome: "done" });
+
+  // The answer to the change was lost: the server may have stored it. The change is sent once and never again;
+  // the stored state is read back and shown, and the banner is told, so a switch that is on never shows as off.
+  for (const post of ["offline", "unreadable", "server_error"] as const) {
+    for (const select of [true, false]) {
+      assert.deepEqual(await scenario({ post, select }), { calls: ["post", "reload", "notify"], outcome: "uncertain" }, `${post}, select ${select}`);
+    }
+    // The stored state cannot be read back either: say so, and still tell the banner to read its own state.
+    assert.deepEqual(await scenario({ post, reload: false }), { calls: ["post", "reload", "notify"], outcome: "unreachable" });
+    assert.deepEqual(await scenario({ post, reload: "offline" }), { calls: ["post", "reload", "notify"], outcome: "unreachable" });
+  }
 });
 
 test("screen order: a read that began before a change never replaces what the change returned", () => {
@@ -1245,7 +1281,7 @@ test("typed errors: Deepgram refuses definitively only on documented 401, 402 an
 
     const exhausted = await attempt(402, JSON.stringify({ err_code: "ASR_PAYMENT_REQUIRED", err_msg: `Project does not have enough credits ${K1}` }));
     assert.deepEqual(definitiveRefusalOf(exhausted), { provider: "deepgram", kind: "exhausted", status: 402 });
-    assert.equal(exhausted.message, "Deepgram error: payment-or-quota (HTTP 402) [ASR_PAYMENT_REQUIRED]", "fixed parts and one machine code");
+    assert.equal(exhausted.message, "Deepgram error: payment-or-quota (HTTP 402) [ASR_PAYMENT_REQUIRED]", "fixed parts and this code base's own label");
     const rejected = await attempt(401, '{"err_code":"INVALID_AUTH","err_msg":"Invalid credentials."}');
     assert.deepEqual(definitiveRefusalOf(rejected), { provider: "deepgram", kind: "rejected", status: 401 });
     assert.equal(rejected.message, "Deepgram error: authentication (HTTP 401) [INVALID_AUTH]");
@@ -1395,9 +1431,9 @@ test("typed errors: AssemblyAI is definitive only for documented shapes before t
   for (const error of [new ProviderHttpError("AssemblyAI", 401), documentedBalance(), new InsufficientCreditsError("AssemblyAI", 402)]) {
     assert.equal(definitiveRefusalOf(await outcome((client) => { client.getTranscript = async () => { throw error; }; })), undefined);
   }
-  // A job that ends in error after acceptance: the provider's explanation is not quoted; the job id is the one token.
+  // A job that ends in error after acceptance: neither the provider's explanation nor its job identifier is quoted.
   const jobError = await outcome((client) => { client.getTranscript = async () => ({ id: "job-1", status: "error", error: balance }); });
-  assert.equal(jobError?.message, "AssemblyAI error: transcription-failed [job-1]; the accepted job ended in error at the provider");
+  assert.equal(jobError?.message, "AssemblyAI error: transcription-failed; the accepted job ended in error at the provider");
   assert.equal(definitiveRefusalOf(jobError), undefined);
 
   // Through the real HTTP layer.
@@ -1431,11 +1467,11 @@ test("typed errors: AssemblyAI is definitive only for documented shapes before t
       assert.ok(polled.error instanceof ProviderHttpError); assert.equal(definitiveRefusalOf(polled.error), undefined);
       assert.equal(polled.error.message, text);
     }
-    // Polling that gives up keeps the job reference, as fixed text plus the one token.
+    // Polling that gives up says so with fixed text; the job identifier stays inside the adapter.
     const gaveUp = await drive((url, init) => url.endsWith("/upload") ? uploaded()
       : init?.method === "POST" ? Response.json({ id: "job-7", status: "queued" }) : Response.json({ id: "job-7", status: "processing" }),
       { ...transcribeOptions, maxPollMinutes: 0 });
-    assert.equal(gaveUp.error?.message, "AssemblyAI error: timeout [job-7]; polling gave up after 0 minutes; the upstream job was not recreated");
+    assert.equal(gaveUp.error?.message, "AssemblyAI error: timeout; polling gave up after 0 minutes; the upstream job was not recreated");
   } finally { f.cleanup(); }
 });
 
@@ -1452,15 +1488,28 @@ test("legacy key pool never logs key characters when it cools a key down", async
   for (const line of lines) for (const key of [K1, K2]) assert.equal(line.includes(key.slice(0, 4)), false, "no key prefix in logs");
 });
 
-test("web proxy: the banner's read needs the operator session, forwards only the exact notices view and refuses any other query", async () => {
+test("web proxy: the banner's read needs the operator session and the exact query, and passes on only a rebuilt notices view (an older API's account listing is refused)", async () => {
   const previous = { ...process.env }; const fetchBefore = globalThis.fetch;
   Object.assign(process.env, { Y2T_WEB_AUTH_SECRET: "web-auth-secret-for-synthetic-tests-32", Y2T_WEB_AUTH_PASSPHRASE: "synthetic-passphrase",
     Y2T_API_KEY: "operator-key-synthetic-32-characters", Y2T_API_BASE_URL: "http://api.example.test" });
   const forwarded: Array<{ url: string; method: string; key: string | null }> = [];
+  const accountA = "5b0f2f6e-3c1d-4e7a-9b2c-0d1e2f3a4b5c"; const accountB = "6c1a3b7f-4d2e-4f8b-8c3d-1e2f3a4b5c6d";
+  const notice = { id: "7d2b4c80-5e3f-4a9c-9d4e-2f3a4b5c6d7e", kind: "moved", reason: "exhausted", status: 402,
+    from: { accountId: accountA, label: "Cuenta personal", provider: "deepgram", keyHint: `••••${K1.slice(-4)}` },
+    to: { accountId: accountB, label: "Cuenta de respaldo", provider: "assemblyai", keyHint: `••••${K3.slice(-4)}` },
+    serviceChanged: true, count: 2, firstAt: "2026-11-12T10:00:00.000Z", lastAt: "2026-11-12T10:05:00.000Z" };
+  const routing = { enabled: true, state: "account", reason: null, provider: "assemblyai", accountLabel: "Cuenta de respaldo" };
+  const noticesView = { view: "notices", notices: [notice], routing };
+  // What an API older than 0.43.0 answers to the very same request: it ignores the query and lists the accounts.
+  const olderApi = { configured: true, activeProvider: "deepgram", selectedAccountId: accountA, selectionReady: true,
+    accounts: [{ id: accountA, provider: "deepgram", label: "Cuenta personal", enabled: true, selected: true, currentCredentialId: notice.id,
+      keys: [{ id: notice.id, hint: `••••${K1.slice(-4)}`, revoked: false, createdAt: "2026-10-24T09:00:00.000Z", check: null }] }],
+    legacy: [{ provider: "deepgram", keys: [`••••${LEGACY_KEY.slice(-4)}`], selected: false }] };
+  let upstream: () => Response = () => Response.json(noticesView);
   try {
     globalThis.fetch = (async (url: unknown, init?: RequestInit) => {
       forwarded.push({ url: String(url), method: init?.method ?? "GET", key: new Headers(init?.headers).get("x-api-key") });
-      return Response.json({ notices: [] });
+      return upstream();
     }) as typeof fetch;
     const session = await issueWebSessionToken();
     const request = (query: string, init: RequestInit = {}, cookie = `${WEB_SESSION_COOKIE}=${session}`) =>
@@ -1472,6 +1521,7 @@ test("web proxy: the banner's read needs the operator session, forwards only the
 
     const ok = await request("?view=notices");
     assert.equal(ok.status, 200); assert.equal(ok.headers.get("cache-control"), "no-store");
+    assert.deepEqual(await ok.json(), noticesView);
     assert.deepEqual(forwarded, [{ url: "http://api.example.test/provider-accounts?view=notices", method: "GET", key: "operator-key-synthetic-32-characters" }]);
 
     // Any other query on this route is refused: never forwarded, never answered with the account snapshot.
@@ -1482,9 +1532,46 @@ test("web proxy: the banner's read needs the operator session, forwards only the
     assert.equal((await request("?view=notices", { method: "POST", body: "{}", headers: { origin: "https://console.test" } })).status, 400);
     assert.equal(forwarded.length, 1);
 
+    // Nothing the API sends is passed on as it came. The answer is read as the notices view and built again
+    // from the allowed fields; a field this code does not know is left behind.
+    upstream = () => Response.json({ ...noticesView, routing: { ...routing, debug: K2 },
+      notices: [{ ...notice, internalNote: K2, from: { ...notice.from, token: K1 } }] });
+    const rebuilt = await request("?view=notices");
+    assert.equal(rebuilt.status, 200); assert.deepEqual(await rebuilt.json(), noticesView);
+
+    // Mixed rollout, and every other answer that is not the notices view: refused with a fixed error, nothing passed on.
+    const notTheView: Array<[string, () => Response, string]> = [
+      ["the account listing of an older API", () => Response.json(olderApi), "api_answer_not_notices_view"],
+      ["that listing carrying the mark", () => Response.json({ ...olderApi, view: "notices", notices: [], routing }), "api_answer_not_notices_view"],
+      ["the view with an account listing beside it", () => Response.json({ ...noticesView, accounts: olderApi.accounts }), "api_answer_not_notices_view"],
+      ["the view without its mark", () => Response.json({ notices: [notice], routing }), "api_answer_not_notices_view"],
+      ["a notice whose hint is a whole key", () => Response.json({ ...noticesView, notices: [{ ...notice, from: { ...notice.from, keyHint: K1 } }] }),
+        "api_answer_not_notices_view"],
+      ["a notice with a field missing", () => Response.json({ ...noticesView, notices: [{ ...notice, to: undefined }] }), "api_answer_not_notices_view"],
+      ["routing in an unknown state", () => Response.json({ ...noticesView, routing: { ...routing, state: "everything" } }), "api_answer_not_notices_view"],
+      ["an answer that is not JSON", () => new Response(`<html>${K1} Cuenta personal</html>`, { status: 200 }), "api_answer_not_notices_view"],
+      ["an API failure", () => Response.json({ error: "internal", detail: `key ${K1}`, accounts: olderApi.accounts }, { status: 500 }), "api_refused_notices"],
+      ["an API refusal", () => Response.json({ ...olderApi, error: "unauthorized" }, { status: 401 }), "api_refused_notices"],
+    ];
+    for (const [label, answer, error] of notTheView) {
+      upstream = answer;
+      const refused = await request("?view=notices");
+      const text = await refused.text();
+      assert.equal(refused.status, 502, label); assert.deepEqual(JSON.parse(text), { error }, label);
+      for (const privateText of [K1, K1.slice(-4), LEGACY_KEY.slice(-4), "••••", "Cuenta personal", accountA]) {
+        assert.equal(text.includes(privateText), false, `${label}: nothing from the API reaches the banner`);
+      }
+    }
+    const read = readNoticesView(noticesView);
+    assert.deepEqual(read, noticesView); assert.notEqual(read, noticesView, "a new object, never the API's own");
+    for (const other of [null, [], "notices", olderApi, { view: "notices" }, { view: "notices", notices: [], routing: null }]) {
+      assert.equal(readNoticesView(other), undefined);
+    }
+
     // Without a query the same path is the accounts screen's own read.
+    upstream = () => Response.json(olderApi);
     assert.equal((await request("")).status, 200);
-    assert.equal(forwarded[1]!.url, "http://api.example.test/provider-accounts");
+    assert.equal(forwarded.at(-1)!.url, "http://api.example.test/provider-accounts");
 
     assert.equal(isExactNoticesQuery(new URLSearchParams("view=notices")), true);
     for (const query of ["", "view=Notices", "view=notices&x=1", "x=1&view=notices", "view=notices&view=notices"]) {
@@ -1497,7 +1584,7 @@ test("web proxy: the banner's read needs the operator session, forwards only the
   }
 });
 
-test("account API and public status: order, switch, notice, dismissal and the fixed default status shape", async () => {
+test("account API and public status: order, switch, notice, dismissal, unavailable selection and the fixed default status shape", async () => {
   const f = fixture(); const previous = { ...process.env };
   const proofSecret = "ef".repeat(32);
   Object.assign(process.env, { Y2T_API_KEY: "synthetic-operator-key-0000000000000000",
@@ -1539,6 +1626,23 @@ test("account API and public status: order, switch, notice, dismissal and the fi
     const b = (await mutate({ action: "create", provider: "assemblyai", label: "Cuenta de respaldo", token: K3 })).body.accountId!;
     assert.equal((await mutate({ action: "add_key", accountId: a, token: K2 })).status, 200);
     assert.equal((await mutate({ action: "select", accountId: a })).status, 200);
+
+    // The selected account is disabled: admission refuses new work, also with the switch off and no notice pending.
+    // The public status says so with one fixed sentence: no alias, no reason, no identifier.
+    const refusal = "The selected transcription account cannot take work; new work is refused until the operator acts.";
+    assert.equal((await mutate({ action: "enable", accountId: a, enabled: false })).status, 200);
+    assert.throws(() => f.store.pinForNewWork("deepgram"), /selected_account_unavailable/);
+    const refusing = await status(); assertFixedShape(refusing);
+    assert.deepEqual([refusing.condition, refusing.severity, refusing.summary], ["degraded", "warning", refusal]);
+    const refusingDetail = await status("?include=stt_account_failover");
+    assert.deepEqual(refusingDetail.checks[3], { name: "stt_account_failover", label: "Transcription account failover", condition: "degraded",
+      severity: "warning", summary: refusal, pending_notices: 0, service_changed: false, blocked: false, selection_unavailable: true });
+    for (const text of [JSON.stringify(refusing), JSON.stringify(refusingDetail)]) {
+      for (const privateText of ["Cuenta personal", ...HINTS, "••••", a, "account_disabled"]) assert.equal(text.includes(privateText), false);
+    }
+    assert.equal((await mutate({ action: "enable", accountId: a, enabled: true })).status, 200);
+    assert.equal((await status()).condition, "ok");
+
     const unsigned = await fetch(`${base}/provider-accounts`, { method: "POST", headers, body: JSON.stringify({ action: "set_failover", enabled: true }) });
     assert.equal(unsigned.status, 403, "the switch needs the same recent-authentication proof as any key change");
     assert.equal((await mutate({ action: "set_failover_order", accountIds: [b] })).status, 200);
@@ -1570,7 +1674,7 @@ test("account API and public status: order, switch, notice, dismissal and the fi
     assert.equal(detailed.checks.length, 4);
     assert.deepEqual(detailed.checks[3], { name: "stt_account_failover", label: "Transcription account failover", condition: "degraded",
       severity: "warning", summary: "2 automatic account change notice(s) await operator review; the transcription service changed.",
-      pending_notices: 2, service_changed: true, blocked: false });
+      pending_notices: 2, service_changed: true, blocked: false, selection_unavailable: false });
     for (const text of [JSON.stringify(degraded), JSON.stringify(detailed)]) {
       assertNoSecret("public status", text);
       for (const privateText of ["Cuenta personal", "Cuenta de respaldo", ...HINTS, "••••", a, b]) {
@@ -1580,8 +1684,11 @@ test("account API and public status: order, switch, notice, dismissal and the fi
 
     // The banner shown on every screen reads notices and current routing only.
     const view = await (await fetch(`${base}/provider-accounts?view=notices`, { headers })).json() as
-      { notices: FailoverNotice[]; routing: Record<string, unknown> };
-    assert.deepEqual(Object.keys(view).sort(), ["notices", "routing"], "no account listing and no legacy keys");
+      { view: string; notices: FailoverNotice[]; routing: Record<string, unknown> };
+    assert.deepEqual(Object.keys(view).sort(), ["notices", "routing", "view"], "no account listing and no legacy keys");
+    assert.equal(view.view, "notices", "the answer is marked, so the web can tell it from an older API's account listing");
+    assert.deepEqual(readNoticesView(view), view, "the web's reader accepts exactly what this API answers");
+    assert.equal(readNoticesView(read), undefined, "and never the account listing");
     assert.equal(view.notices.length, 2);
     assert.deepEqual(view.routing, { enabled: true, state: "account", reason: null, provider: "assemblyai", accountLabel: "Cuenta de respaldo" });
     for (const query of ["?view=other", "?view=notices&debug=1", "?view=notices&view=notices", "?debug=1"]) {

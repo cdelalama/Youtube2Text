@@ -1,9 +1,9 @@
 # Automatic key and account failover with operator notice - 2026-11-12
 
 State: source prepared on task branch `work/stt-failover-20261112`, candidate
-0.43.4. NOT deployed: the NAS still runs 0.42.2. Three independent reviews by
-Codex (of 0.43.0, 0.43.1 and 0.43.3) said do not merge or deploy yet; 0.43.4
-answers the third and waits for the next one (see `docs/llm/REVIEWS.md`). The switch is
+0.43.5. NOT deployed: the NAS still runs 0.42.2. Four independent reviews by
+Codex (of 0.43.0, 0.43.1, 0.43.3 and 0.43.4) said do not merge or deploy yet;
+0.43.5 answers the fourth and waits for the next one (see `docs/llm/REVIEWS.md`). The switch is
 off by default, so installing this release changes no routing until Carlos
 turns it on. What does change with the switch off is listed below under
 "Changes that apply with the switch off".
@@ -101,42 +101,71 @@ or any response that another screen needs.
   pending notices and current routing. It carries no account listing and no key
   suffix of the existing configuration; the full snapshot is read only by the
   accounts screen. Any other query on that route is refused with 400.
+- The web proxy of that read (`web/lib/failoverNoticesProxy.ts`) never passes on
+  what the API sent. The API marks the answer with `view: "notices"`. The proxy
+  accepts only a body whose top level is exactly `view`, `notices` and
+  `routing`, checks every allowed field of each notice and of the routing, and
+  builds a new response from those fields. Anything else is answered with a
+  fixed error (`api_answer_not_notices_view`, or `api_refused_notices` when the
+  API did not answer 200) and the API's body is dropped. This is what makes a
+  mixed rollout safe: an API older than 0.43.0 ignores the query and answers
+  the whole account listing, with key suffixes of the existing configuration.
+  With a new web in front of it, or after rolling back the API first, the
+  banner gets the fixed error and shows nothing; no account data reaches the
+  other screens. A field inside a notice or the routing that this web release
+  does not know is left behind, not passed on.
 
 Provider text is closed off for every provider error, not only for refusals.
-A provider can echo part of a key in its answer, and a filter over free text
-cannot be made complete (short or separated fragments survive it). So no free
-provider text is kept anywhere. `src/transcription/errors.ts` builds every
-outward text from fixed parts only:
+A provider can echo a key in its answer, whole or in fragments, and no filter
+over what a provider writes can be made complete: a fragment written with a
+separator (`AB-CD` for a key ending `ABCD`) or a whole key written with a dot
+between its characters still looks like a plain identifier. So no string
+supplied by a provider is kept or repeated anywhere, in any form.
+`src/transcription/errors.ts` builds every outward text only from parts owned by
+this code base:
 
 - the provider name chosen by the adapter;
 - the HTTP status;
 - a category chosen by the code: `authentication`, `payment-or-quota`,
   `rate-limit`, `server-error`, `invalid-request`, `invalid-response`,
   `timeout`, `network`, `transcription-failed` or `unclassified`;
-- at most one machine token supplied by the provider, accepted only if it
-  matches `^[A-Za-z0-9_.-]{1,64}$` and shares no run of four or more consecutive
-  characters with the key in use (a key shorter than four characters is
-  compared whole);
+- an optional label from a fixed list held in that file, one list per provider;
 - for two AssemblyAI cases, a fixed note written in the code.
 
 Examples: `Deepgram error: payment-or-quota (HTTP 402) [ASR_PAYMENT_REQUIRED]`,
 `OpenAI Whisper error: rate-limit (HTTP 429) [rate_limit_exceeded]`,
+`Deepgram error: invalid-request (HTTP 400) [other]`,
 `AssemblyAI error: server-error (HTTP 503)`, `Deepgram error: timeout`,
 `AssemblyAI error: network`.
 
-The token is the provider's error code or type (Deepgram `err_code`; OpenAI
-`error.code`, else `error.type`). AssemblyAI answers errors with free text, so
-its HTTP errors carry no token. Two AssemblyAI errors after acceptance carry
-the job identifier as their one token, under the same checks, because it is the
-only reference for looking the job up: a job that ends in error
-(`AssemblyAI error: transcription-failed [<job id>]; the accepted job ended in
-error at the provider`) and polling that gives up. The provider's own
-explanation of a failed job is not quoted.
+The label works like this (`fixedLabel`): the adapter reads the provider's error
+code (Deepgram `err_code`; OpenAI `error.code`, then `error.type`) and compares
+it with its own list. On a match the message carries the list's own constant.
+When the provider sent a code that is not in the list, the message carries the
+fixed word `other`. When it sent no code there is no label. The provider's
+string itself is never copied, so nothing it writes can reach a message. The
+lists are `DEEPGRAM_ERROR_LABELS` (the `err_code` values of Deepgram's errors
+page) and `OPENAI_ERROR_LABELS` (the codes and types of OpenAI's error-codes
+guide, plus `invalid_api_key` and `rate_limit_exceeded`, which that guide does
+not list and which are assumed from common use). A label only makes a message
+easier to read: no routing decision is taken from it. AssemblyAI answers errors
+with free text, so its errors carry no label.
+
+Upstream job identifiers follow the same rule, because they are provider
+strings too. The AssemblyAI job identifier is used inside the adapter to poll
+the job and nowhere else: it is not in the "Transcription started" log line, in
+the error of a job that ends in error (`AssemblyAI error: transcription-failed;
+the accepted job ended in error at the provider`) or in the error of polling
+that gives up. The provider's own explanation of a failed job is not quoted.
+The identifier a provider returns with a finished transcript stays where it
+always was, inside the stored transcript file; that is the transcript's content,
+not a message, and this work does not change it.
 
 What the pipeline needs to decide is in typed fields of `ProviderError`
-(`status`, `category`, `token`), not in the message. `sanitizeProviderErrorText`
-no longer exists. The failover errors (`FailoverExhaustedError`,
-`RecordingStoppedError`) are fixed text with provider, reason and status.
+(`status`, `category`, `label`), not in the message. `sanitizeProviderErrorText`
+and the earlier `acceptProviderToken` filter no longer exist. The failover errors
+(`FailoverExhaustedError`, `RecordingStoppedError`) are fixed text with
+provider, reason and status.
 
 ## Provider error shapes
 
@@ -191,6 +220,11 @@ Routing does not change until the switch is on. These things do:
 5. `GET /provider-accounts` refuses any query other than exactly `view=notices`.
 6. The legacy key pool log line shows a key's position, not its first characters.
 7. The private database gains five tables; 0.42.2 ignores them.
+8. The public status route reports `degraded` while the selected account
+   cannot take work (item 4), also with no notice pending.
+9. An AssemblyAI job identifier no longer appears in any log line or error.
+10. A change on the accounts screen whose answer is lost is not sent again; the
+    stored state is read back and shown, with a message that says so.
 
 ## Order of attempts
 
@@ -299,21 +333,28 @@ work is a separate matter: it moves, and that move gets its own notice.
 `/api/status/media-pipeline`):
 
 - Default response: still exactly three checks and the same five top-level
-  keys. An automatic change awaiting review, or nothing left to take over, sets
-  `condition: degraded`, `severity: warning` and a summary that says so.
+  keys. An automatic change awaiting review, nothing left to take over, or a
+  selected account that cannot take work sets `condition: degraded`,
+  `severity: warning` and a summary that says so.
 - With `?include=stt_account_failover`: a fourth check is added.
 
 ```json
 { "name": "stt_account_failover", "label": "Transcription account failover",
   "condition": "degraded", "severity": "warning",
   "summary": "1 automatic account change notice(s) await operator review; the transcription service changed.",
-  "pending_notices": 1, "service_changed": true, "blocked": false }
+  "pending_notices": 1, "service_changed": true, "blocked": false,
+  "selection_unavailable": false }
 ```
 
 `pending_notices` counts undismissed notices, `service_changed` is true when any
 of them changed service, `blocked` is true when the switch is on, the selected
-key is unhealthy and nothing listed can take over. No account alias, key hint or
-identifier is exposed.
+key is unhealthy and nothing listed can take over. `selection_unavailable` is
+true when the selected account is disabled, its current key is locally revoked
+or it belongs to another service: admission then refuses new work whatever the
+switch says, so the route reports it with the switch off and with no notice
+pending. Its sentence is fixed ("The selected transcription account cannot take
+work; new work is refused until the operator acts.") and carries no reason. No
+account alias, key hint or identifier is exposed.
 
 Why opt-in: the deployed Sentinel readiness probe for Media2Text
 (`sentinel/src/sentinel_readiness_probe.py`, read at origin/main on 2026-11-12)
@@ -370,9 +411,17 @@ Nothing below was done. The NAS runs 0.42.2.
    `docs/operations/DEPLOY_PLAYBOOK.md`. No new secret, environment variable,
    port or mount. The private database gains five tables on first start
    (`CREATE TABLE IF NOT EXISTS`); 0.42.2 ignores them, so rollback is safe.
+   The web and the API need not be replaced at the same instant: while a new
+   web faces an older API (or the API is rolled back first), the banner's read
+   is refused by the web proxy and the band stays empty; the accounts screen
+   keeps working on the older answer. The automatic change itself needs both.
 3. Update Home Infra's deployed-reality records for the new version.
 4. Carlos opens Settings, adds or imports the accounts he wants, orders the
-   list and turns the switch on. Until then behaviour is unchanged.
+   list and turns the switch on. Until then routing is unchanged. The
+   reviewer's conditions before turning it on: he has selected a saved account
+   and has reviewed the fallback order, because the existing (legacy)
+   configuration does not take part in automatic changes. The operator guide
+   states both in Spanish.
 5. A first real automatic change can only be observed when a real key is
    refused. No paid test is implied or authorized by this work.
 
@@ -384,10 +433,16 @@ Nothing below was done. The NAS runs 0.42.2.
   "Marcar como disponible" does. Marks never clear by themselves, so a key he
   topped up stays skipped until he marks it available.
 - Provider errors no longer say what the provider wrote, only its status, a
-  category and at most one code. Diagnosing an unusual failure may need the
-  provider's own console.
-- A provider code is dropped when it shares four consecutive characters with the
-  key in use, even by coincidence.
+  category and, for a recognised code, a fixed label. A code outside the fixed
+  lists reads `other`, and an AssemblyAI job identifier is not shown, so
+  diagnosing an unusual failure may need the provider's own console. The lists
+  need a code change when a provider adds a code worth naming.
+- After a change whose answer was lost, the screen shows the stored state but
+  does not complete a half-made selection: if the account was selected and the
+  provider was not yet made active, the operator sees that state and repeats
+  the selection.
+- With a web release in front of an older API the band shows nothing instead of
+  an explanation; that pairing has no automatic change to report.
 - Key health is recorded even with the switch off, as information only; the
   screen says so and warns before the switch is turned on with marked keys.
 - A provider refusal in an undocumented shape (for example an OpenAI or
@@ -415,11 +470,15 @@ piece; every refusal recorded with no attempt counter; caps enforced; no key
 character and no provider text in logs, run records, events, stored audit rows,
 the status route or error texts, on refusals and on the older paths (5xx, rate
 limit, unclassified status, unreadable answer, network, timeout, AssemblyAI
-polling and job failure), with ordinary and with short secrets; the machine
-token filter; a selected account that cannot take work shown as unavailable;
-the band told once after a whole selection; the notices-only read and its
-proxy, refusing any other query; an older screen read never replacing a newer
-change; notice wording; documented-only provider shapes; fixed default status
-shape and the opt-in check;
+polling and job failure), with ordinary and with short secrets, and with a key
+written as a separated fragment or with dots, as an error code and as a job
+identifier; fixed labels and `other`; a selected account that cannot take work
+shown as unavailable, also by the public status route; the band told once
+after a whole selection, and the stored state read back without repeating a
+change whose answer was lost; the notices-only read and its proxy, refusing any
+other query, rebuilding the answer and refusing the account listing of an older
+API; an older screen read never replacing a newer change; notice wording;
+documented-only provider shapes; fixed default status shape and the opt-in
+check;
 account API actions. Exact results for this candidate are in
 `docs/llm/HISTORY.md`.

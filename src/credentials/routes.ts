@@ -67,7 +67,7 @@ export function credentialRoutes(store: CredentialStore | undefined, baseConfig:
         if (names.length !== 1 || query.view !== "notices") { json(res, 400, { error: "invalid_request" }); return; }
         const provider = effectiveConfig().sttProvider;
         json(res, 200, store?.noticesView(provider)
-          ?? { notices: [], routing: { enabled: false, state: "legacy", reason: null, provider, accountLabel: null } });
+          ?? { view: "notices", notices: [], routing: { enabled: false, state: "legacy", reason: null, provider, accountLabel: null } });
         return;
       }
       if (req.method !== "POST") { json(res, 405, { error: "method_not_allowed" }); return; }

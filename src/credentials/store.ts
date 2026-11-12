@@ -565,6 +565,8 @@ export class CredentialStore {
    * screen. No account listing, no legacy key suffix; a key hint appears only
    * inside a notice. `state` tells apart the existing configuration, a working
    * account, a selected account that refuses new work, and nothing left.
+   * `view` marks the answer, so a reader can tell it from the account listing
+   * that an older API returns for the same request.
    */
   noticesView(provider: SttProviderId) {
     const view = this.failoverState(provider);
@@ -574,7 +576,7 @@ export class CredentialStore {
         : view.blocked ? "blocked" as const : "account" as const;
     const accountId = view.effective?.accountId ?? (selection.state === "legacy" ? undefined : selection.accountId);
     const account = accountId ? this.account(accountId) : undefined;
-    return { notices: view.notices, routing: { enabled: view.enabled, state,
+    return { view: "notices" as const, notices: view.notices, routing: { enabled: view.enabled, state,
       reason: selection.state === "unavailable" ? selection.reason : null,
       provider: account?.provider ?? provider, accountLabel: account?.label ?? null } };
   }

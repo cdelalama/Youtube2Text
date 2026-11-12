@@ -1,8 +1,8 @@
-## Automatic key and account failover: third review answered - 2026-11-12
+## Automatic key and account failover: fourth review answered - 2026-11-12
 
 Last Updated: 2026-11-12 - Claude (Fable 5.2).
 
-- Version: 0.43.4 candidate in source on task branch work/stt-failover-20261112. Not deployed: the NAS still runs 0.42.2 from 8c3f0a542691144a80c0c1819dbf4d350b36f43f.
+- Version: 0.43.5 candidate in source on task branch work/stt-failover-20261112. Not deployed: the NAS still runs 0.42.2 from 8c3f0a542691144a80c0c1819dbf4d350b36f43f.
 
 Carlos decided on 2026-11-12 (D-029) that Media2Text must move by itself when a
 key is rejected or out of credit: first to the next key of the same account,
@@ -14,14 +14,26 @@ D-028 exclusion of automatic account failover.
 What Carlos can use today: nothing new. The installed 0.42.2 account screen
 works as before. Nothing of this work is deployed.
 
-Review state. Codex (a different model family) reviewed 0.43.0, 0.43.1 and
-0.43.3 through the requesting Cortex session; each verdict was do not merge or
-deploy yet. The third pass marked every earlier point resolved except four,
-which 0.43.4 answers: no free provider text in any provider error; a selected
-account that cannot take work shown as refused work, not as the existing
-configuration; the band refreshed only after a whole selection; and the web
-proxy of the notices view gathered in one unit that refuses any other query.
-Findings and fixes are in docs/llm/REVIEWS.md. 0.43.4 has not been reviewed, so
+Review state. Codex (a different model family) reviewed 0.43.0, 0.43.1, 0.43.3
+and 0.43.4 through the requesting Cortex session; each verdict was do not merge
+or deploy yet. The fourth pass marked resolved the unavailable-selection state,
+the refresh after a complete selection and the proxy evidence, and left two
+release blockers and two follow-ups, which 0.43.5 answers:
+
+1. No string supplied by a provider reaches an error, a log, a run record or an
+   event. A recognised provider code becomes a label from a fixed list in
+   src/transcription/errors.ts; any other code reads "other"; upstream job
+   identifiers stay inside the adapter.
+2. The web proxy of the banner's read no longer passes on what the API sent. It
+   accepts only an answer marked view "notices", rebuilds it from the allowed
+   fields and refuses anything else, so a new web in front of an older API
+   cannot show account data on other screens.
+3. A change on the accounts screen whose answer is lost is not sent again; the
+   stored state is read back and the banner is told.
+4. The public status reports degraded while the selected account cannot take
+   work, with a fixed sentence and the same default shape.
+
+Findings and fixes are in docs/llm/REVIEWS.md. 0.43.5 has not been reviewed, so
 the gate stays closed.
 
 What the release adds once installed, all inside Settings > Transcription
@@ -34,12 +46,18 @@ the audio, in a shape that provider documents; anything else fails the job as
 before. Usage caps are unchanged. Transcript Ready v1 is unchanged.
 
 Changes that apply even with the switch off (the reviewer accepts them; they
-are listed in CHANGELOG 0.43.4 and in the operator guide): provider errors read
-with fixed parts and no provider text; refused keys are marked on the screen;
-the console re-reads every 20 seconds and shows a band when a notice is pending
-or new jobs are refused; the accounts route refuses unknown queries.
+are listed in CHANGELOG 0.43.4 and 0.43.5 and in the operator guide): provider
+errors read with fixed parts and no provider string, and no upstream job
+identifier; refused keys are marked on the screen; the console re-reads every
+20 seconds and shows a band when a notice is pending or new jobs are refused;
+the accounts route refuses unknown queries; the public status degrades while
+the selected account cannot take work.
 
-Not done: review of 0.43.4; deployment; a browser exercise of the new screen;
+Before the switch is turned on (reviewer's conditions, stated in Spanish in the
+operator guide): a saved account is selected and the fallback order has been
+reviewed, because the existing (legacy) configuration takes no part.
+
+Not done: review of 0.43.5; deployment; a browser exercise of the new screen;
 the immediate phone message, which needs separate Home Infra and Sentinel work
 and Carlos's choice to receive it. No paid transcription, budget increase,
 secret, login or runtime change occurred.
@@ -49,19 +67,20 @@ secret, login or runtime change occurred.
 The requesting session sends branch work/stt-failover-20261112 back to Codex for
 review of the current candidate against docs/llm/REVIEWS.md, then merges and
 deploys it with docs/operations/DEPLOY_PLAYBOOK.md. After that Carlos opens
-Settings > Cuentas de transcripcion, adds his accounts to the list, orders them
-and turns on the switch; he should see the switch stay on and the list in his
-order. Earlier work keeps its own scope and priority: the account delivery
-witness, M1-M3 and the long-recording economics.
+Settings > Cuentas de transcripcion, checks that a saved account is selected,
+adds his accounts to the list, orders them and turns on the switch; he should
+see the switch stay on and the list in his order. Earlier work keeps its own
+scope and priority: the account delivery witness, M1-M3 and the long-recording
+economics.
 
 ### Trace Anchor
 
 - Role: executor
-- Sent: 2026-11-12 17:47:15 CET (16:47:15 UTC)
-- Subject: D-029 automatic key and account failover, third review answered; source 0.43.4
-- Resulting state: branch work/stt-failover-20261112; version=0.43.4; gate=independent review of this candidate; not deployed
+- Sent: 2026-11-12 18:35:24 CET (17:35:24 UTC)
+- Subject: D-029 automatic key and account failover, fourth review answered; source 0.43.5
+- Resulting state: branch work/stt-failover-20261112; version=0.43.5; gate=independent review of this candidate; not deployed
 - Repo state: managed task worktree from published baseline 139b0c5aac1d4d8fe0e6c8c02b5526b27ca7633a; primary and peer checkouts untouched
-- Validation: observed on source commit 34164d7 (0.43.4): npm test 279 tests, 279 pass, 0 fail (248 existing plus 31 in tests/sttFailover.test.ts); backend tsc --noEmit exit 0; web tsc --noEmit exit 0; npm run api:contract:check exit 0; web production build (next build) exit 0. No provider was called. The screen was not exercised in a browser.
+- Validation: VALIDATION-PENDING: observed on the code of this commit (its fingerprint did not change between the checks and the commit): npm test 279 tests, 279 pass, 0 fail (248 existing plus 31 in tests/sttFailover.test.ts); backend tsc --noEmit exit 0; web tsc --noEmit exit 0; npm run api:contract:check exit 0. The web production build was still running. An earlier run of the suite on the same code, before the HANDOFF version line was updated, had 278 pass and 1 fail (the version marker test, for that line only). No provider was called. The screen was not exercised in a browser.
 - Next gate: requesting session obtains the Codex review of this candidate, then merge and deployment; Carlos turns the switch on afterwards
 - Dossier: refresh_required after acceptance of the reviewed change; not refreshed from this unreviewed task branch
 
@@ -182,7 +201,7 @@ The executor publishes the qualified source and immutable images and the existin
 - Next gate: executor qualifies focused review and actual deployment/access/recovery
 - Dossier: refresh_required; previous native/shared history retained; new reader revision unavailable
 
-<!-- doc-version: 0.43.4 -->
+<!-- doc-version: 0.43.5 -->
 
 ## Current continuation - approved STT account administration, 2026-10-23
 

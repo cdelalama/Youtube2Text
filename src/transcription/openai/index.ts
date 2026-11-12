@@ -3,9 +3,10 @@ import { basename } from "node:path";
 import { TranscriptionProvider, type ProviderCapabilities } from "../provider.js";
 import { TranscriptJson, TranscriptionOptions } from "../types.js";
 import {
-  acceptProviderToken,
+  fixedLabel,
   jsonField,
   logUnclassifiedRefusal,
+  OPENAI_ERROR_LABELS,
   ProviderError,
   ProviderHttpError,
   ProviderRefusalError,
@@ -144,16 +145,15 @@ export class OpenAiWhisperProvider implements TranscriptionProvider {
     }
 
     if (!res.ok) {
-      // The body is read only to classify and to pick one machine code; none of its text is kept.
+      // The body is read only to classify and to recognise its code; nothing the provider wrote is kept.
       const text = await res.text().catch(() => "");
-      const token = acceptProviderToken(jsonField(text, ["error", "code"]), [this.apiKey])
-        ?? acceptProviderToken(jsonField(text, ["error", "type"]), [this.apiKey]);
+      const label = fixedLabel(OPENAI_ERROR_LABELS, jsonField(text, ["error", "code"]), jsonField(text, ["error", "type"]));
       const kind = classifyOpenAiRefusal(res.status, text);
       if (kind) {
-        throw new ProviderRefusalError({ provider: "openai_whisper", kind, status: res.status }, PROVIDER, token);
+        throw new ProviderRefusalError({ provider: "openai_whisper", kind, status: res.status }, PROVIDER, label);
       }
       if (res.status === 402 || res.status === 403) logUnclassifiedRefusal("OpenAI", res.status);
-      throw new ProviderHttpError(PROVIDER, res.status, { token });
+      throw new ProviderHttpError(PROVIDER, res.status, { label });
     }
 
     let data: OpenAiWhisperResponse;

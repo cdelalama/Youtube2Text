@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Media2Text API
-  version: 0.43.4
+  version: 0.43.5
   description: |
     Minimal local HTTP API for Media2Text, backed by the youtube2text engine.
     Notes:
@@ -132,11 +132,14 @@ paths:
       operationId: getMediaPipelineStatus
       summary: Get sanitized Home Infra media-pipeline status
       description: The default response keeps exactly three checks. An automatic
-        transcription account change awaiting operator review degrades the
-        aggregate condition and summary. The named, machine-readable
-        stt_account_failover check (pending_notices, service_changed, blocked) is
-        added only with include=stt_account_failover, so consumers that pin the
-        default shape are unaffected. No account alias or key hint is exposed.
+        transcription account change awaiting operator review, no healthy key
+        or account left, or a selected account that cannot take work (new work
+        is refused, also with the automatic switch off) degrades the aggregate
+        condition and summary. The named, machine-readable stt_account_failover
+        check (pending_notices, service_changed, blocked, selection_unavailable)
+        is added only with include=stt_account_failover, so consumers that pin
+        the default shape are unaffected. No account alias or key hint is
+        exposed.
       security: []
       parameters:
         - name: include
@@ -2861,12 +2864,19 @@ components:
     FailoverNoticesView:
       type: object
       description: Pending notices and where new work goes now. A key hint appears
-        only inside a notice.
+        only inside a notice. `view` marks this answer, so a reader can tell it
+        from the account listing that a release before 0.43.0 returns for the
+        same request.
       additionalProperties: false
       required:
+        - view
         - notices
         - routing
       properties:
+        view:
+          type: string
+          enum:
+            - notices
         notices:
           type: array
           items:

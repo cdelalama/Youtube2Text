@@ -3,7 +3,6 @@ import { setTimeout as delay } from "node:timers/promises";
 import { logStep } from "../../utils/logger.js";
 import { TranscriptJson, TranscriptionOptions } from "../types.js";
 import {
-  acceptProviderToken,
   InsufficientCreditsError,
   logUnclassifiedRefusal,
   ProviderError,
@@ -112,10 +111,9 @@ export class AssemblyAiClient {
     }
     const deadline = Date.now() + opts.maxPollMinutes * 60 * 1000;
 
-    // The job identifier comes from the provider: it is the one machine token
-    // this adapter lets out, and only when it carries no key characters.
-    const job = acceptProviderToken(created.id, [this.apiKey]);
-    logStep("transcribe", `Transcription started: ${job ?? "(job identifier withheld)"}`);
+    // The job identifier comes from the provider. It is used only here, to poll
+    // the job; it is never written to a log, an error, a run record or an event.
+    logStep("transcribe", "Transcription started: AssemblyAI accepted the job");
 
     while (Date.now() < deadline) {
       const current = await retry(
@@ -125,13 +123,13 @@ export class AssemblyAiClient {
       if (current.status === "completed") return current;
       if (current.status === "error") {
         // The provider's own explanation is free text and is not kept.
-        throw new ProviderError({ provider: "AssemblyAI", category: "transcription-failed", token: job,
+        throw new ProviderError({ provider: "AssemblyAI", category: "transcription-failed",
           note: "the accepted job ended in error at the provider" });
       }
       await delay(opts.pollIntervalMs, undefined, { signal: opts.abortSignal });
     }
 
-    throw new ProviderError({ provider: "AssemblyAI", category: "timeout", token: job,
+    throw new ProviderError({ provider: "AssemblyAI", category: "timeout",
       note: `polling gave up after ${opts.maxPollMinutes} minutes; the upstream job was not recreated` });
   }
 }

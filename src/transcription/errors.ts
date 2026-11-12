@@ -3,11 +3,13 @@ import { logWarn } from "../utils/logger.js";
 
 // Disclosure rule for every error that comes from a speech-to-text provider
 // (D-029): the text that leaves this module (thrown messages, and through them
-// logs, run records, events, API responses and status) is built from fixed
-// parts only. Those parts are the provider name chosen here, the HTTP status, a
-// category chosen by the code, an optional fixed note written here, and AT MOST
-// one machine token supplied by the provider. No free provider text is ever
-// kept, because a provider can echo part of a key in its answer.
+// logs, run records, events, API responses and status) is built ONLY from parts
+// owned by this code base: the provider name chosen here, the HTTP status, a
+// category chosen by the code, an optional label taken from the fixed lists
+// below, and an optional fixed note written here. No string supplied by a
+// provider is ever kept or repeated, in any form, because a provider can echo a
+// key in its answer, whole or in separated fragments. Upstream job identifiers
+// follow the same rule: they stay inside the adapter that needs them.
 
 export type ProviderErrorCategory =
   | "authentication"
@@ -21,27 +23,65 @@ export type ProviderErrorCategory =
   | "transcription-failed"
   | "unclassified";
 
-const TOKEN = /^[A-Za-z0-9_.-]{1,64}$/;
-const KEY_RUN = 4;
+// Provider error codes this code base recognises. They only make a message
+// easier to read; no routing decision is taken from a label. Deepgram: the
+// err_code values of developers.deepgram.com/docs/errors. OpenAI: the codes and
+// types of developers.openai.com/api/docs/guides/error-codes, plus
+// invalid_api_key and rate_limit_exceeded, which that guide does not list.
+export const DEEPGRAM_ERROR_LABELS = [
+  "INVALID_AUTH",
+  "INSUFFICIENT_PERMISSIONS",
+  "ASR_PAYMENT_REQUIRED",
+  "PROJECT_NOT_FOUND",
+  "INVALID_QUERY_PARAMETER",
+  "PAYLOAD_ERROR",
+  "REMOTE_CONTENT_ERROR",
+  "PAYLOAD_TOO_LARGE",
+  "UNSUPPORTED_MEDIA_TYPE",
+  "ASR_UNPROCESSABLE_ENTITY",
+  "UNPROCESSABLE_ENTITY",
+  "TOO_MANY_REQUESTS",
+] as const;
+export const OPENAI_ERROR_LABELS = [
+  "invalid_api_key",
+  "insufficient_quota",
+  "credit_balance_exhausted",
+  "organization_spend_limit_exceeded",
+  "project_spend_limit_exceeded",
+  "organization_usage_limit_exceeded",
+  "rate_limit_exceeded",
+  "rate_limit_error",
+  "slow_down",
+  "invalid_request_error",
+  "service_unavailable_error",
+  "server_is_overloaded",
+] as const;
+/** The provider sent a code, but not one of the recognised ones. */
+export const OTHER_LABEL = "other";
+export type ProviderErrorLabel =
+  | (typeof DEEPGRAM_ERROR_LABELS)[number]
+  | (typeof OPENAI_ERROR_LABELS)[number]
+  | typeof OTHER_LABEL;
 
 /**
- * Accepts one provider-supplied machine token (an error code or type, or a job
- * identifier) only when it is a short plain identifier and shares no run of
- * four or more consecutive characters with a key in use. A key shorter than
- * four characters is compared whole. Anything else is dropped.
+ * Turns what a provider sent as its error code into a label owned by this code
+ * base. The result is the first candidate that equals an entry of `known`
+ * (the entry itself, a constant of this file), "other" when the provider sent
+ * something else, and nothing when it sent no code. The provider's own string
+ * is never returned, so nothing it writes can reach an outward message.
  */
-export function acceptProviderToken(candidate: unknown, secrets: string[]): string | undefined {
-  if (typeof candidate !== "string" || !TOKEN.test(candidate)) return undefined;
-  const token = candidate.toLowerCase();
-  for (const raw of secrets) {
-    const secret = (raw ?? "").toLowerCase();
-    if (!secret) continue;
-    const run = Math.min(KEY_RUN, secret.length);
-    for (let start = 0; start + run <= secret.length; start += 1) {
-      if (token.includes(secret.slice(start, start + run))) return undefined;
-    }
+export function fixedLabel<T extends ProviderErrorLabel>(
+  known: readonly T[],
+  ...candidates: unknown[]
+): T | typeof OTHER_LABEL | undefined {
+  let sent = false;
+  for (const candidate of candidates) {
+    if (candidate === undefined || candidate === null) continue;
+    sent = true;
+    const label = known.find((entry) => entry === candidate);
+    if (label !== undefined) return label;
   }
-  return candidate;
+  return sent ? OTHER_LABEL : undefined;
 }
 
 /** Category for an HTTP error status when the adapter has no better knowledge. */
@@ -60,8 +100,8 @@ export type ProviderErrorParts = {
   provider: string;
   category: ProviderErrorCategory;
   status?: number;
-  /** Already passed through acceptProviderToken. */
-  token?: string;
+  /** A constant of this file (see fixedLabel); never a provider string. */
+  label?: ProviderErrorLabel;
   /** Fixed wording written in this code base; never provider text. */
   note?: string;
 };
@@ -70,7 +110,7 @@ function providerErrorText(parts: ProviderErrorParts): string {
   return (
     `${parts.provider} error: ${parts.category}` +
     (parts.status === undefined ? "" : ` (HTTP ${parts.status})`) +
-    (parts.token ? ` [${parts.token}]` : "") +
+    (parts.label ? ` [${parts.label}]` : "") +
     (parts.note ? `; ${parts.note}` : "")
   );
 }
@@ -84,13 +124,13 @@ export class ProviderError extends Error {
   readonly provider: string;
   readonly category: ProviderErrorCategory;
   readonly status?: number;
-  readonly token?: string;
+  readonly label?: ProviderErrorLabel;
   constructor(parts: ProviderErrorParts) {
     super(providerErrorText(parts));
     this.provider = parts.provider;
     this.category = parts.category;
     this.status = parts.status;
-    this.token = parts.token;
+    this.label = parts.label;
   }
 }
 
@@ -98,8 +138,8 @@ export class ProviderError extends Error {
 export class ProviderHttpError extends ProviderError {
   name = "ProviderHttpError";
   declare readonly status: number;
-  constructor(provider: string, status: number, options: { category?: ProviderErrorCategory; token?: string } = {}) {
-    super({ provider, status, category: options.category ?? categoryForStatus(status), token: options.token });
+  constructor(provider: string, status: number, options: { category?: ProviderErrorCategory; label?: ProviderErrorLabel } = {}) {
+    super({ provider, status, category: options.category ?? categoryForStatus(status), label: options.label });
   }
 }
 
@@ -132,12 +172,12 @@ export type DefinitiveRefusal = {
 
 export class ProviderRefusalError extends ProviderError {
   name = "ProviderRefusalError";
-  constructor(public refusal: DefinitiveRefusal, provider: string, token?: string) {
+  constructor(public refusal: DefinitiveRefusal, provider: string, label?: ProviderErrorLabel) {
     super({
       provider,
       status: refusal.status,
       category: refusal.kind === "exhausted" ? "payment-or-quota" : "authentication",
-      token,
+      label,
     });
   }
 }

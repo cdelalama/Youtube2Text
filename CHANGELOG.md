@@ -5,6 +5,61 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.43.5] - 2026-11-12
+
+Answers the fourth independent review (of 0.43.4: do not merge yet, two release
+blockers and two follow-ups). Still source on task branch
+`work/stt-failover-20261112`; not deployed; review pending. See
+`docs/llm/REVIEWS.md`.
+
+### Behaviour changes that apply even with the automatic switch off
+
+In addition to the list under 0.43.4:
+
+- A provider error never repeats a string the provider sent. The optional part
+  in square brackets is now a label from a fixed list of this code base
+  (`[ASR_PAYMENT_REQUIRED]`, `[rate_limit_exceeded]`, ...); a provider code that
+  is not in the list reads `[other]`.
+- The AssemblyAI job identifier no longer appears in any log line or error. The
+  log line is `Transcription started: AssemblyAI accepted the job`; a job that
+  ends in error reads `AssemblyAI error: transcription-failed; the accepted job
+  ended in error at the provider`.
+- The public status route reports `degraded` while the selected account cannot
+  take work (disabled, current key revoked, or another service), also with no
+  notice pending. The default response shape is unchanged.
+- A change on the accounts screen whose answer is lost is not sent again: the
+  stored state is read back and shown, with a message that says so.
+
+### Added
+
+- `view: "notices"` marks the answer of `GET /provider-accounts?view=notices`.
+- `selection_unavailable` in the opt-in `stt_account_failover` status check.
+- Operator guide (Spanish): what to check before turning the switch on.
+
+### Changed
+
+- Provider error labels come from fixed lists (`DEEPGRAM_ERROR_LABELS`,
+  `OPENAI_ERROR_LABELS`, `fixedLabel` in `src/transcription/errors.ts`). The
+  `acceptProviderToken` filter and the `token` field of `ProviderError` are
+  removed; the typed field is now `label`.
+- `runAccountAction` has a new outcome, `uncertain`, and treats a lost answer
+  or a 5xx as "may be stored": read back, then tell the banner.
+
+### Fixed
+
+- Disclosure: a provider string shaped like an identifier could still carry a
+  key as a separated fragment (`AB-CD`) or dotted, and reach errors, logs and
+  events. No provider string reaches them now.
+- Mixed rollout: the web proxy of the notices view passed on whatever the API
+  answered. An API older than 0.43.0 ignores the query and answers the account
+  listing, which would have reached the banner on every screen. The proxy now
+  accepts only an answer marked as the notices view, rebuilds it from the
+  allowed fields and refuses anything else with a fixed error.
+- An enabled switch could show as off until the next refresh when the answer
+  to the change was lost after the server had stored it.
+- The public status said `ok` while admission refused new work because the
+  selected account was unavailable.
+
 ## [0.43.4] - 2026-11-12
 
 Answers the third independent review (of 0.43.3: do not merge yet). Still source

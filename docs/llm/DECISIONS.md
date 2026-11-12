@@ -66,13 +66,18 @@ Decision details:
   is rendered. They never appear in logs, audit rows, failover events, the
   public status route, error messages or any response another screen needs; the
   banner on other screens reads notices and current routing only.
-- No free provider text leaves an adapter, for any provider error and with the
-  switch on or off, because a provider can echo part of a key and no filter
-  over free text is complete. Outward text is built from fixed parts only:
-  provider name, HTTP status, a category chosen by the code, and at most one
-  provider machine token that matches ^[A-Za-z0-9_.-]{1,64}$ and shares no run
-  of four or more characters with the key in use. What the pipeline decides on
-  is in typed fields, not in the message.
+- No string supplied by a provider leaves an adapter, for any provider error
+  and with the switch on or off, because a provider can echo a key, whole or in
+  separated fragments, and no filter over provider text is complete. Outward
+  text is built only from parts owned by the code: provider name, HTTP status,
+  a category, an optional label from a fixed list per provider (a provider code
+  that is not in the list becomes "other") and fixed notes. Upstream job
+  identifiers stay inside the adapter. What the pipeline decides on is in typed
+  fields, not in the message.
+- The banner's web proxy never passes on what the API sent. It accepts only an
+  answer marked as the notices view and rebuilds its response from the allowed
+  fields, so a web release in front of an older API cannot show account data on
+  other screens.
 - A selected account that cannot take work (disabled, or its current key
   revoked) is its own state. New work is refused and the operator is told why;
   it is never shown as the existing configuration.
@@ -96,10 +101,10 @@ Sentinel; no bot token belongs here).
 
 State: source prepared on a task branch; not deployed. Candidates 0.43.0,
 0.43.1 and 0.43.3 were each reviewed by a different model family (do not merge
-yet each time); 0.43.4 answers the third review and awaits the next one, see
-REVIEWS.md. The reviewer accepted that some behaviour changes with the switch
-off (error wording, key marks, periodic refresh and the band); CHANGELOG 0.43.4
-and the operator guide list them.
+yet each time), and so was 0.43.4; 0.43.5 answers that fourth review and awaits
+the next one, see REVIEWS.md. The reviewer accepted that some behaviour changes
+with the switch off (error wording, key marks, periodic refresh and the band);
+CHANGELOG 0.43.4 and 0.43.5 and the operator guide list them.
 An immediate push message needs separate Home Infra and Sentinel work and an
 operator choice.
 See ../operations/STT_FAILOVER_2026-11-12.md.

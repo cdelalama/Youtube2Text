@@ -35,7 +35,7 @@ ficticias. Conserva la evidencia de instalación y no debe usarse para transcrib
 
 ## Cambio automático de clave o cuenta
 
-**Todavía no está instalado.** Llega con la versión 0.43.4, que está preparada
+**Todavía no está instalado.** Llega con la versión 0.43.5, que está preparada
 en el código y pendiente de una nueva revisión independiente y de
 instalación. El NAS sigue con la 0.42.2, donde esta sección no aparece. Cuando
 se instale, los trabajos siguen yendo a la misma cuenta hasta que actives el
@@ -45,13 +45,16 @@ Qué cambia aunque no actives el interruptor. Al instalar esa versión notarás
 estas diferencias, con el interruptor apagado o encendido:
 
 - **Los mensajes de error de los servicios de transcripción cambian de forma.**
-  Ya no copian el texto que devuelve el servicio. Ahora son siempre así:
+  Ya no copian nada de lo que devuelve el servicio. Ahora son siempre así:
   «Deepgram error: server-error (HTTP 503)», «OpenAI Whisper error: rate-limit
   (HTTP 429) [rate_limit_exceeded]», «AssemblyAI error: timeout». Dicen el
-  servicio, el tipo de fallo, el código de respuesta y, como mucho, un código
-  corto del propio servicio. El motivo es que un servicio puede devolver trozos
-  de tu clave en su respuesta, y así nunca llegan a los registros. Si necesitas
-  más detalle de un fallo raro, míralo en la web del servicio.
+  servicio, el tipo de fallo, el código de respuesta y, a veces, una etiqueta
+  entre corchetes. Esa etiqueta sale de una lista fija de Media2Text: si el
+  servicio manda un código que no está en la lista verás «[other]». Tampoco
+  aparece ya el identificador que el servicio da a cada trabajo. El motivo es
+  que un servicio puede devolver tu clave en su respuesta, entera o a trozos, y
+  así nunca llega a los registros. Si necesitas más detalle de un fallo raro,
+  míralo en la web del servicio.
 - **Las claves quedan marcadas.** Si un servicio rechaza una clave o dice que no
   queda saldo, o si **Comprobar acceso** sale rechazado, la clave aparece
   marcada en esta pantalla hasta que tú quites la marca. Con el interruptor
@@ -63,13 +66,32 @@ estas diferencias, con el interruptor apagado o encendido:
   revocas su clave actual, los trabajos nuevos se rechazan. La línea **Nuevos
   trabajos** y la banda lo dicen con el motivo («la cuenta elegida está
   desactivada» o «la clave actual está revocada localmente»). Se arregla
-  activando la cuenta, eligiendo otra clave o eligiendo otra cuenta.
+  activando la cuenta, eligiendo otra clave o eligiendo otra cuenta. Mientras
+  dure, el estado que consulta el monitor de la casa pasa a «degradado», aunque
+  no haya ningún aviso pendiente.
+- **Si un cambio se queda sin confirmar.** Si al guardar algo en esta pantalla
+  se corta la conexión, verás «No llegó la confirmación del cambio». El cambio
+  no se reenvía solo. La lista se vuelve a leer y muestra lo que quedó guardado
+  de verdad: míralo antes de repetir la acción.
 
 Qué hace: si el servicio de transcripción rechaza una clave o responde que no
 queda saldo o cuota, Media2Text prueba la siguiente clave de la misma cuenta y,
 si ninguna sirve, pasa a la siguiente cuenta de tu lista. Esa cuenta puede ser
 de otro servicio (por ejemplo, de Deepgram a AssemblyAI). Cada vez que ocurre,
 te lo dice.
+
+Antes de activar el interruptor, comprueba estas dos cosas. Son condiciones de
+la revisión independiente, y sin ellas el interruptor no hace lo que esperas:
+
+1. **Tienes elegida una cuenta guardada.** La elegiste con **Usar para nuevas
+   transcripciones** y la línea **Nuevos trabajos** la nombra. Si esa línea
+   dice que se usa la configuración existente, el interruptor no hace nada:
+   las claves de la configuración existente (las de Doppler) no participan en
+   el cambio automático, ni como punto de partida ni como respaldo.
+2. **Has revisado la lista de respaldo.** Mira qué cuentas hay en ella, en qué
+   orden y de qué servicio es cada una. Ahí es adonde irán los trabajos sin
+   preguntarte. Si una cuenta de la lista es de otro servicio, la calidad de
+   esas transcripciones puede cambiar.
 
 Cómo activarlo, en **Ajustes > Cuentas de transcripción > Cambio automático de
 clave o cuenta**:
