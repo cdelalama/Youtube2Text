@@ -5,6 +5,41 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.43.1] - 2026-11-12
+
+Answers the independent review of 0.43.0 (do not merge yet: one blocker, six
+should-fix). Still source on task branch `work/stt-failover-20261112`; not
+deployed; re-review pending. See `docs/llm/REVIEWS.md`.
+
+### Added
+
+- A distinct "recording stopped" notice and audit event for a partly
+  transcribed recording whose next candidate is another service.
+- The console banner now shows on every screen including Settings; the console
+  and the open Settings screen re-read notices and key state every 20 seconds.
+- A status-only log line for refusal-looking provider answers that match no
+  documented shape.
+
+### Changed
+
+- Key health is latched: only the operator's reset, or his successful access
+  check for a rejected key, clears a mark. A completed transcription no longer
+  clears it.
+- Every automatic change produces a pending notice; a dismissed notice no
+  longer silences a later identical change.
+- Whether a recording may move is decided before any pin is rewritten.
+- Provider shapes limited to documented ones: OpenAI 402 and non-region 403,
+  AssemblyAI 402 and older credit wordings, and the AssemblyAI negative-balance
+  answer outside the create call no longer move work.
+
+### Fixed
+
+- Blocker: each attempt's availability guard and local revocation now follow
+  that attempt's own key, not the run's current key, when another recording of
+  the same run has moved the run.
+- The fixed limit of 25 attempts could stop before recording a refusal; the loop
+  is now bounded by the keys and records every definitive refusal.
+
 ## [0.43.0] - 2026-11-12
 
 Source prepared on task branch `work/stt-failover-20261112`; not deployed.

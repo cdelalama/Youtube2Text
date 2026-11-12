@@ -1,4 +1,69 @@
-## 2026-11-12 - Automatic account failover 0.43.0: independent review pending
+## 2026-11-12 - Automatic account failover: independent review of 0.43.0 and fixes in 0.43.1
+
+Review, as relayed by the requesting Cortex session: Codex gpt-6-astra,
+reasoning effort max, read-only, inline diff, session
+01a1cd4f-1482-7183-8dac-be9bc8a11a49, candidate commit `d6868aa` (0.43.0).
+Verdict: do not merge or deploy yet; one blocker and six should-fix.
+Provenance limit: the executor (Claude, claude-fable-5-2) received the findings
+through the requesting session and did not see the review session or verify its
+returned model metadata. The verdict covers 0.43.0 only. 0.43.1 below is the
+executor's answer; it has NOT been re-reviewed, so the gate stays closed.
+
+Findings and how each was handled in 0.43.1:
+
+1. BLOCKER. Guards and revocation followed the run's current pin, not the
+   attempt's: while one upload used K1 a sibling could move the run to K2 and the
+   first upload's guard then validated K2. Fixed. Each recording now owns its
+   pin (src/pipeline/sttSession.ts) and keeps it until its own request is
+   refused. The guard passed to the adapter is bound to that attempt's pin for
+   its whole life, and RunManager tracks every outstanding pin of a run (each
+   recording holds its pin from start to end, between pieces too), so revoking
+   a key cancels the run while any recording still owns it. Test with two
+   concurrent recordings; both halves are confirmed by mutation.
+2. An older success erased a newer refusal. Fixed by removing success-clearing
+   altogether: a rejected or exhausted mark is latched until the operator's
+   reset or, for rejected only, his successful re-check. Interleaving tested.
+3. A dismissed notice silenced a later identical move. Fixed: every automatic
+   change, including new work routed past a marked key, produces a pending
+   notice; pending repeats share a counter; a dismissed one never suppresses
+   the next. Operator guide updated.
+4. The move was committed before checking whether the recording may move.
+   Fixed: recordRefusal records health, then decides before rewriting anything.
+   A partly transcribed recording whose next candidate is another service gets a
+   distinct recording_stopped event and a "stopped" notice; its pin and recorded
+   selection are untouched, and the notice says the recording stopped. The same
+   check applies when a sibling recording already moved the run.
+5. Notices refreshed only on terminal run updates, Settings went stale and the
+   banner was hidden there. Fixed: the console and the open Settings screen
+   re-read every 20 seconds while visible and on run activity; the banner shows
+   on every screen including Settings.
+6. The 25-attempt cap threw before recording the refusal. Fixed: the cap is
+   gone. A key refused for a recording is never tried again for it, every
+   definitive refusal is recorded first, and a registry answer that repeats an
+   already refused key stops with its own explicit reason.
+7. Provider shapes marked assumed. Removed. OpenAI: every 401, 403 only with the
+   documented unsupported-region text, 429 only with error.type
+   insufficient_quota or a documented quota error.code; a bare 402 is not
+   definitive. AssemblyAI: 401, and the documented negative-balance 400 at
+   creation only; 402 and the older credit wordings are unclassified. AssemblyAI
+   403 still never moves work, with the corrected reason: it is ambiguous (no
+   access to the resource in the troubleshooting guide; a request-volume limit
+   and an upload access error on the errors page), not a rate limit.
+   Unclassified refusals fail as before and are logged with the status only.
+
+Judgement left for the reviewer: OpenAI organization_usage_limit_exceeded is
+kept as exhausted. It is documented, but as a usage limit assigned by OpenAI,
+not as billing; the same page groups it with quota errors a retry cannot fix.
+
+Requested tests added: two jobs refused at once (one move each, no lost health);
+a partly transcribed recording refused on its second piece (same provider
+continues; other provider stops with the right notice and pin); failures after
+a 2xx or after the upload never move work. tests/sttFailover.test.ts now has 22
+tests. Exact totals are in the HISTORY entry for 0.43.1.
+
+Not done: re-review of 0.43.1; any browser exercise of the screen; deployment.
+
+## 2026-11-12 - Automatic account failover 0.43.0: before the review (superseded above)
 
 No independent review yet: Claude author (claude-fable-5-2), so a Claude review
 would not be independent. The requesting Cortex session obtains the review from

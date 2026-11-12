@@ -1614,12 +1614,15 @@ export interface components {
             provider: "assemblyai" | "deepgram" | "openai_whisper";
             keyHint: string;
         };
-        /** @description Operator-facing record of an automatic move, kept until dismissed. Identical pending transitions share one notice and a count. */
+        /** @description Operator-facing record of automatic routing, kept until dismissed. Identical pending transitions share one notice and a count; a dismissed notice never silences the next occurrence. */
         FailoverNotice: {
             /** Format: uuid */
             id: string;
-            /** @enum {string} */
-            kind: "moved" | "blocked";
+            /**
+             * @description moved = `to` took over; blocked = nothing was left; stopped = a partly transcribed recording stopped because `to` is another service.
+             * @enum {string}
+             */
+            kind: "moved" | "blocked" | "stopped";
             /** @enum {string} */
             reason: "rejected" | "exhausted";
             status: number | null;

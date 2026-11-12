@@ -116,6 +116,9 @@ export class RunManager {
   private activeRunPromises = new Map<string, Promise<void>>();
   private runTimeoutMs?: number;
   private credentialSelections = new Map<string, CredentialPin>();
+  // Pins still owned by an unfinished recording, per run. A run that moved to
+  // another key can still have a recording uploading with the previous one.
+  private outstandingPins = new Map<string, Map<string, number>>();
   private acceptedConfigs = new Map<string, AppConfig>();
 
   constructor(
@@ -287,7 +290,9 @@ export class RunManager {
   revokeCredential(credentialId: string): number {
     let count = 0;
     for (const run of this.runs.values()) {
-      if (this.credentialSelections.get(run.runId)?.credentialId === credentialId && (run.status === "queued" || run.status === "running")) {
+      const uses = this.credentialSelections.get(run.runId)?.credentialId === credentialId
+        || (this.outstandingPins.get(run.runId)?.get(credentialId) ?? 0) > 0;
+      if (uses && (run.status === "queued" || run.status === "running")) {
         run.error = "credential_revoked_local";
         this.cancelRun(run.runId); count += 1;
       }
@@ -365,9 +370,8 @@ export class RunManager {
     const acceptedConfig = config;
     const credentialSelection = this.credentialSelections.get(runId);
     // The pin moves only through an audited, noticed failover (D-029), never silently.
-    let activeSelection = credentialSelection;
     const failover: PipelineFailover | undefined = credentialSelection && this.options.credentialStore
-      ? this.createFailover(runId, req, acceptedConfig, () => activeSelection!, (next) => { activeSelection = next; })
+      ? this.createFailover(runId, req, acceptedConfig, credentialSelection)
       : undefined;
     const emitter: PipelineEventEmitter = {
       emit: (event) => this.onEvent(runId, event),
@@ -413,8 +417,9 @@ export class RunManager {
       emitter,
       abortSignal: controller.signal,
       runId,
+      // The accepted pin, for checks made before any provider request.
       assertCredentialAvailable: credentialSelection ? () => {
-        this.options.credentialStore!.resolve(activeSelection!);
+        this.options.credentialStore!.resolve(credentialSelection);
       } : undefined,
       failover,
       });
@@ -463,6 +468,7 @@ export class RunManager {
       .finally(() => {
         this.acceptedConfigs.delete(runId);
         this.credentialSelections.delete(runId);
+        this.outstandingPins.delete(runId);
         this.abortControllers.delete(runId);
         this.activeRunPromises.delete(runId);
         const handle = this.runTimeouts.get(runId);
@@ -474,37 +480,60 @@ export class RunManager {
 
   /**
    * Bridges the pipeline to the credential store for one pinned run. The store
-   * decides (switch, order, health) and writes the audit row and notice; this
-   * only keeps the run's in-memory pin in step so local revocation still applies.
+   * decides (switch, order, health, eligibility) and writes the audit event and
+   * notice. This keeps every pin the run has had, so each attempt is guarded
+   * and revocable by its OWN pin even after a sibling recording moved the run.
    */
   private createFailover(
     runId: string,
     req: RunCreateRequest,
     acceptedConfig: AppConfig,
-    current: () => CredentialPin,
-    move: (next: CredentialPin) => void
+    accepted: CredentialPin
   ): PipelineFailover {
     const store = this.options.credentialStore!;
     const workIds = [`run:${runId}`, ...(req.intakeId ? [`intake:${req.intakeId}`] : [])];
+    const pins = new Map<string, CredentialPin>([[accepted.credentialId, accepted]]);
+    let current = accepted;
+    const pinOf = (credentialId: string): CredentialPin => {
+      const pin = pins.get(credentialId);
+      if (!pin) throw new CredentialError("credential_unavailable");
+      return pin;
+    };
     return {
-      credentialId: () => current().credentialId,
-      onSuccess: (credentialId) => {
-        const pin = current();
-        if (pin.credentialId !== credentialId) return;
-        try { store.recordSuccess(pin); } catch { /* health bookkeeping never fails a finished transcript */ }
+      credentialId: () => current.credentialId,
+      assertAvailable: (credentialId) => { store.resolve(pinOf(credentialId)); },
+      track: (credentialId) => {
+        const outstanding = this.outstandingPins.get(runId) ?? new Map<string, number>();
+        this.outstandingPins.set(runId, outstanding);
+        outstanding.set(credentialId, (outstanding.get(credentialId) ?? 0) + 1);
+        let released = false;
+        return () => {
+          if (released) return;
+          released = true;
+          const left = (outstanding.get(credentialId) ?? 1) - 1;
+          if (left > 0) outstanding.set(credentialId, left); else outstanding.delete(credentialId);
+        };
       },
-      onDefinitiveRefusal: ({ credentialId, refusal }) => {
+      onDefinitiveRefusal: ({ credentialId, refusal, sameProviderOnly, recordOnly }) => {
         try {
-          let pin = current();
-          if (pin.credentialId === credentialId) {
-            const outcome = store.recordRefusal({ pin, kind: refusal.kind, status: refusal.status, workIds });
-            if (!outcome.moved) return outcome;
-            pin = outcome.pin;
-            move(pin);
-            this.credentialSelections.set(runId, pin);
+          const refused = pinOf(credentialId);
+          // A sibling recording may already have moved this run; following it
+          // is not a second move, but it still has to be allowed for THIS one.
+          const follow = current.credentialId === credentialId ? undefined : current;
+          const outcome = store.recordRefusal({ pin: refused, kind: refusal.kind, status: refusal.status, workIds,
+            sameProviderOnly, recordOnly, follow });
+          if (!outcome.moved) {
+            return outcome.reason === "recording_stopped"
+              ? { moved: false, reason: "recording_stopped", nextProvider: outcome.next.provider }
+              : { moved: false, reason: outcome.reason };
           }
-          // Otherwise a sibling item of this run already moved; follow it without a second record.
-          return { moved: true, config: applyCredential(acceptedConfig, pin, store), credentialId: pin.credentialId };
+          if (!follow) {
+            // The store has committed the move; keep this run in step with it.
+            current = outcome.pin;
+            pins.set(current.credentialId, current);
+            this.credentialSelections.set(runId, current);
+          }
+          return { moved: true, config: applyCredential(acceptedConfig, outcome.pin, store), credentialId: outcome.pin.credentialId };
         } catch {
           // Without a recorded decision the work must fail exactly as before.
           return { moved: false, reason: "error" };

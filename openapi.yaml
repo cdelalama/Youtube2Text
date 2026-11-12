@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Media2Text API
-  version: 0.43.0
+  version: 0.43.1
   description: |
     Minimal local HTTP API for Media2Text, backed by the youtube2text engine.
     Notes:
@@ -2774,8 +2774,9 @@ components:
           type: string
     FailoverNotice:
       type: object
-      description: Operator-facing record of an automatic move, kept until
-        dismissed. Identical pending transitions share one notice and a count.
+      description: Operator-facing record of automatic routing, kept until
+        dismissed. Identical pending transitions share one notice and a count; a
+        dismissed notice never silences the next occurrence.
       additionalProperties: false
       required:
         - id
@@ -2791,10 +2792,13 @@ components:
       properties:
         id: *a1
         kind:
+          description: moved = `to` took over; blocked = nothing was left; stopped =
+            a partly transcribed recording stopped because `to` is another service.
           type: string
           enum:
             - moved
             - blocked
+            - stopped
         reason:
           type: string
           enum:

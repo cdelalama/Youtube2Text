@@ -4,6 +4,7 @@ import { logStep } from "../../utils/logger.js";
 import { TranscriptJson, TranscriptionOptions } from "../types.js";
 import {
   InsufficientCreditsError,
+  logUnclassifiedRefusal,
   ProviderHttpError,
   ProviderRefusalError,
   type DefinitiveRefusal,
@@ -83,13 +84,20 @@ export class AssemblyAiClient {
     };
 
     logStep("upload", `Uploading to AssemblyAI: ${audioPath}`);
-    let created: CreateResponse;
+    // Work is accepted only when the create call answers 2xx. Upload and create
+    // are the two phases where a refusal can be definitive; everything after
+    // them is post-acceptance and is never classified.
+    let uploadUrl: string;
     try {
-      const uploadUrl = await retry(
+      uploadUrl = await retry(
         () => { guard(); return this.uploadAudio(audioPath, timeoutMs, opts.abortSignal, guard); },
         retryOptions
       );
-
+    } catch (error) {
+      throw asSubmissionRefusal(error, "upload");
+    }
+    let created: CreateResponse;
+    try {
       // A timed-out create response may still have created billable work.
       guard();
       created = await this.createTranscript(uploadUrl, {
@@ -98,9 +106,7 @@ export class AssemblyAiClient {
         languageConfidenceThreshold: opts.languageConfidenceThreshold,
       }, timeoutMs, opts.abortSignal);
     } catch (error) {
-      // Work is accepted only when the create call answers 2xx. Everything
-      // after this block is post-acceptance and is never classified.
-      throw asSubmissionRefusal(error);
+      throw asSubmissionRefusal(error, "create");
     }
     const deadline = Date.now() + opts.maxPollMinutes * 60 * 1000;
 
@@ -125,37 +131,35 @@ export class AssemblyAiClient {
 }
 
 /**
- * Classifies a failed upload or create call. Documented shapes
- * (assemblyai.com/docs/errors and the pre-recorded common-errors guide): HTTP 401
- * "Authentication error, API token missing/invalid" and HTTP 400 "Your current
- * account balance is negative..." on POST /v2/transcript. HTTP 402 and the older
- * credit wordings already recognised by this adapter are undocumented for this
- * API and are accepted only with a 400/402 status. AssemblyAI documents 403 as a
- * request-rate limit, so it is deliberately not a refusal. Timeouts, network
- * failures, 429 and 5xx stay unclassified.
+ * Classifies a failed upload or create call. Only shapes AssemblyAI documents
+ * are definitive (assemblyai.com/docs/errors and the pre-recorded
+ * common-errors guide): HTTP 401 "Authentication error, API token
+ * missing/invalid" in either phase, and HTTP 400 "Your current account balance
+ * is negative..." on POST /v2/transcript. Unclassified on purpose: 402 and this
+ * adapter's older credit wordings (not documented for this API); 403, which is
+ * ambiguous (documented both as no access to the resource and as a request
+ * volume limit); 429, 5xx, timeouts and network failures.
  */
-export function classifyAssemblyAiSubmissionRefusal(error: unknown): DefinitiveRefusal | undefined {
-  if (error instanceof ProviderHttpError) {
-    if (error.status === 401) return { provider: "assemblyai", kind: "rejected", status: 401 };
-    if (error.status === 400 && /account balance is negative/i.test(error.message)) {
-      return { provider: "assemblyai", kind: "exhausted", status: 400 };
-    }
-    return undefined;
-  }
-  if (error instanceof InsufficientCreditsError && (error.status === 400 || error.status === 402)) {
-    return { provider: "assemblyai", kind: "exhausted", status: error.status };
+export function classifyAssemblyAiSubmissionRefusal(
+  error: unknown,
+  phase: "upload" | "create"
+): DefinitiveRefusal | undefined {
+  if (!(error instanceof ProviderHttpError)) return undefined;
+  if (error.status === 401) return { provider: "assemblyai", kind: "rejected", status: 401 };
+  if (phase === "create" && error.status === 400 && /account balance is negative/i.test(error.message)) {
+    return { provider: "assemblyai", kind: "exhausted", status: 400 };
   }
   return undefined;
 }
 
-function asSubmissionRefusal(error: unknown): unknown {
-  const refusal = classifyAssemblyAiSubmissionRefusal(error);
-  if (!refusal) return error;
-  if (error instanceof InsufficientCreditsError) {
-    error.refusal = refusal;
-    return error;
-  }
-  return new ProviderRefusalError(refusal, (error as Error).message);
+function asSubmissionRefusal(error: unknown, phase: "upload" | "create"): unknown {
+  const refusal = classifyAssemblyAiSubmissionRefusal(error, phase);
+  if (refusal) return new ProviderRefusalError(refusal, (error as Error).message);
+  const status = error instanceof ProviderHttpError || error instanceof InsufficientCreditsError
+    ? error.status : undefined;
+  if (status === 400 && !(error instanceof InsufficientCreditsError)) return error;
+  if (status === 400 || status === 402 || status === 403) logUnclassifiedRefusal("AssemblyAI", status);
+  return error;
 }
 
 export function shouldRetryAssemblyAiRequest(error: unknown): boolean {

@@ -2,7 +2,7 @@
   "artifacts": [],
   "branch": "work/stt-failover-20261112",
   "id": "stt-failover-20261112",
-  "next_step": "Source 0.43.0 is prepared and published on this task branch; not deployed. The requesting session obtains independent review from Codex, then merges and deploys. Carlos then orders his accounts and turns the switch on in Settings. The Telegram message needs separate Home Infra and Sentinel work.",
+  "next_step": "Source 0.43.1 answers the independent review of 0.43.0 and is published on this task branch; not deployed. The requesting session obtains the re-review from Codex, then merges and deploys. Carlos then orders his accounts and turns the switch on in Settings. The Telegram message needs separate Home Infra and Sentinel work.",
   "project": "youtube2text",
   "purpose": "Automatic key and account failover with operator notice",
   "schema": 1,

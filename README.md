@@ -1,4 +1,4 @@
-<!-- doc-version: 0.43.0 -->
+<!-- doc-version: 0.43.1 -->
 # Media2Text
 
 Media2Text is the visible product name for the `youtube2text` engine: a
@@ -758,12 +758,13 @@ credentials. See [implementation and recovery](docs/operations/STT_ACCOUNT_UI_IM
 
 ### Automatic key and account failover
 
-The 0.43.0 candidate (source only, not deployed) adds one switch, off by default,
+The 0.43.1 candidate (source only, not deployed) adds one switch, off by default,
 and an operator-ordered list of accounts. When a provider definitively refuses a
 request before accepting the audio (key rejected, or no credit or quota), work
 moves to the next key of the same account and then to the next listed account,
 which may be another service. It never moves on a timeout, network error, 5xx,
 rate limit or any failure after acceptance. Every move is audited and shown as a
-notice until dismissed; usage caps still apply. Legacy environment keys and the
+notice until dismissed; key marks stay until the operator clears them; usage caps
+still apply. Legacy environment keys and the
 CLI are unchanged. No new environment variable or secret is needed. See
 [decision and design](docs/operations/STT_FAILOVER_2026-11-12.md) and D-029.

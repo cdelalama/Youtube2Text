@@ -1,4 +1,5 @@
 import type { SttProviderId } from "../config/schema.js";
+import { logWarn } from "../utils/logger.js";
 
 export type ProviderRefusalKind = "rejected" | "exhausted";
 
@@ -15,10 +16,13 @@ export type DefinitiveRefusal = {
   status: number;
 };
 
+/**
+ * Stops an AssemblyAI run on credit wording, as it always did. It is NOT a
+ * definitive refusal: its status/wording match is undocumented, so it never
+ * moves work to another key or account.
+ */
 export class InsufficientCreditsError extends Error {
   name = "InsufficientCreditsError";
-  /** Set only by an adapter that knows the request was refused before acceptance. */
-  refusal?: DefinitiveRefusal;
   constructor(message: string, public status?: number) {
     super(message);
   }
@@ -32,9 +36,19 @@ export class ProviderRefusalError extends Error {
 }
 
 export function definitiveRefusalOf(error: unknown): DefinitiveRefusal | undefined {
-  if (error instanceof ProviderRefusalError) return error.refusal;
-  if (error instanceof InsufficientCreditsError) return error.refusal;
-  return undefined;
+  return error instanceof ProviderRefusalError ? error.refusal : undefined;
+}
+
+/**
+ * A 4xx answer that looks like a refusal but matches no shape documented by the
+ * provider. The job fails as it always did; only the status code is logged here
+ * (never the body), so the operator can see why the work did not move.
+ */
+export function logUnclassifiedRefusal(provider: string, status: number): void {
+  logWarn(
+    `${provider} answered HTTP ${status}, which is not a documented definitive refusal; ` +
+      "the work is not moved to another key or account."
+  );
 }
 
 export class ProviderHttpError extends Error {

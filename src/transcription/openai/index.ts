@@ -2,7 +2,12 @@ import { promises as fs } from "node:fs";
 import { basename } from "node:path";
 import { TranscriptionProvider, type ProviderCapabilities } from "../provider.js";
 import { TranscriptJson, TranscriptionOptions } from "../types.js";
-import { ProviderRefusalError, sanitizeProviderErrorText, type ProviderRefusalKind } from "../errors.js";
+import {
+  logUnclassifiedRefusal,
+  ProviderRefusalError,
+  sanitizeProviderErrorText,
+  type ProviderRefusalKind,
+} from "../errors.js";
 import { fetchWithTimeout, isAbortError } from "../../utils/fetch.js";
 
 const DEFAULT_MAX_AUDIO_BYTES = 25 * 1024 * 1024;
@@ -28,33 +33,34 @@ type OpenAiWhisperResponse = {
   segments?: OpenAiSegment[];
 };
 
-const OPENAI_BILLING_CODES = new Set([
-  "insufficient_quota",
+// 429 codes the error-codes guide documents as billing, spend or quota refusals
+// ("Retrying billing, spend, or quota errors won't restore API access").
+const OPENAI_DOCUMENTED_QUOTA_CODES = new Set([
   "credit_balance_exhausted",
-  "billing_hard_limit_reached",
   "organization_spend_limit_exceeded",
   "project_spend_limit_exceeded",
   "organization_usage_limit_exceeded",
 ]);
+const OPENAI_UNSUPPORTED_REGION = /country, region, or territory not supported/i;
 
 /**
  * /v1/audio/transcriptions answers synchronously, so an HTTP error status means
- * the audio was not accepted as work. Documented shapes
- * (developers.openai.com/api/docs/guides/error-codes): 401 invalid
- * authentication, 403 unsupported country/region, and 429 billing refusals whose
- * body carries error.type "insufficient_quota" or a billing error.code. A plain
- * 429 rate limit, 5xx and everything else stay unclassified on purpose. 402 is
- * not documented by OpenAI; it is treated as a payment refusal by HTTP meaning.
+ * the audio was not accepted as work. Only shapes documented in
+ * developers.openai.com/api/docs/guides/error-codes are definitive: every 401
+ * (invalid authentication), the 403 "Country, region, or territory not
+ * supported", and a 429 whose body carries error.type "insufficient_quota" or a
+ * documented quota error.code. Everything else is unclassified on purpose: a
+ * 402 (OpenAI documents none), any other 403, a plain 429 rate limit, 5xx.
  */
 export function classifyOpenAiRefusal(status: number, body: string): ProviderRefusalKind | undefined {
-  if (status === 401 || status === 403) return "rejected";
-  if (status === 402) return "exhausted";
+  if (status === 401) return "rejected";
+  if (status === 403) return OPENAI_UNSUPPORTED_REGION.test(body) ? "rejected" : undefined;
   if (status !== 429) return undefined;
   try {
     const error = (JSON.parse(body) as { error?: { type?: unknown; code?: unknown } }).error;
     const type = typeof error?.type === "string" ? error.type : "";
     const code = typeof error?.code === "string" ? error.code : "";
-    return type === "insufficient_quota" || OPENAI_BILLING_CODES.has(code) ? "exhausted" : undefined;
+    return type === "insufficient_quota" || OPENAI_DOCUMENTED_QUOTA_CODES.has(code) ? "exhausted" : undefined;
   } catch {
     return undefined;
   }
@@ -142,6 +148,7 @@ export class OpenAiWhisperProvider implements TranscriptionProvider {
       if (kind) {
         throw new ProviderRefusalError({ provider: "openai_whisper", kind, status: res.status }, message);
       }
+      if (res.status === 402 || res.status === 403) logUnclassifiedRefusal("OpenAI", res.status);
       throw new Error(message);
     }
 

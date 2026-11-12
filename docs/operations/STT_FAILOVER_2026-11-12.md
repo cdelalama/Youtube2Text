@@ -1,9 +1,11 @@
 # Automatic key and account failover with operator notice - 2026-11-12
 
 State: source prepared on task branch `work/stt-failover-20261112`, candidate
-0.43.0. NOT deployed: the NAS still runs 0.42.2. Independent review by a
-different model family is still pending. The switch is off by default, so
-installing this release changes nothing until Carlos turns it on.
+0.43.1. NOT deployed: the NAS still runs 0.42.2. The independent review of
+0.43.0 (Codex) said do not merge or deploy yet, with one blocker and six
+should-fix items; 0.43.1 answers all seven and waits for re-review (see
+`docs/llm/REVIEWS.md`). The switch is off by default, so installing this
+release changes nothing until Carlos turns it on.
 Decision: `docs/llm/DECISIONS.md` D-029. Operator guide (Spanish):
 `STT_ACCOUNTS_OPERATOR_GUIDE_2026-10-24.md`, section "Cambio automático".
 
@@ -39,12 +41,15 @@ In Settings > Transcription accounts:
   Only listed, enabled accounts can ever receive moved work.
 - Each account's keys in order (current key first, then the order he sets).
 - Each key shows its state: ok, rejected by the service, or out of credit/quota,
-  with the time since when and the HTTP status that caused it.
+  with the time since when and the HTTP status that caused it. The mark stays
+  until he clears it; a completed transcription never clears it.
 - "Marcar como disponible" puts a key back in use after he topped up or fixed it.
 - A notice for every automatic change, kept until he dismisses it, naming the
   account and key (last four characters) that stopped, why, and what took over.
-  When the service changed it says so and that quality may differ. The same
-  notice is shown as a banner on every screen of the console.
+  When the service changed it says so and that quality may differ. Dismissing a
+  notice never silences the next change, even an identical one. The notice is
+  shown as a banner on every screen of the console, Settings included, and the
+  open console re-reads notices and key state every 20 seconds.
 - The line "Nuevos trabajos" shows which account is really in use.
 
 ## The safety rule
@@ -60,26 +65,36 @@ explains why generic failover after an ambiguous billable submission is unsafe.
 
 The rule is enforced in three places:
 
-- Adapters classify. Only they know the phase. They attach a typed
-  `DefinitiveRefusal` (`src/transcription/errors.ts`) and nothing else does.
-- The pipeline (`transcribePiece` in `src/pipeline/run.ts`) reacts only to that
-  typed refusal and rethrows every other error untouched.
-- The private store (`recordRefusal` in `src/credentials/store.ts`) decides
-  whether a move is allowed (switch, list, health) and writes the audit event
-  and the notice in the same transaction as the move.
+- Adapters classify. Only they know the phase. They throw a typed
+  `ProviderRefusalError` (`src/transcription/errors.ts`) only for shapes the
+  provider documents; nothing else may infer a refusal.
+- The pipeline (`transcribePiece` in `src/pipeline/sttSession.ts`) reacts only
+  to that typed refusal and rethrows every other error untouched.
+- The private store (`recordRefusal` in `src/credentials/store.ts`) records the
+  key's health, then decides whether the work may move (switch, list, health,
+  and whether part of the recording was already accepted) BEFORE rewriting any
+  pin, and writes the audit event and the notice in the same transaction.
+
+Each attempt is bound to its own pin. A recording keeps the key it started with
+until its own request is refused, even if another recording of the same run has
+already moved the run. Its availability guard (checked before every request,
+retry and poll) and local revocation act on that exact key: revoking a key
+cancels a run while any of its recordings still owns that key, between pieces
+too, whatever the run's current key is.
 
 ## Provider error shapes
 
-Verified means: read in the adapter code and in the provider's official
-documentation on 2026-11-12. No live provider was called; no real refusal was
-observed. Assumed means: not documented for that endpoint, accepted on HTTP
-meaning or on wording this adapter already recognised.
+Only shapes supported by the provider's own documentation move work. Everything
+else is unclassified: the job fails exactly as before, and the adapter logs the
+HTTP status code only (never the body) so the reason is visible. Documentation
+was read on 2026-11-12 through a fetch tool that summarises each page; no live
+provider was called and no real refusal was observed.
 
-| Provider | Where work is accepted | Rejected | Exhausted | Deliberately not a refusal |
+| Provider | Where work is accepted | Rejected | Exhausted | Unclassified on purpose |
 | --- | --- | --- | --- | --- |
-| Deepgram | Synchronous `POST /v1/listen`; a 4xx means no work | 401 `INVALID_AUTH` / `INSUFFICIENT_PERMISSIONS`, 403 `INSUFFICIENT_PERMISSIONS` (verified) | 402 `ASR_PAYMENT_REQUIRED` (verified) | 429, 5xx, timeout, network |
-| OpenAI | Synchronous `POST /v1/audio/transcriptions` | 401, 403 unsupported country/region (verified) | 429 with `error.type` `insufficient_quota` or a billing `error.code` (verified); 402 (assumed, undocumented) | 429 rate limit, 5xx, timeout, network |
-| AssemblyAI | `POST /v2/transcript` answering 2xx. Upload and create are before acceptance; polling is after | 401 on upload or create (verified) | 400 "Your current account balance is negative" on create (verified); 402 and the older credit wordings with a 400/402 status (assumed) | 403 (documented as a request-rate limit), 429, 5xx, timeout, network, every polling error, a job that ends in `status: error` |
+| Deepgram | Synchronous `POST /v1/listen`; a 4xx means no work | 401 `INVALID_AUTH` / `INSUFFICIENT_PERMISSIONS`; 403 `INSUFFICIENT_PERMISSIONS` | 402 `ASR_PAYMENT_REQUIRED` | 429, 5xx, timeout, network, a failure after a 2xx |
+| OpenAI | Synchronous `POST /v1/audio/transcriptions` | every 401; 403 only with the documented text "Country, region, or territory not supported" | 429 with `error.type` `insufficient_quota` or `error.code` `credit_balance_exhausted`, `organization_spend_limit_exceeded`, `project_spend_limit_exceeded`, `organization_usage_limit_exceeded` | 402 (OpenAI documents none), any other 403, a plain 429 rate limit, 5xx, timeout, network, a failure after a 2xx |
+| AssemblyAI | `POST /v2/transcript` answering 2xx. Upload and create are before acceptance; polling is after | 401 "Authentication error, API token missing/invalid" on upload or create | 400 "Your current account balance is negative" on create only | 402 and this adapter's older credit wordings (undocumented for this API), 403, 429, 5xx, timeout, network, a create call with no answer, every polling error, a job that ends in `status: error` |
 
 Sources: <https://developers.deepgram.com/docs/errors>,
 <https://developers.openai.com/api/docs/guides/error-codes>,
@@ -88,18 +103,18 @@ Sources: <https://developers.deepgram.com/docs/errors>,
 
 Notes:
 
-- OpenAI: `error.type` `insufficient_quota` and the `error.code` values
-  `credit_balance_exhausted`, `organization_spend_limit_exceeded`,
-  `project_spend_limit_exceeded` and `organization_usage_limit_exceeded` are
-  documented. `insufficient_quota` and `billing_hard_limit_reached` as
-  `error.code` are older shapes and are assumed.
+- AssemblyAI 403 does not move work because it is ambiguous, not because it is
+  a rate limit: the troubleshooting guide describes 403 as no access to the
+  requested resource and 429 as too many requests, while the errors page also
+  ties 403 to a request-volume limit and to "Cannot access uploaded file".
+- AssemblyAI's older credit wording match (`InsufficientCreditsError`) is
+  unchanged: it still stops the run as before, and it never moves work.
+- OpenAI `organization_usage_limit_exceeded` is documented as a usage limit
+  assigned by OpenAI rather than as billing; it is kept because the same page
+  groups it with "billing, spend, or quota errors" that a retry cannot fix.
 - A 403 is a permission answer, not always a bad key: Deepgram uses it when the
   project lacks access to the model, OpenAI for an unsupported region. Moving is
   still safe for billing, and the notice shows the HTTP status.
-- AssemblyAI's existing loose credit wording match is unchanged. It still stops
-  the run as before; it only becomes a refusal with a 400/402 status before
-  acceptance. The documented 400 balance message was not recognised before and
-  with the switch off it still fails as an ordinary 400.
 
 ## Order of attempts
 
@@ -109,7 +124,14 @@ Notes:
 A candidate must be an enabled account with a key that is not locally revoked
 and not marked rejected or exhausted. If nothing is left the job fails closed:
 "Automatic account change stopped: ... no other enabled, healthy key or account
-is left", and he gets a notice.
+is left", and he gets a notice. A key refused for a recording is never tried
+again for that recording; there is no attempt counter, so every definitive
+refusal is recorded and every remaining candidate is tried.
+
+Key health is latched. A rejected or exhausted mark is cleared only by the
+operator: "Marcar como disponible", or a successful "Comprobar acceso" for a
+rejected key (an access check never proves credit). A completed transcription
+never clears it, because that request may have been accepted before the refusal.
 
 The account he selected stays his selection. When its key is marked unhealthy
 and the switch is on, new work goes to the next candidate; when he marks the key
@@ -126,7 +148,9 @@ definitively refuses that job's own request, and that move writes an audit event
 naming the job, updates its recorded selection (and its intake's, so a restart
 does not replay the refused key), and raises the notice. Other queued jobs pinned
 to the same key are left alone until their own request is refused. Changing the
-switch, the list or the key order never touches accepted work.
+switch, the list or the key order never touches accepted work. Two jobs refused
+at the same moment each move once to the same next key; a second recording of a
+run that already moved follows that move without a second record.
 
 ## Usage caps and cost
 
@@ -145,9 +169,15 @@ A recording larger than the service's limit is sent in pieces. If a piece is
 refused, the next key of the same service continues with that piece; pieces
 already accepted are kept. A change to another service is made only when no
 piece of that recording was accepted yet; the recording is then planned again for
-the new service's limits. If part was already accepted, the recording fails with
-a clear reason instead of paying twice or mixing two services in one transcript.
-New work still moves, and he is told.
+the new service's limits.
+
+If part was already accepted and the next candidate is another service, the
+recording stops. This is decided before anything is moved: the refusal is
+recorded, a distinct `recording_stopped` event is written, the recording keeps
+its real provider pin, and the notice says that the recording stopped, not that
+another account took over. It is not paid twice and two services are never mixed
+in one transcript. New work is a separate matter: it moves, and that move gets
+its own notice.
 
 ## Telling the operator
 
@@ -155,10 +185,11 @@ New work still moves, and he is told.
    reason, HTTP status, from and to (provider, account, key identifiers), and
    whether the service changed. The existing `audit` table also records health
    changes, moves, the switch and order changes. No key value is stored.
-2. Notice in the web UI, until dismissed. Repeats of the same pending change
-   share one notice with a count. New work that only follows a change he already
-   dismissed is audited but does not raise the same notice again; a key that
-   fails again after being re-enabled does.
+2. Notice in the web UI, until dismissed. Every automatic change produces a
+   pending notice: repeats of the same pending change share one notice with a
+   count, and a notice he dismissed never silences the next change. There are
+   three kinds: another key or account took over; nothing was left; a partly
+   transcribed recording stopped.
 3. The transcript. The immutable record already has `transcription.provider`
    and `transcription.model`; they now name the service that actually did the
    work, and `/v1/transcripts` exposes them as before. Transcript Ready v1 has no
@@ -225,8 +256,8 @@ this repository, none of it done:
    contract to accept the fourth check and its three extra fields, adds the rule
    and message text, and delivers through its existing Telegram sender. This
    needs Sentinel's own review and guarded installation.
-4. Order: deploy Media2Text 0.43.0 first (the default route is unchanged), then
-   change Sentinel. No Media2Text setting has to change afterwards.
+4. Order: deploy Media2Text first (the default route is unchanged), then change
+   Sentinel. No Media2Text setting has to change afterwards.
 5. Optional, Home Infra: point the Portal status URL at the opt-in form if the
    Portal should list the check by name. It already shows the degraded aggregate.
 
@@ -236,9 +267,9 @@ Recovery is natural: when he dismisses the notices the check returns to ok.
 
 Nothing below was done. The NAS runs 0.42.2.
 
-1. Independent review of this branch by a different model family (the
-   requesting session obtains it from Codex) and merge to `main`.
-2. Build and publish immutable 0.43.0 API and web images and deploy with
+1. Re-review of 0.43.1 by a different model family (the requesting session
+   obtains it from Codex), then merge to `main`.
+2. Build and publish immutable 0.43.1 API and web images and deploy with
    `docs/operations/DEPLOY_PLAYBOOK.md`. No new secret, environment variable,
    port or mount. The private database gains five tables on first start
    (`CREATE TABLE IF NOT EXISTS`); 0.42.2 ignores them, so rollback is safe.
@@ -253,8 +284,12 @@ Nothing below was done. The NAS runs 0.42.2.
 - A refused request still reaches the provider once per job pinned to that key.
   With AssemblyAI the audio is uploaded before the create call is refused.
 - An access check cannot prove credit, so it never clears "out of credit"; only
-  "Marcar como disponible" or a completed request does.
-- Key health is recorded even with the switch off, as information only.
+  "Marcar como disponible" does. Marks never clear by themselves, so a key he
+  topped up stays skipped until he marks it available.
+- Key health is recorded even with the switch off, as information only; the
+  screen says so and warns before the switch is turned on with marked keys.
+- A provider refusal in an undocumented shape (for example an OpenAI or
+  AssemblyAI 402) does not move work: the job fails as before.
 - The notice count can overstate by one if an intake admission is rolled back.
 - Audit, event and notice rows have no retention policy, like the existing
   audit rows.
@@ -264,12 +299,18 @@ Nothing below was done. The NAS runs 0.42.2.
 
 ## Validation
 
-`tests/sttFailover.test.ts`, 17 tests, all with local fakes: same-account next
+`tests/sttFailover.test.ts`, 22 tests, all with local fakes: same-account next
 key; next account after every key; cross-service move and transcript provider;
 no move on timeout, network error, 5xx, rate limit and post-acceptance failures;
-switch off identical to an unpinned run; accepted work not re-pinned silently;
-caps enforced; no secret in audit, notices, events, snapshots, logs or the
-private database; unhealthy keys skipped until re-enabled or re-checked; split
-recordings; typed errors per provider; fixed default status shape and the opt-in
-check; account API actions. Exact results for this candidate are in
+no move after a 2xx or after the upload; switch off identical to an unpinned
+run; accepted work not re-pinned silently; each attempt guarded and revocable by
+its own pin while a sibling recording moves the run; two jobs refused at once;
+an older success not erasing a newer refusal; a partly transcribed recording
+refused on its second piece (same service continues, other service stops with
+the right notice and pin); every refusal recorded with no attempt counter; caps
+enforced; no secret in audit, notices, events, snapshots, logs or the private
+database; unhealthy keys skipped until re-enabled or re-checked; a dismissed
+notice not silencing the next change; documented-only provider shapes and
+status-only logs for the rest; fixed default status shape and the opt-in check;
+account API actions. Exact results for this candidate are in
 `docs/llm/HISTORY.md`.

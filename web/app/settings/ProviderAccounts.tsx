@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useId, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from "react";
 
 type Provider = "assemblyai" | "deepgram" | "openai_whisper";
 type Check = { state: "accepted" | "rejected" | "permission_unknown" | "unavailable"; checkedAt: string };
@@ -9,7 +9,7 @@ type Account = { id: string; provider: Provider; label: string; enabled: boolean
   currentCredentialId: string; keyOrder: string[];
   keys: { id: string; hint: string; revoked: boolean; createdAt: string; access: Check | null; health: Health }[] };
 type Party = { accountId: string; label: string; provider: Provider; keyHint: string };
-export type FailoverNotice = { id: string; kind: "moved" | "blocked"; reason: "rejected" | "exhausted"; status: number | null;
+export type FailoverNotice = { id: string; kind: "moved" | "blocked" | "stopped"; reason: "rejected" | "exhausted"; status: number | null;
   from: Party; to: Party | null; serviceChanged: boolean; count: number; firstAt: string; lastAt: string };
 type Failover = { enabled: boolean; order: string[]; effective: { provider: Provider; accountId: string; credentialId: string } | null;
   blocked: boolean; unhealthyKeys: number; notices: FailoverNotice[] };
@@ -18,6 +18,8 @@ type Snapshot = { configured: boolean; activeProvider: Provider; selectedAccount
 type Action = Record<string, string | boolean | number | string[]>;
 const names: Record<Provider, string> = { assemblyai: "AssemblyAI", deepgram: "Deepgram", openai_whisper: "OpenAI Whisper" };
 type Translate = (es: string, en: string) => string;
+/** How often an open console re-reads accounts and notices. */
+export const REFRESH_MS = 20_000;
 
 /** Tolerates an API that predates automatic failover, so a mixed rollout cannot break the screen. */
 function normalize(raw: Snapshot): Snapshot {
@@ -55,6 +57,11 @@ export function failoverNoticeText(notice: FailoverNotice, t: Translate): string
       " No other key or account in your list is available: jobs fail until you add credit, add a key or mark one as available.") + when;
   }
   const to = notice.to;
+  if (notice.kind === "stopped") {
+    // Nothing took over for that recording: say that it stopped, and why.
+    return stopped + t(` Una grabación que ya estaba transcrita en parte se ha detenido y no se ha completado: la siguiente cuenta de tu lista, «${to.label}», es de otro servicio (${names[to.provider]}), y no se mezclan dos servicios en una misma transcripción ni se paga dos veces. Vuelve a lanzar esa grabación para transcribirla entera con ${names[to.provider]}.`,
+      ` A recording that was already partly transcribed has stopped and was not completed: the next account in your list, "${to.label}", belongs to another service (${names[to.provider]}), and two services are never mixed in one transcript nor paid twice. Run that recording again to transcribe it entirely with ${names[to.provider]}.`) + when;
+  }
   const takeover = to.accountId === from.accountId
     ? t(` Ahora se usa la clave ${to.keyHint} de la misma cuenta.`, ` Key ${to.keyHint} of the same account is used now.`)
     : t(` Ahora se usa la cuenta «${to.label}» (${names[to.provider]}), clave ${to.keyHint}.`,
@@ -98,6 +105,16 @@ export default function ProviderAccounts({ lang, settingsRevision, onProviderSel
     } catch { setError(lang === "es" ? "No se pudieron cargar las cuentas. Reintenta la consulta." : "Could not load accounts. Retry the request."); }
   }, [lang]);
   useEffect(() => { void load(); }, [load, settingsRevision]);
+  // Jobs and admissions change key state and notices without any action here,
+  // so the open screen is refreshed periodically (never over a pending action).
+  const busyRef = useRef(false);
+  busyRef.current = busy;
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (!busyRef.current && document.visibilityState === "visible") void load();
+    }, REFRESH_MS);
+    return () => window.clearInterval(timer);
+  }, [load]);
   useEffect(() => { if (data) onNoticesChanged?.(data.failover.notices); }, [data, onNoticesChanged]);
 
   function failure(code: string) {
@@ -176,7 +193,7 @@ export default function ProviderAccounts({ lang, settingsRevision, onProviderSel
       : !data.configured ? <p>{t("La gestión de cuentas está pendiente de activar en el servidor. Las claves existentes siguen disponibles.", "Account management is awaiting server activation. Existing keys remain available.")}</p>
       : <>
         {data.failover.notices.map((notice) => <div className="m2t-account-notice" role="alert" key={notice.id}>
-          <strong>{notice.to ? t("Cambio automático de cuenta", "Automatic account change") : t("Sin cuentas disponibles", "No accounts available")}</strong>
+          <strong>{notice.kind === "stopped" ? t("Grabación detenida", "Recording stopped") : notice.to ? t("Cambio automático de cuenta", "Automatic account change") : t("Sin cuentas disponibles", "No accounts available")}</strong>
           <p>{failoverNoticeText(notice, t)}</p>
           <button disabled={busy} onClick={() => void perform({ action: "dismiss_notice", noticeId: notice.id }, t("Aviso descartado.", "Notice dismissed."))}>{t("Descartar aviso", "Dismiss notice")}</button>
         </div>)}
@@ -258,8 +275,13 @@ function FailoverPanel({ data, t, busy, perform }: { data: Snapshot; t: Translat
     </label>
     <p>{t("Solo se cambia cuando el servicio rechaza la clave o responde que no queda saldo o cuota antes de aceptar el audio. Con un fallo de red, una espera agotada o un error del servicio, el trabajo falla como hasta ahora, para no pagar dos veces.",
       "A change happens only when the service rejects the key or answers that no credit or quota is left before accepting the audio. On a network failure, a timeout or a service error the job fails as before, to avoid paying twice.")}</p>
-    <p>{t("Primero se prueba otra clave de la misma cuenta. Después, las cuentas de esta lista, de arriba abajo. Cada cambio te lo avisa esta pantalla; si cambia el servicio, la calidad puede ser distinta. Los límites de gasto siguen vigentes.",
-      "Another key of the same account is tried first. Then the accounts in this list, top to bottom. This screen tells you about every change; if the service changes, quality may differ. Spending limits still apply.")}</p>
+    <p>{t("Primero se prueba otra clave de la misma cuenta. Después, las cuentas de esta lista, de arriba abajo. Cada cambio te lo avisa la aplicación, también si ya descartaste un aviso anterior igual; si cambia el servicio, la calidad puede ser distinta. Los límites de gasto siguen vigentes.",
+      "Another key of the same account is tried first. Then the accounts in this list, top to bottom. The application tells you about every change, even if you dismissed an identical earlier notice; if the service changes, quality may differ. Spending limits still apply.")}</p>
+    {data.failover.unhealthyKeys > 0 && <p className="m2t-account-error">{enabled
+      ? t(`Hay ${data.failover.unhealthyKeys} clave(s) marcadas como rechazadas o sin saldo: no se usan para trabajos nuevos hasta que las marques como disponibles. Una transcripción completada no borra esa marca.`,
+        `${data.failover.unhealthyKeys} key(s) are marked rejected or out of credit: they are not used for new jobs until you mark them as available. A completed transcription does not clear that mark.`)
+      : t(`Hay ${data.failover.unhealthyKeys} clave(s) marcadas como rechazadas o sin saldo. Con el interruptor desactivado se siguen usando; si lo activas, dejarán de usarse para trabajos nuevos hasta que las marques como disponibles.`,
+        `${data.failover.unhealthyKeys} key(s) are marked rejected or out of credit. With the switch off they are still used; if you turn it on they stop being used for new jobs until you mark them as available.`)}</p>}
     {enabled && !data.selectedAccountId && <p className="m2t-account-error">{t("Ahora se usa la configuración existente, que no participa en el cambio automático. Elige una cuenta guardada aquí para que funcione.",
       "The existing configuration is in use and does not take part in automatic change. Select an account saved here for it to work.")}</p>}
     {listed.length === 0 ? <p>{t("La lista está vacía: solo se probarían otras claves de la cuenta elegida.", "The list is empty: only other keys of the selected account would be tried.")}</p>

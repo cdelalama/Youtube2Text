@@ -35,10 +35,10 @@ ficticias. Conserva la evidencia de instalación y no debe usarse para transcrib
 
 ## Cambio automático de clave o cuenta
 
-**Todavía no está instalado.** Llega con la versión 0.43.0, que está preparada
-en el código y pendiente de revisión independiente y de instalación. El NAS
-sigue con la 0.42.2, donde esta sección no aparece. Cuando se instale, nada
-cambia hasta que actives el interruptor: viene desactivado.
+**Todavía no está instalado.** Llega con la versión 0.43.1, que está preparada
+en el código y pendiente de una segunda revisión independiente y de
+instalación. El NAS sigue con la 0.42.2, donde esta sección no aparece. Cuando
+se instale, nada cambia hasta que actives el interruptor: viene desactivado.
 
 Qué hace: si el servicio de transcripción rechaza una clave o responde que no
 queda saldo o cuota, Media2Text prueba la siguiente clave de la misma cuenta y,
@@ -64,7 +64,9 @@ clave o cuenta**:
 Cuándo cambia y cuándo no:
 
 - Cambia solo si el servicio rechaza la petición **antes de aceptar el audio**:
-  clave rechazada o sin permiso, o sin saldo o cuota.
+  clave rechazada o sin permiso, o sin saldo o cuota. Solo cuentan las
+  respuestas que cada servicio documenta; cualquier otra respuesta rara hace
+  fallar el trabajo como hasta ahora.
 - **No** cambia si hay un corte de red, una espera agotada, un error del
   servicio o cualquier fallo después de que el audio se haya aceptado. En esos
   casos el trabajo falla como hasta ahora, porque el primer servicio aún podría
@@ -74,8 +76,12 @@ Cuándo cambia y cuándo no:
 - Con las **claves de la configuración existente** (las de Doppler) no hay
   cambio automático. Para que funcione, elige una cuenta guardada en esta pantalla.
 
-Qué significa el aviso. Aparece en la parte superior de todas las pantallas y
-en Ajustes, y se queda hasta que pulses **Descartar aviso**. Dice:
+Qué significa el aviso. Aparece en la parte superior de todas las pantallas,
+también en Ajustes, y se queda hasta que pulses **Descartar aviso** en Ajustes.
+La pantalla se actualiza sola cada 20 segundos. Recibes un aviso **cada vez**
+que hay un cambio automático: descartar uno no silencia el siguiente, aunque
+sea igual; mientras no lo descartes, las repeticiones se suman en el mismo
+aviso con un contador. Dice:
 
 - qué cuenta y qué clave (sus cuatro últimos caracteres) han dejado de usarse;
 - por qué: **sin saldo o cuota** o **clave rechazada**, con el código de respuesta;
@@ -87,10 +93,18 @@ Si el aviso dice que no queda ninguna clave o cuenta disponible, los trabajos
 fallan hasta que hagas una de estas tres cosas: recargar saldo, añadir una
 clave nueva o marcar una clave como disponible.
 
+Si el aviso se titula **Grabación detenida**, una grabación larga que ya estaba
+transcrita en parte se ha parado sin completarse: la siguiente cuenta de tu
+lista es de otro servicio, y Media2Text no mezcla dos servicios en una misma
+transcripción ni paga dos veces la parte ya hecha. Ninguna cuenta ha tomado el
+relevo para esa grabación. Vuelve a lanzarla y se transcribirá entera con el
+servicio siguiente. Los trabajos nuevos sí cambian de cuenta, con su propio aviso.
+
 Estado de cada clave. Junto a cada clave verás **Sin saldo o cuota desde…** o
 **Rechazada por el servicio desde…** cuando el servicio lo haya dicho. Con el
-interruptor activado, esa clave no se usa para trabajos nuevos. Para volver a
-usarla:
+interruptor activado, esa clave no se usa para trabajos nuevos. La marca no se
+quita sola: una transcripción que termine bien no la borra, porque pudo
+aceptarse antes del rechazo. Solo la quitas tú. Para volver a usarla:
 
 - Sin saldo: recarga en la web del servicio y pulsa **Marcar como disponible**.
   **Comprobar acceso** no sirve para esto, porque no puede confirmar el saldo.

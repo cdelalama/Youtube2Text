@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { components } from "../lib/apiTypes.gen";
-import ProviderAccounts, { failoverNoticeText, type FailoverNotice } from "./settings/ProviderAccounts";
+import ProviderAccounts, { failoverNoticeText, REFRESH_MS, type FailoverNotice } from "./settings/ProviderAccounts";
 
 type RunRecord = components["schemas"]["RunRecord"];
 type ChannelInfo = components["schemas"]["ChannelInfo"];
@@ -339,6 +339,7 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
   const [uploadFile, setUploadFile] = useState<File | undefined>();
   const [toast, setToast] = useState<string | undefined>();
   const [failoverNotices, setFailoverNotices] = useState<FailoverNotice[]>([]);
+  const lastNoticeRefresh = useRef(0);
   const [busy, setBusy] = useState<string | undefined>();
   const [settingsDraft, setSettingsDraft] = useState<Record<string, string>>({});
   const [watchDraftUrl, setWatchDraftUrl] = useState("");
@@ -370,6 +371,7 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
 
   // Automatic account changes stay visible on every screen until dismissed in Settings.
   async function refreshFailoverNotices() {
+    lastNoticeRefresh.current = Date.now();
     const accounts = await maybeJson<{ failover?: { notices?: FailoverNotice[] } }>("/api/provider-accounts");
     if (accounts) setFailoverNotices(accounts.failover?.notices ?? []);
   }
@@ -413,6 +415,15 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
     void refreshAll();
   }, []);
 
+  // A notice can appear without any run update (for example a refused intake
+  // admission), so it is also re-read on a timer while the console is visible.
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refreshFailoverNotices();
+    }, REFRESH_MS);
+    return () => window.clearInterval(timer);
+  }, []);
+
   useEffect(() => {
     const applyHash = () => {
       const next = screenFromLocation();
@@ -433,7 +444,8 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
       try {
         const parsed = JSON.parse(event.data) as { run?: RunRecord };
         if (!parsed.run?.runId) return;
-        if (parsed.run.status === "done" || parsed.run.status === "error") void refreshFailoverNotices();
+        // Run activity is when notices change most; the timer below covers the rest.
+        if (Date.now() - lastNoticeRefresh.current > 3_000) void refreshFailoverNotices();
         setRuns((prev) => {
           const idx = prev.findIndex((r) => r.runId === parsed.run?.runId);
           const next = idx >= 0 ? [...prev.slice(0, idx), parsed.run!, ...prev.slice(idx + 1)] : [parsed.run!, ...prev];
@@ -670,13 +682,15 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
           </div>
         </header>
         <main className="m2t-content">
-          {failoverNotices.length > 0 && screen !== "settings" ? (
+          {failoverNotices.length > 0 ? (
             <div role="alert">
               <button className="m2t-failover-banner" onClick={() => go("settings")}>
-                <strong>{t(lang, "Aviso: cambio automático de cuenta de transcripción.", "Notice: automatic transcription account change.")}</strong>{" "}
+                <strong>{t(lang, "Aviso de las cuentas de transcripción.", "Transcription accounts notice.")}</strong>{" "}
                 {failoverNoticeText(failoverNotices[0]!, (es, en) => t(lang, es, en))}
                 {failoverNotices.length > 1 ? t(lang, ` Hay ${failoverNotices.length - 1} aviso(s) más.`, ` There are ${failoverNotices.length - 1} more notice(s).`) : ""}{" "}
-                {t(lang, "Abre Ajustes para revisarlo y descartarlo.", "Open Settings to review and dismiss it.")}
+                {screen === "settings"
+                  ? t(lang, "Descártalo más abajo, en Cuentas de transcripción.", "Dismiss it below, under Transcription accounts.")
+                  : t(lang, "Abre Ajustes para revisarlo y descartarlo.", "Open Settings to review and dismiss it.")}
               </button>
             </div>
           ) : null}

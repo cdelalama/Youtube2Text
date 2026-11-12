@@ -1,8 +1,8 @@
-## Automatic key and account failover prepared - 2026-11-12
+## Automatic key and account failover: review fixes prepared - 2026-11-12
 
 Last Updated: 2026-11-12 - Claude (Fable 5.2).
 
-- Version: 0.43.0 candidate in source on task branch work/stt-failover-20261112. Not deployed: the NAS still runs 0.42.2 from 8c3f0a542691144a80c0c1819dbf4d350b36f43f.
+- Version: 0.43.1 candidate in source on task branch work/stt-failover-20261112. Not deployed: the NAS still runs 0.42.2 from 8c3f0a542691144a80c0c1819dbf4d350b36f43f.
 
 Carlos decided on 2026-11-12 (D-029) that Media2Text must move by itself when a
 key is rejected or out of credit: first to the next key of the same account,
@@ -12,46 +12,53 @@ are quoted in docs/operations/STT_FAILOVER_2026-11-12.md. This supersedes only t
 D-028 exclusion of automatic account failover.
 
 What Carlos can use today: nothing new. The installed 0.42.2 account screen
-works as before. The 0.43.0 source is prepared and published on the task branch
-only. Independent review by a different model family is pending; the requesting
-Cortex session obtains it from Codex. The author is Claude, so no Claude review
-counts as independent.
+works as before. Nothing of this work is deployed.
 
-What 0.43.0 adds once installed, all inside Settings > Transcription accounts:
-one switch (off by default, so installing changes nothing), an ordered list of
-the accounts allowed to take over, the order of each account's keys, the state
-of every key with the time since when, a notice for every automatic change kept
-until dismissed and shown on every screen, and a plain sentence when the
+Review state. Candidate 0.43.0 was reviewed by Codex (a different model family)
+through the requesting Cortex session. Verdict: do not merge or deploy yet; one
+blocker and six should-fix. Candidate 0.43.1 answers all seven; the findings and
+each fix are in docs/llm/REVIEWS.md. 0.43.1 has not been re-reviewed, so the
+gate stays closed.
+
+What the release adds once installed, all inside Settings > Transcription
+accounts: one switch (off by default, so installing changes nothing), an ordered
+list of the accounts allowed to take over, the order of each account's keys, the
+state of every key with the time since when, a notice for every automatic change
+kept until dismissed and shown on every screen, and a plain sentence when the
 service changed. Work moves only when the provider definitively refused the
-request before accepting the audio; a timeout, network error, 5xx, rate limit
-or any later failure fails the job as before. Usage caps are unchanged and apply
-to the service that does the work. Transcript Ready v1 is unchanged.
+request before accepting the audio, in a shape that provider documents; a
+timeout, network error, 5xx, rate limit or any later failure fails the job as
+before. A key marked rejected or out of credit stays marked until he clears it.
+A recording that is partly transcribed never changes service; it stops and says
+so. Usage caps are unchanged and apply to the service that does the work.
+Transcript Ready v1 is unchanged.
 
-Not done: deployment; a browser exercise of the new screen; the immediate phone
-message. The default public status response keeps its exact shape because the
-deployed Sentinel probe pins it; the named check is opt-in. A Telegram message
-needs separate Home Infra and Sentinel work and Carlos's choice to receive it.
-No paid transcription, budget increase, secret, login or runtime change occurred.
+Not done: re-review of 0.43.1; deployment; a browser exercise of the new screen;
+the immediate phone message. The default public status response keeps its exact
+shape because the deployed Sentinel probe pins it; the named check is opt-in. A
+Telegram message needs separate Home Infra and Sentinel work and Carlos's choice
+to receive it. No paid transcription, budget increase, secret, login or runtime
+change occurred.
 
 ### Open work - next concrete step
 
-The requesting session sends branch work/stt-failover-20261112 to Codex for
-independent review of docs/operations/STT_FAILOVER_2026-11-12.md and the code,
-then merges and deploys 0.43.0 with docs/operations/DEPLOY_PLAYBOOK.md. After
-that Carlos opens Settings > Cuentas de transcripcion, adds his accounts to the
-list, orders them and turns on the switch; he should see the switch stay on and
-the list in his order. Earlier work keeps its own scope and priority: the
-account delivery witness, M1-M3 and the long-recording economics.
+The requesting session sends branch work/stt-failover-20261112 back to Codex for
+re-review of 0.43.1 against docs/llm/REVIEWS.md, then merges and deploys it with
+docs/operations/DEPLOY_PLAYBOOK.md. After that Carlos opens Settings > Cuentas de
+transcripcion, adds his accounts to the list, orders them and turns on the
+switch; he should see the switch stay on and the list in his order. Earlier work
+keeps its own scope and priority: the account delivery witness, M1-M3 and the
+long-recording economics.
 
 ### Trace Anchor
 
 - Role: executor
-- Sent: 2026-11-12 02:05:32 CET (01:05:32 UTC)
-- Subject: D-029 automatic key and account failover with operator notice, source 0.43.0
-- Resulting state: branch work/stt-failover-20261112; version=0.43.0; gate=independent-review; not deployed
+- Sent: 2026-11-12 15:17:12 CET (14:17:12 UTC)
+- Subject: D-029 automatic key and account failover, review fixes as source 0.43.1
+- Resulting state: branch work/stt-failover-20261112; version=0.43.1; gate=independent re-review; not deployed
 - Repo state: managed task worktree from published baseline 139b0c5aac1d4d8fe0e6c8c02b5526b27ca7633a; primary and peer checkouts untouched
-- Validation: npm test 265 of 265 pass, 0 fail (248 existing plus 17 new in tests/sttFailover.test.ts, all with local fakes); backend and web tsc --noEmit exit 0; web production build exit 0; api:contract:check, version:check, check-version-sync, naming:check and the idea check against baseline 139b0c5 pass; two mutation checks (every error treated as a refusal; switch ignored) are caught by the new tests. No provider was called. The new screen was built but not exercised in a browser.
-- Next gate: requesting session obtains Codex review, then merge and deployment; Carlos turns the switch on afterwards
+- Validation: npm test 270 of 270 pass, 0 fail (248 existing plus 22 in tests/sttFailover.test.ts, all with local fakes; run of 2026-11-12 01:53 UTC on this source); backend and web tsc --noEmit exit 0; web production build exit 0; api:contract:check, version:check, check-version-sync, naming:check and the idea check against baseline 139b0c5 pass; mutation checks confirm the blocker test (guard bound to the run's current pin; revocation ignoring outstanding pins). No provider was called. The screen was built but not exercised in a browser.
+- Next gate: requesting session obtains the Codex re-review, then merge and deployment; Carlos turns the switch on afterwards
 - Dossier: refresh_required after acceptance of the reviewed change; not refreshed from this unreviewed task branch
 
 ## Media2Text account delivery readback - 2026-10-24
@@ -171,7 +178,7 @@ The executor publishes the qualified source and immutable images and the existin
 - Next gate: executor qualifies focused review and actual deployment/access/recovery
 - Dossier: refresh_required; previous native/shared history retained; new reader revision unavailable
 
-<!-- doc-version: 0.43.0 -->
+<!-- doc-version: 0.43.1 -->
 
 ## Current continuation - approved STT account administration, 2026-10-23
 

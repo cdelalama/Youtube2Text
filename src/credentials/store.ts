@@ -12,28 +12,36 @@ export type KeyRefusalKind = Exclude<KeyHealthState, "ok">;
 /** Health comes only from a definitive provider answer; `since` and `status` are null while ok. */
 export type KeyHealth = { state: KeyHealthState; since: string | null; status: number | null };
 export type FailoverParty = { accountId: string; label: string; provider: SttProviderId; keyHint: string };
-/** Operator-facing record of automatic moves. Never contains a key value. */
+/**
+ * Operator-facing record of automatic routing. Never contains a key value.
+ * "moved": `to` took over. "blocked": nothing was left. "stopped": a partly
+ * transcribed recording stopped because `to`, the next candidate, is another
+ * service; nothing took over for that recording.
+ */
 export type FailoverNotice = {
-  id: string; kind: "moved" | "blocked"; reason: KeyRefusalKind; status: number | null;
+  id: string; kind: "moved" | "blocked" | "stopped"; reason: KeyRefusalKind; status: number | null;
   from: FailoverParty; to: FailoverParty | null; serviceChanged: boolean;
   count: number; firstAt: string; lastAt: string;
 };
 /**
- * Audit trail of automatic routing. "moved"/"blocked" follow a provider refusal
- * of running work; "admitted"/"admission_blocked" record new work that skipped a
- * key already marked unhealthy (or found nothing left).
+ * Audit trail of automatic routing. "moved"/"blocked"/"recording_stopped"
+ * follow a provider refusal of running work; "admitted"/"admission_blocked"
+ * record new work that skipped a key already marked unhealthy (or found nothing
+ * left). "recording_stopped" never rewrites a pin.
  */
 export type FailoverEvent = {
-  id: number; at: string; kind: "moved" | "blocked" | "admitted" | "admission_blocked"; workId: string | null; reason: KeyRefusalKind;
+  id: number; at: string; kind: "moved" | "blocked" | "recording_stopped" | "admitted" | "admission_blocked";
+  workId: string | null; reason: KeyRefusalKind;
   status: number | null; from: CredentialPin; to: CredentialPin | null; serviceChanged: boolean;
 };
 export type RefusalOutcome =
   | { moved: true; pin: CredentialPin; serviceChanged: boolean }
-  | { moved: false; reason: "off" | "no_candidate" };
+  | { moved: false; reason: "off" | "no_candidate" | "record_only" }
+  | { moved: false; reason: "recording_stopped"; next: CredentialPin };
 type AccountRow = { id: string; provider: SttProviderId; label: string; enabled: number; current_key: string; created_at: string };
 type KeyRow = { id: string; account_id: string; hint: string; sealed: string; revoked: number; created_at: string; check_json: string | null };
 type HealthRow = { credential_id: string; state: KeyRefusalKind; since: string; status: number | null };
-type NoticeRow = { id: string; kind: "moved" | "blocked"; reason: KeyRefusalKind; status: number | null;
+type NoticeRow = { id: string; kind: FailoverNotice["kind"]; reason: KeyRefusalKind; status: number | null;
   from_account_id: string; from_credential_id: string; to_account_id: string | null; to_credential_id: string | null;
   service_changed: number; count: number; first_at: string; last_at: string };
 export class CredentialError extends Error {
@@ -267,7 +275,7 @@ export class CredentialStore {
       if (this.credential(pin.credentialId).account_id !== pin.accountId) throw new CredentialError("credential_unavailable");
       this.db.prepare("UPDATE credentials SET check_json=? WHERE id=?").run(JSON.stringify(check), pin.credentialId);
       this.audit("probe", pin.accountId, pin.credentialId);
-      // The authentication probe is a definitive provider answer about access only.
+      // The operator's re-check is a definitive provider answer about access only.
       // It can set or clear "rejected"; it never proves credit, so "exhausted" stays.
       if (check.state === "rejected") this.setHealth(pin, "rejected", 401);
       else if (check.state === "accepted" && this.health(pin.credentialId).state === "rejected") this.setHealth(pin, "ok", null);
@@ -329,17 +337,16 @@ export class CredentialStore {
       this.audit("key_order", accountId);
     });
   }
-  /** Operator "use this key again": the only way back for an exhausted key besides a successful request. */
+  /**
+   * Operator "use this key again". A rejected or exhausted mark is latched: only
+   * this reset, or an accepted re-check for "rejected", clears it. A completed
+   * request never does, because it may have been accepted before the refusal.
+   */
   resetKeyHealth(accountId: string, credentialId: string): void {
     this.atomic(() => {
       if (this.credential(credentialId).account_id !== accountId) throw new CredentialError("credential_unavailable");
       this.setHealth({ provider: this.account(accountId).provider, accountId, credentialId }, "ok", null);
     });
-  }
-  /** A completed request is a definitive answer too: the key works. */
-  recordSuccess(pin: CredentialPin): void {
-    if (this.health(pin.credentialId).state === "ok") return;
-    this.atomic(() => this.setHealth(pin, "ok", null));
   }
   /**
    * Next enabled, healthy, non-revoked key: the rest of the same account in key
@@ -356,72 +363,85 @@ export class CredentialStore {
     return undefined;
   }
   /**
-   * Caller must be inside atomic(). Every call writes an audit event. A refusal
-   * of running work always raises (or extends) a pending notice. New work that
-   * merely follows a change the operator was already told about, for the same
-   * key since it became unhealthy, does not raise the same notice again.
+   * Caller must be inside atomic(). Every call writes an audit event and
+   * produces a pending notice: identical pending ones share a row and a counter,
+   * and a notice the operator dismissed never silences the next occurrence.
+   * `to` is what took over, or for "recording_stopped" the candidate that could
+   * not be used for that recording.
    */
   private recordFailover(kind: FailoverEvent["kind"], workId: string | null, from: CredentialPin, to: CredentialPin | undefined,
     reason: KeyRefusalKind, status: number | null): void {
     const now = new Date().toISOString();
-    const serviceChanged = to && to.provider !== from.provider ? 1 : 0;
+    const stopped = kind === "recording_stopped";
+    const serviceChanged = !stopped && to && to.provider !== from.provider ? 1 : 0;
     this.db.prepare(`INSERT INTO failover_events(at,kind,work_id,reason,status,from_provider,from_account_id,from_credential_id,
       to_provider,to_account_id,to_credential_id,service_changed) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`)
       .run(now, kind, workId, reason, status, from.provider, from.accountId, from.credentialId,
         to?.provider ?? null, to?.accountId ?? null, to?.credentialId ?? null, serviceChanged);
-    const fromRefusal = kind === "moved" || kind === "blocked";
-    if (fromRefusal) this.audit(`failover_${kind}`, from.accountId, from.credentialId);
-    const noticeKind = to ? "moved" : "blocked";
-    const same = "kind=? AND reason=? AND from_credential_id=? AND to_credential_id IS ?";
-    const identity = [noticeKind, reason, from.credentialId, to?.credentialId ?? null];
-    const pending = this.db.prepare(`SELECT id FROM failover_notices WHERE dismissed_at IS NULL AND ${same}`)
-      .get(...identity) as { id: string } | undefined;
+    if (kind === "moved" || kind === "blocked" || stopped) this.audit(`failover_${kind}`, from.accountId, from.credentialId);
+    const noticeKind: FailoverNotice["kind"] = stopped ? "stopped" : to ? "moved" : "blocked";
+    const pending = this.db.prepare(`SELECT id FROM failover_notices WHERE dismissed_at IS NULL AND kind=? AND reason=?
+      AND from_credential_id=? AND to_credential_id IS ?`)
+      .get(noticeKind, reason, from.credentialId, to?.credentialId ?? null) as { id: string } | undefined;
     if (pending) {
       this.db.prepare("UPDATE failover_notices SET count=count+1, last_at=?, status=? WHERE id=?").run(now, status, pending.id);
       return;
-    }
-    if (!fromRefusal) {
-      const since = this.health(from.credentialId).since ?? now;
-      if (this.db.prepare(`SELECT 1 FROM failover_notices WHERE ${same} AND first_at >= ?`).get(...identity, since)) return;
     }
     this.db.prepare("INSERT INTO failover_notices VALUES(?,?,?,?,?,?,?,?,?,1,?,?,NULL)")
       .run(randomUUID(), noticeKind, reason, status, from.accountId, from.credentialId, to?.accountId ?? null,
         to?.credentialId ?? null, serviceChanged, now, now);
   }
   /**
-   * The provider definitively refused `pin` before accepting work. Always records
-   * the key's health. Moves the named work only while the operator's switch is on
-   * and a listed, enabled, healthy candidate exists; every move is audited and
-   * noticed. Other work pinned to the same key is left untouched.
+   * The provider definitively refused `pin` before accepting work. The key's
+   * health is always recorded first. Whether the named work may move is decided
+   * BEFORE anything is rewritten:
+   * - `recordOnly` (the work was cancelled): health only.
+   * - switch off: health only.
+   * - nothing listed, enabled and healthy is left: "blocked" event and notice.
+   * - `sameProviderOnly` (part of this recording was already accepted by this
+   *   provider) and the next candidate is another service: a distinct
+   *   "recording_stopped" event and notice; no pin is rewritten.
+   * - otherwise the work moves, with an audit event and a notice.
+   * `follow` is the pin a sibling recording of the same run already moved to;
+   * following it is not a second move, so it writes no second "moved" record.
+   * Other work pinned to the same key is never touched.
    */
-  recordRefusal(input: { pin: CredentialPin; kind: KeyRefusalKind; status: number; workIds: string[] }): RefusalOutcome {
-    return this.atomic(() => {
+  recordRefusal(input: { pin: CredentialPin; kind: KeyRefusalKind; status: number; workIds: string[];
+    sameProviderOnly?: boolean; recordOnly?: boolean; follow?: CredentialPin }): RefusalOutcome {
+    return this.atomic((): RefusalOutcome => {
       const { pin, kind, status } = input;
       const account = this.account(pin.accountId);
       if (account.provider !== pin.provider || this.credential(pin.credentialId).account_id !== account.id) {
         throw new CredentialError("credential_unavailable");
       }
       this.setHealth(pin, kind, status);
-      if (!this.failoverEnabled()) return { moved: false as const, reason: "off" as const };
-      const next = this.nextCandidate(account.id);
+      if (input.recordOnly) return { moved: false, reason: "record_only" };
+      if (!this.failoverEnabled()) return { moved: false, reason: "off" };
+      const next = input.follow ?? this.nextCandidate(account.id);
       const workId = input.workIds[0] ?? null;
       if (!next) {
         this.recordFailover("blocked", workId, pin, undefined, kind, status);
-        return { moved: false as const, reason: "no_candidate" as const };
+        return { moved: false, reason: "no_candidate" };
       }
-      this.recordFailover("moved", workId, pin, next, kind, status);
-      for (const id of input.workIds) {
-        this.db.prepare("UPDATE work_selections SET provider=?, account_id=?, credential_id=?, at=? WHERE work_id=?")
-          .run(next.provider, next.accountId, next.credentialId, new Date().toISOString(), id);
+      if (input.sameProviderOnly && next.provider !== pin.provider) {
+        this.recordFailover("recording_stopped", workId, pin, next, kind, status);
+        return { moved: false, reason: "recording_stopped", next };
       }
-      return { moved: true as const, pin: next, serviceChanged: next.provider !== pin.provider };
+      if (!input.follow) {
+        this.recordFailover("moved", workId, pin, next, kind, status);
+        for (const id of input.workIds) {
+          this.db.prepare("UPDATE work_selections SET provider=?, account_id=?, credential_id=?, at=? WHERE work_id=?")
+            .run(next.provider, next.accountId, next.credentialId, new Date().toISOString(), id);
+        }
+      }
+      return { moved: true, pin: next, serviceChanged: next.provider !== pin.provider };
     });
   }
   /**
    * Pin for newly admitted work. With the switch off this is exactly pin(). With
    * it on, a selected key already marked rejected/exhausted is skipped for the
-   * next candidate, and that admission is audited and noticed. A selected account
-   * the operator disabled or revoked still fails closed, as before.
+   * next candidate, and every such admission is audited and noticed. A selected
+   * account the operator disabled or revoked still fails closed, as before.
    */
   pinForNewWork(provider: SttProviderId, workId?: string): CredentialPin | undefined {
     const primary = this.pin(provider);
