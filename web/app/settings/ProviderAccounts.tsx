@@ -1,23 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { failoverNoticeText, failoverNoticeTitle, providerNames, type FailoverNotice, type Provider, type Translate } from "../../lib/failoverNotices";
+import { createSnapshotGate } from "../../lib/snapshotGate";
 
-type Provider = "assemblyai" | "deepgram" | "openai_whisper";
 type Check = { state: "accepted" | "rejected" | "permission_unknown" | "unavailable"; checkedAt: string };
-type Health = { state: "ok" | "rejected" | "exhausted"; since: string | null; status: number | null };
+type Mark = { since: string; status: number | null };
+// Two independent facts; only "Marcar como disponible" clears "exhausted".
+type Health = { exhausted: Mark | null; rejected: Mark | null };
 type Account = { id: string; provider: Provider; label: string; enabled: boolean; selected: boolean;
   currentCredentialId: string; keyOrder: string[];
   keys: { id: string; hint: string; revoked: boolean; createdAt: string; access: Check | null; health: Health }[] };
-type Party = { accountId: string; label: string; provider: Provider; keyHint: string };
-export type FailoverNotice = { id: string; kind: "moved" | "blocked" | "stopped"; reason: "rejected" | "exhausted"; status: number | null;
-  from: Party; to: Party | null; serviceChanged: boolean; count: number; firstAt: string; lastAt: string };
 type Failover = { enabled: boolean; order: string[]; effective: { provider: Provider; accountId: string; credentialId: string } | null;
   blocked: boolean; unhealthyKeys: number; notices: FailoverNotice[] };
 type Snapshot = { configured: boolean; activeProvider: Provider; selectedAccountId: string | null; selectionReady: boolean;
   accounts: Account[]; failover: Failover; legacy: { provider: Provider; keys: string[]; selected: boolean }[]; check?: Check };
 type Action = Record<string, string | boolean | number | string[]>;
-const names: Record<Provider, string> = { assemblyai: "AssemblyAI", deepgram: "Deepgram", openai_whisper: "OpenAI Whisper" };
-type Translate = (es: string, en: string) => string;
+const names = providerNames;
 /** How often an open console re-reads accounts and notices. */
 export const REFRESH_MS = 20_000;
 
@@ -27,50 +26,26 @@ function normalize(raw: Snapshot): Snapshot {
     failover: raw.failover ?? { enabled: false, order: [], effective: null, blocked: false, unhealthyKeys: 0, notices: [] },
     accounts: (raw.accounts ?? []).map((account) => ({ ...account,
       keyOrder: account.keyOrder ?? account.keys.filter((key) => !key.revoked).map((key) => key.id),
-      keys: account.keys.map((key) => ({ ...key, health: key.health ?? { state: "ok" as const, since: null, status: null } })) })) };
+      keys: account.keys.map((key) => ({ ...key, health: key.health ?? { exhausted: null, rejected: null } })) })) };
 }
 
-function reasonText(reason: "rejected" | "exhausted", status: number | null, t: Translate): string {
-  const http = status ? ` (HTTP ${status})` : "";
-  return reason === "exhausted"
-    ? t(`el servicio respondió que no queda saldo o cuota${http}`, `the service answered that no credit or quota is left${http}`)
-    : t(`el servicio rechazó la clave${http}`, `the service rejected the key${http}`);
-}
-function healthText(health: Health, t: Translate): string {
-  const since = health.since ? new Date(health.since).toLocaleString() : "";
-  const http = health.status ? ` (HTTP ${health.status})` : "";
-  return health.state === "exhausted" ? t(`Sin saldo o cuota desde ${since}${http}`, `No credit or quota since ${since}${http}`)
-    : health.state === "rejected" ? t(`Rechazada por el servicio desde ${since}${http}`, `Rejected by the service since ${since}${http}`) : "";
-}
-/** Plain-language account of one automatic change. Shared with the console banner. */
-export function failoverNoticeText(notice: FailoverNotice, t: Translate): string {
-  const why = reasonText(notice.reason, notice.status, t);
-  const when = notice.count > 1
-    ? t(` Ha ocurrido ${notice.count} veces; la última, el ${new Date(notice.lastAt).toLocaleString()}.`,
-      ` It happened ${notice.count} times; most recently on ${new Date(notice.lastAt).toLocaleString()}.`)
-    : t(` Ocurrió el ${new Date(notice.lastAt).toLocaleString()}.`, ` It happened on ${new Date(notice.lastAt).toLocaleString()}.`);
-  const from = notice.from;
-  const stopped = t(`La clave ${from.keyHint} de la cuenta «${from.label}» (${names[from.provider]}) ha dejado de usarse: ${why}.`,
-    `Key ${from.keyHint} of account "${from.label}" (${names[from.provider]}) is no longer used: ${why}.`);
-  if (!notice.to) {
-    return stopped + t(" No queda ninguna otra clave o cuenta disponible en tu lista: los trabajos fallan hasta que recargues saldo, añadas una clave o marques una como disponible.",
-      " No other key or account in your list is available: jobs fail until you add credit, add a key or mark one as available.") + when;
-  }
-  const to = notice.to;
-  if (notice.kind === "stopped") {
-    // Nothing took over for that recording: say that it stopped, and why.
-    return stopped + t(` Una grabación que ya estaba transcrita en parte se ha detenido y no se ha completado: la siguiente cuenta de tu lista, «${to.label}», es de otro servicio (${names[to.provider]}), y no se mezclan dos servicios en una misma transcripción ni se paga dos veces. Vuelve a lanzar esa grabación para transcribirla entera con ${names[to.provider]}.`,
-      ` A recording that was already partly transcribed has stopped and was not completed: the next account in your list, "${to.label}", belongs to another service (${names[to.provider]}), and two services are never mixed in one transcript nor paid twice. Run that recording again to transcribe it entirely with ${names[to.provider]}.`) + when;
-  }
-  const takeover = to.accountId === from.accountId
-    ? t(` Ahora se usa la clave ${to.keyHint} de la misma cuenta.`, ` Key ${to.keyHint} of the same account is used now.`)
-    : t(` Ahora se usa la cuenta «${to.label}» (${names[to.provider]}), clave ${to.keyHint}.`,
-      ` Account "${to.label}" (${names[to.provider]}), key ${to.keyHint}, is used now.`);
-  const service = notice.serviceChanged
-    ? t(` Ha cambiado el servicio de transcripción: de ${names[from.provider]} a ${names[to.provider]}. La calidad de las transcripciones puede ser distinta.`,
-      ` The transcription service changed: from ${names[from.provider]} to ${names[to.provider]}. Transcription quality may differ.`)
-    : "";
-  return stopped + takeover + service + when;
+const marked = (health: Health) => Boolean(health.exhausted || health.rejected);
+/** One line per mark, each with since when and what clears it. */
+function healthLines(health: Health, t: Translate): string[] {
+  const line = (mark: Mark | null, es: string, en: string, clearEs: string, clearEn: string) => {
+    if (!mark) return [];
+    const since = new Date(mark.since).toLocaleString();
+    const http = mark.status ? ` (HTTP ${mark.status})` : "";
+    return [t(`${es} desde ${since}${http}. ${clearEs}`, `${en} since ${since}${http}. ${clearEn}`)];
+  };
+  return [
+    ...line(health.exhausted, "Sin saldo o cuota", "No credit or quota",
+      "Comprobar acceso no confirma saldo: cuando hayas recargado, pulsa «Marcar como disponible».",
+      "Checking access does not confirm credit: once you have topped up, press Mark as available."),
+    ...line(health.rejected, "Rechazada por el servicio", "Rejected by the service",
+      "Se quita con una comprobación de acceso aceptada o con «Marcar como disponible».",
+      "An accepted access check or Mark as available clears it."),
+  ];
 }
 
 function checkText(check: Check | null | undefined, t: Translate): string {
@@ -80,9 +55,10 @@ function checkText(check: Check | null | undefined, t: Translate): string {
     unavailable: t("Comprobación no disponible", "Check unavailable") })[check.state];
 }
 
-export default function ProviderAccounts({ lang, settingsRevision, onProviderSelected, onNoticesChanged }: {
+export default function ProviderAccounts({ lang, settingsRevision, onProviderSelected, onChanged }: {
   lang: "es" | "en"; settingsRevision?: string; onProviderSelected: (provider: Provider) => void;
-  onNoticesChanged?: (notices: FailoverNotice[]) => void;
+  /** Called after each change made here, so the console banner can re-read its notices. */
+  onChanged?: () => void;
 }) {
   const t: Translate = (es, en) => lang === "es" ? es : en;
   const prefix = useId();
@@ -97,13 +73,21 @@ export default function ProviderAccounts({ lang, settingsRevision, onProviderSel
   const [reauth, setReauth] = useState(false);
   const [passphrase, setPassphrase] = useState("");
   const [check, setCheck] = useState<Check>();
+  // A read that started before a change must never replace what the change
+  // returned (see snapshotGate): otherwise a periodic refresh could show the
+  // switch off right after it was turned on.
+  const gate = useRef(createSnapshotGate()).current;
   const load = useCallback(async () => {
+    const read = gate.beginRead();
     try {
       const response = await fetch("/api/provider-accounts", { cache: "no-store" });
       if (!response.ok) throw new Error();
-      setData(normalize(await response.json()));
-    } catch { setError(lang === "es" ? "No se pudieron cargar las cuentas. Reintenta la consulta." : "Could not load accounts. Retry the request."); }
-  }, [lang]);
+      const next = normalize(await response.json());
+      if (gate.accepts(read)) setData(next);
+    } catch {
+      if (gate.accepts(read)) setError(lang === "es" ? "No se pudieron cargar las cuentas. Reintenta la consulta." : "Could not load accounts. Retry the request.");
+    }
+  }, [lang, gate]);
   useEffect(() => { void load(); }, [load, settingsRevision]);
   // Jobs and admissions change key state and notices without any action here,
   // so the open screen is refreshed periodically (never over a pending action).
@@ -115,7 +99,6 @@ export default function ProviderAccounts({ lang, settingsRevision, onProviderSel
     }, REFRESH_MS);
     return () => window.clearInterval(timer);
   }, [load]);
-  useEffect(() => { if (data) onNoticesChanged?.(data.failover.notices); }, [data, onNoticesChanged]);
 
   function failure(code: string) {
     if (code === "recent_auth_required") {
@@ -136,11 +119,14 @@ export default function ProviderAccounts({ lang, settingsRevision, onProviderSel
   }
   async function perform(action: Action, success?: string): Promise<boolean> {
     setBusy(true); setError(""); setMessage("");
+    gate.changed(); // reads already in flight predate this change
     try {
       const response = await fetch("/api/provider-accounts", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(action) });
       const result = await response.json();
+      gate.changed(); // and so does any read that began while it ran
       if (!response.ok) { setError(failure(result.error)); return false; }
       setData(normalize(result));
+      onChanged?.();
       if (result.check) setMessage(checkText(result.check, t));
       else setMessage(success ?? t("Cambio guardado.", "Change saved."));
       if (action.action === "probe_unsaved") setCheck(result.check);
@@ -148,6 +134,7 @@ export default function ProviderAccounts({ lang, settingsRevision, onProviderSel
         const account = (result as Snapshot).accounts.find((item) => item.id === action.accountId)!;
         const settingsResponse = await fetch("/api/settings", { method: "PATCH", headers: { "content-type": "application/json" },
           body: JSON.stringify({ settings: { sttProvider: account.provider } }) });
+        gate.changed();
         if (!settingsResponse.ok) {
           setError(t("La cuenta quedó elegida para su proveedor, pero no se pudo activar ese proveedor. Revisa Proveedor y guarda los cambios.",
             "The account was selected for its provider, but that provider could not be activated. Check Provider and save changes."));
@@ -157,7 +144,7 @@ export default function ProviderAccounts({ lang, settingsRevision, onProviderSel
         await load();
       }
       return true;
-    } catch { setError(failure("api_unreachable")); return false; }
+    } catch { gate.changed(); setError(failure("api_unreachable")); return false; }
     finally { setBusy(false); }
   }
   async function save(event: FormEvent) {
@@ -193,7 +180,7 @@ export default function ProviderAccounts({ lang, settingsRevision, onProviderSel
       : !data.configured ? <p>{t("La gestión de cuentas está pendiente de activar en el servidor. Las claves existentes siguen disponibles.", "Account management is awaiting server activation. Existing keys remain available.")}</p>
       : <>
         {data.failover.notices.map((notice) => <div className="m2t-account-notice" role="alert" key={notice.id}>
-          <strong>{notice.kind === "stopped" ? t("Grabación detenida", "Recording stopped") : notice.to ? t("Cambio automático de cuenta", "Automatic account change") : t("Sin cuentas disponibles", "No accounts available")}</strong>
+          <strong>{failoverNoticeTitle(notice, t)}</strong>
           <p>{failoverNoticeText(notice, t)}</p>
           <button disabled={busy} onClick={() => void perform({ action: "dismiss_notice", noticeId: notice.id }, t("Aviso descartado.", "Notice dismissed."))}>{t("Descartar aviso", "Dismiss notice")}</button>
         </div>)}
@@ -309,7 +296,7 @@ function AccountItem({ account, t, busy, active, failoverEnabled, perform }: { a
     <div><h3>{account.label}</h3><p>{names[account.provider]} · {account.enabled ? t("Activa", "Enabled") : t("Desactivada", "Disabled")}
       {account.selected && <> · <strong>{active ? t("Elegida para nuevos trabajos", "Selected for new jobs") : t("Elegida para este proveedor", "Selected for this provider")}</strong></>}</p>
       <p>{current?.hint} · {current?.revoked ? t("Clave revocada localmente", "Key locally revoked") : checkText(current?.access, t)}</p>
-      {current && current.health.state !== "ok" && <p className="m2t-account-error">{healthText(current.health, t)}</p>}
+      {current && healthLines(current.health, t).map((line) => <p className="m2t-account-error" key={line}>{line}</p>)}
     </div>
     <div className="m2t-account-actions">
       {(!account.selected || !active) && <button disabled={busy || !account.enabled || current?.revoked} onClick={() => void perform({ action: "select", accountId: account.id }, t("Cuenta elegida para nuevas transcripciones.", "Account selected for new transcriptions."))}>{t("Usar para nuevas transcripciones", "Use for new transcriptions")}</button>}
@@ -332,13 +319,12 @@ function AccountItem({ account, t, busy, active, failoverEnabled, perform }: { a
           <span>{key.hint} · {new Date(key.createdAt).toLocaleDateString()} · {key.revoked ? t("Revocada localmente", "Locally revoked") : key.id === account.currentCredentialId ? t("Actual", "Current") : t("Anterior", "Previous")}</span>
           {key.access && <small>{checkText(key.access, t)} · {new Date(key.access.checkedAt).toLocaleString()}</small>}
           {!key.revoked && account.keyOrder.length > 1 && <small>{t("Orden de uso automático", "Automatic use order")}: {account.keyOrder.indexOf(key.id) + 1} {t("de", "of")} {account.keyOrder.length}</small>}
-          {key.health.state !== "ok" && <small className="m2t-account-error">{healthText(key.health, t)}. {failoverEnabled
-            ? t("No se usa para trabajos nuevos hasta que la marques como disponible.", "Not used for new jobs until you mark it as available.")
-            : t("El cambio automático está desactivado: se sigue usando.", "Automatic change is off: it is still used.")} {key.health.state === "exhausted"
-            ? t("Comprobar acceso no confirma saldo: cuando hayas recargado, pulsa «Marcar como disponible».", "Checking access does not confirm credit: once you have topped up, press Mark as available.")
-            : t("Puedes volver a comprobar el acceso o marcarla como disponible.", "You can check access again or mark it as available.")}</small>}
+          {healthLines(key.health, t).map((line) => <small className="m2t-account-error" key={line}>{line}</small>)}
+          {marked(key.health) && <small className="m2t-account-error">{failoverEnabled
+            ? t("Con alguna de estas marcas, la clave no recibe trabajos nuevos.", "With either mark the key receives no new jobs.")
+            : t("El cambio automático está desactivado: la clave se sigue usando.", "Automatic change is off: the key is still used.")}</small>}
           {!key.revoked && <div className="m2t-account-actions">
-            {key.health.state !== "ok" && <button onClick={() => void perform({ action: "reset_key_health", accountId: account.id, credentialId: key.id }, t("Clave marcada como disponible.", "Key marked as available."))}>{t("Marcar como disponible", "Mark as available")}</button>}
+            {marked(key.health) && <button onClick={() => void perform({ action: "reset_key_health", accountId: account.id, credentialId: key.id }, t("Clave marcada como disponible.", "Key marked as available."))}>{t("Marcar como disponible", "Mark as available")}</button>}
             {account.keyOrder.indexOf(key.id) > 1 && <button onClick={() => void perform({ action: "set_key_order", accountId: account.id, credentialIds: move(account.keyOrder, account.keyOrder.indexOf(key.id), -1) }, t("Orden guardado.", "Order saved."))}>{t("Subir en el orden", "Move up in order")}</button>}
             {account.keyOrder.indexOf(key.id) > 0 && account.keyOrder.indexOf(key.id) < account.keyOrder.length - 1 && <button onClick={() => void perform({ action: "set_key_order", accountId: account.id, credentialIds: move(account.keyOrder, account.keyOrder.indexOf(key.id), 1) }, t("Orden guardado.", "Order saved."))}>{t("Bajar en el orden", "Move down in order")}</button>}
             {key.id !== account.currentCredentialId && <button onClick={() => void perform({ action: "use_key", accountId: account.id, credentialId: key.id })}>{t("Usar esta clave", "Use this key")}</button>}

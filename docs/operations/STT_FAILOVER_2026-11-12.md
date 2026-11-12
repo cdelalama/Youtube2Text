@@ -1,11 +1,11 @@
 # Automatic key and account failover with operator notice - 2026-11-12
 
 State: source prepared on task branch `work/stt-failover-20261112`, candidate
-0.43.1. NOT deployed: the NAS still runs 0.42.2. The independent review of
-0.43.0 (Codex) said do not merge or deploy yet, with one blocker and six
-should-fix items; 0.43.1 answers all seven and waits for re-review (see
-`docs/llm/REVIEWS.md`). The switch is off by default, so installing this
-release changes nothing until Carlos turns it on.
+0.43.2. NOT deployed: the NAS still runs 0.42.2. Two independent reviews by
+Codex (of 0.43.0 and of 0.43.1) said do not merge or deploy yet; 0.43.2 answers
+the second one and waits for a third (see `docs/llm/REVIEWS.md`). The switch is
+off by default, so installing this release changes no routing until Carlos
+turns it on.
 Decision: `docs/llm/DECISIONS.md` D-029. Operator guide (Spanish):
 `STT_ACCOUNTS_OPERATOR_GUIDE_2026-10-24.md`, section "Cambio automático".
 
@@ -40,16 +40,19 @@ In Settings > Transcription accounts:
 - An ordered list of the accounts allowed to take over. It can mix services.
   Only listed, enabled accounts can ever receive moved work.
 - Each account's keys in order (current key first, then the order he sets).
-- Each key shows its state: ok, rejected by the service, or out of credit/quota,
-  with the time since when and the HTTP status that caused it. The mark stays
-  until he clears it; a completed transcription never clears it.
-- "Marcar como disponible" puts a key back in use after he topped up or fixed it.
-- A notice for every automatic change, kept until he dismisses it, naming the
-  account and key (last four characters) that stopped, why, and what took over.
-  When the service changed it says so and that quality may differ. Dismissing a
+- Each key shows its marks: rejected by the service, out of credit or quota, or
+  both, each with the time since when and the HTTP status that caused it. A
+  mark stays until he clears it; a completed transcription never clears it.
+- "Marcar como disponible" puts a key back in use after he topped up or fixed
+  it. It is the only thing that clears "out of credit".
+- A notice for every automatic change, kept until he dismisses it. It tells
+  what happened in the past tense: which service refused which account and key
+  (last four characters), why, and what the affected job continued with. When
+  the service changed it says so and that quality may differ. Dismissing a
   notice never silences the next change, even an identical one. The notice is
-  shown as a banner on every screen of the console, Settings included, and the
-  open console re-reads notices and key state every 20 seconds.
+  shown as a banner on every screen of the console, Settings included, followed
+  by a separate sentence on where new work goes right now. The open console
+  re-reads notices and key state every 20 seconds.
 - The line "Nuevos trabajos" shows which account is really in use.
 
 ## The safety rule
@@ -81,6 +84,38 @@ already moved the run. Its availability guard (checked before every request,
 retry and poll) and local revocation act on that exact key: revoking a key
 cancels a run while any of its recordings still owns that key, between pieces
 too, whatever the run's current key is.
+
+## Where key characters may appear
+
+D-028 accepted showing the last four characters of a saved key on the accounts
+screen. The rule for this feature: those characters appear ONLY on the
+authenticated accounts screen and inside its failover notice. They never appear
+in logs, audit rows, failover events, the public status route, error messages
+or any response that another screen needs.
+
+- Stored rows (`audit`, `failover_events`, `failover_notices`, `key_marks`) hold
+  account and credential identifiers. The hint and the account alias are added
+  only when a notice is rendered for the authenticated UI.
+- The banner on the other screens reads `GET /provider-accounts?view=notices`:
+  pending notices and current routing. It carries no account listing and no key
+  suffix of the existing configuration; the full snapshot is read only by the
+  accounts screen.
+- Errors of this feature (`ProviderRefusalError`, `FailoverExhaustedError`,
+  `RecordingStoppedError`) are built from fixed provider, status and reason
+  codes. They never copy the provider's response text or the message of the
+  error that caused them. This also applies with the switch off: a refusal that
+  used to read "Deepgram API error (401): <provider text>" now reads "Deepgram
+  API error (401): key or permission rejected".
+- What `sanitizeProviderErrorText` lets through. It is used for every other
+  provider error (5xx, rate limits, unclassified statuses, AssemblyAI polling).
+  Before this change it redacted only an exact copy of the whole key, so a
+  masked echo such as "sk-ab12...wxyz" (some providers answer an invalid key
+  this way) passed with the key's first and last characters. It now also
+  redacts every run of four or more consecutive characters of the key. The rest
+  of the provider body, cut to 200 characters, still passes into those older
+  error messages, and from there into logs, run records and events, as before.
+  Unrelated text that happens to share four characters with the key is redacted
+  too; that is accepted.
 
 ## Provider error shapes
 
@@ -128,10 +163,18 @@ is left", and he gets a notice. A key refused for a recording is never tried
 again for that recording; there is no attempt counter, so every definitive
 refusal is recorded and every remaining candidate is tried.
 
-Key health is latched. A rejected or exhausted mark is cleared only by the
-operator: "Marcar como disponible", or a successful "Comprobar acceso" for a
-rejected key (an access check never proves credit). A completed transcription
-never clears it, because that request may have been accepted before the refusal.
+A key carries two independent, latched marks. "Out of credit" is cleared only
+by "Marcar como disponible". "Rejected" is also cleared by an accepted
+"Comprobar acceso". An access check never proves credit, so it never clears
+"out of credit", not even when the key was refused for access in between. A
+completed transcription clears neither, because that request may have been
+accepted before the refusal. A key with either mark is skipped for new work.
+
+The destination of every move is chosen at that moment, inside the same
+transaction that records it: current health, availability and order, excluding
+the keys the recording was already refused with. So a key another job has just
+marked is not used because a sibling went there earlier, and a key the operator
+re-enabled meanwhile is not handed back to the recording it refused.
 
 The account he selected stays his selection. When its key is marked unhealthy
 and the switch is on, new work goes to the next candidate; when he marks the key
@@ -149,8 +192,9 @@ naming the job, updates its recorded selection (and its intake's, so a restart
 does not replay the refused key), and raises the notice. Other queued jobs pinned
 to the same key are left alone until their own request is refused. Changing the
 switch, the list or the key order never touches accepted work. Two jobs refused
-at the same moment each move once to the same next key; a second recording of a
-run that already moved follows that move without a second record.
+at the same moment each move once to the same next key. A second recording of a
+run that already moved has its destination chosen again and gets its own audit
+event and notice, even when it ends on the same key.
 
 ## Usage caps and cost
 
@@ -175,9 +219,10 @@ If part was already accepted and the next candidate is another service, the
 recording stops. This is decided before anything is moved: the refusal is
 recorded, a distinct `recording_stopped` event is written, the recording keeps
 its real provider pin, and the notice says that the recording stopped, not that
-another account took over. It is not paid twice and two services are never mixed
-in one transcript. New work is a separate matter: it moves, and that move gets
-its own notice.
+another account took over. Two services are never mixed in one transcript. The
+notice and the job error both say plainly that transcribing the recording again
+repeats the parts already done and that those parts can be charged again. New
+work is a separate matter: it moves, and that move gets its own notice.
 
 ## Telling the operator
 
@@ -189,7 +234,11 @@ its own notice.
    pending notice: repeats of the same pending change share one notice with a
    count, and a notice he dismissed never silences the next change. There are
    three kinds: another key or account took over; nothing was left; a partly
-   transcribed recording stopped.
+   transcribed recording stopped. A notice is a past event and is worded in the
+   past tense; it does not claim that a key is unused or that a destination is
+   in use now. Current routing is shown apart: the "Nuevos trabajos" line in
+   Settings and one sentence after the banner. A read that started before a
+   change on the screen never replaces what that change returned.
 3. The transcript. The immutable record already has `transcription.provider`
    and `transcription.model`; they now name the service that actually did the
    work, and `/v1/transcripts` exposes them as before. Transcript Ready v1 has no
@@ -286,6 +335,9 @@ Nothing below was done. The NAS runs 0.42.2.
 - An access check cannot prove credit, so it never clears "out of credit"; only
   "Marcar como disponible" does. Marks never clear by themselves, so a key he
   topped up stays skipped until he marks it available.
+- Provider text still reaches the older, unclassified error messages (with key
+  fragments redacted). Removing it there would change errors this feature does
+  not own.
 - Key health is recorded even with the switch off, as information only; the
   screen says so and warns before the switch is turned on with marked keys.
 - A provider refusal in an undocumented shape (for example an OpenAI or
@@ -299,18 +351,20 @@ Nothing below was done. The NAS runs 0.42.2.
 
 ## Validation
 
-`tests/sttFailover.test.ts`, 22 tests, all with local fakes: same-account next
+`tests/sttFailover.test.ts`, 29 tests, all with local fakes: same-account next
 key; next account after every key; cross-service move and transcript provider;
 no move on timeout, network error, 5xx, rate limit and post-acceptance failures;
 no move after a 2xx or after the upload; switch off identical to an unpinned
 run; accepted work not re-pinned silently; each attempt guarded and revocable by
 its own pin while a sibling recording moves the run; two jobs refused at once;
-an older success not erasing a newer refusal; a partly transcribed recording
-refused on its second piece (same service continues, other service stops with
-the right notice and pin); every refusal recorded with no attempt counter; caps
-enforced; no secret in audit, notices, events, snapshots, logs or the private
-database; unhealthy keys skipped until re-enabled or re-checked; a dismissed
-notice not silencing the next change; documented-only provider shapes and
-status-only logs for the rest; fixed default status shape and the opt-in check;
+an older success not erasing a newer refusal; exhaustion surviving a later
+access refusal and an accepted check; a sibling's destination re-validated and
+its follow audited and announced; a re-enabled key not handed back to the
+recording it refused; a partly transcribed recording refused on its second
+piece; every refusal recorded with no attempt counter; caps enforced; no key
+character and no provider body in logs, run records, events, stored audit rows,
+the status route or error texts; the notices-only read and its proxy; an older
+screen read never replacing a newer change; notice wording; documented-only
+provider shapes; fixed default status shape and the opt-in check;
 account API actions. Exact results for this candidate are in
 `docs/llm/HISTORY.md`.

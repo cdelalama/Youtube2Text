@@ -169,7 +169,9 @@ export class DeepgramProvider implements TranscriptionProvider {
       const safe = sanitizeProviderErrorText(text, [this.apiKey]);
       const message = `Deepgram API error (${res.status}): ${safe || res.statusText}`;
       const kind = classifyDeepgramRefusal(res.status);
-      if (kind) throw new ProviderRefusalError({ provider: "deepgram", kind, status: res.status }, message);
+      if (kind) {
+        throw new ProviderRefusalError({ provider: "deepgram", kind, status: res.status }, `Deepgram API error (${res.status})`);
+      }
       throw new Error(message);
     }
 

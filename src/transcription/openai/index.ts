@@ -146,7 +146,10 @@ export class OpenAiWhisperProvider implements TranscriptionProvider {
       const message = `OpenAI Whisper API error (${res.status}): ${safe || res.statusText}`;
       const kind = classifyOpenAiRefusal(res.status, text);
       if (kind) {
-        throw new ProviderRefusalError({ provider: "openai_whisper", kind, status: res.status }, message);
+        throw new ProviderRefusalError(
+          { provider: "openai_whisper", kind, status: res.status },
+          `OpenAI Whisper API error (${res.status})`
+        );
       }
       if (res.status === 402 || res.status === 403) logUnclassifiedRefusal("OpenAI", res.status);
       throw new Error(message);

@@ -13,7 +13,7 @@ export interface paths {
         };
         /**
          * Read masked provider account metadata from loopback
-         * @description Internal web-to-API route. Requires the operator API key and a loopback socket peer. No full saved key is returned. Cache-Control: no-store.
+         * @description Internal web-to-API route. Requires the operator API key and a loopback socket peer. No full saved key is returned. Cache-Control: no-store. With view=notices it returns only pending failover notices and current routing, for the banner shown on every screen: no account listing and no key suffix of the existing configuration.
          */
         get: operations["getProviderAccounts"];
         put?: never;
@@ -1577,12 +1577,15 @@ export interface components {
             access: components["schemas"]["CredentialAccessCheck"] | null;
             health?: components["schemas"]["CredentialHealth"];
         };
-        /** @description Set only from a definitive provider answer. Rejected and exhausted keys are skipped for new work while automatic failover is on. */
-        CredentialHealth: {
-            /** @enum {string} */
-            state: "ok" | "rejected" | "exhausted";
-            since: string | null;
+        CredentialMark: {
+            /** Format: date-time */
+            since: string;
             status: number | null;
+        };
+        /** @description Two independent latched facts, each set only from a definitive provider answer. Only the operator's reset clears exhausted; an accepted access check also clears rejected. A key with either mark is skipped for new work while automatic failover is on. */
+        CredentialHealth: {
+            exhausted: components["schemas"]["CredentialMark"] | null;
+            rejected: components["schemas"]["CredentialMark"] | null;
         };
         ProviderAccount: {
             /** Format: uuid */
@@ -1634,6 +1637,17 @@ export interface components {
             firstAt: string;
             /** Format: date-time */
             lastAt: string;
+        };
+        /** @description Pending notices and where new work goes now. A key hint appears only inside a notice. */
+        FailoverNoticesView: {
+            notices: components["schemas"]["FailoverNotice"][];
+            routing: {
+                enabled: boolean;
+                blocked: boolean;
+                /** @enum {string} */
+                provider: "assemblyai" | "deepgram" | "openai_whisper";
+                accountLabel: string | null;
+            };
         };
         FailoverState: {
             enabled: boolean;
@@ -1795,20 +1809,22 @@ export type $defs = Record<string, never>;
 export interface operations {
     getProviderAccounts: {
         parameters: {
-            query?: never;
+            query?: {
+                view?: "notices";
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Masked metadata only; access acceptance never establishes credit. */
+            /** @description The masked account snapshot, or with view=notices the notices-only view. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ProviderAccountsSnapshot"];
+                    "application/json": components["schemas"]["ProviderAccountsSnapshot"] | components["schemas"]["FailoverNoticesView"];
                 };
             };
             /** @description Operator API key required */

@@ -1,3 +1,78 @@
+## 2026-11-12 - Automatic account failover: second independent review (0.43.1) and fixes in 0.43.2
+
+Review, as relayed by the requesting Cortex session: Codex gpt-6-astra,
+reasoning effort max, read-only, inline diff, session
+01a1d029-3e3e-70f0-9b43-3ae390a740b1, candidate commit `a8fa9fe` (0.43.1).
+Verdict: do not merge or deploy yet, also with the switch off. Provenance
+limit as before: the executor (Claude, claude-fable-5-2) received the findings
+through the requesting session and did not see the review session or verify its
+model metadata. The verdict covers 0.43.1 only; 0.43.2 below is the executor's
+answer and has NOT been reviewed, so the gate stays closed.
+
+Resolved according to the reviewer (first-review items 1, 4, 5, 7): per-attempt
+guards and pin ownership; eligibility of a partly transcribed recording;
+refresh triggers; assumed refusal shapes, keeping OpenAI
+organization_usage_limit_exceeded as exhausted with the reviewer's agreement.
+
+Findings of the second pass and how each was handled in 0.43.2:
+
+A. BLOCKER, key hints. Rule as accepted in D-028 and restated by the requesting
+   session: the last four characters of a key may appear only where the
+   authenticated accounts screen shows them and in the failover notice inside
+   that UI; never in logs, audit rows, the public status route, error messages
+   or a response another screen needs.
+   (1) The banner on other screens now reads GET /provider-accounts?view=notices:
+   pending notices and current routing, no account listing, no suffix of the
+   existing configuration. The web proxy forwards only that exact view.
+   (2) audit, failover_events, failover_notices and key_marks store identifiers
+   only; hint and alias are derived when a notice is rendered. This was already
+   so; a test now reads the stored rows.
+   (3) ProviderRefusalError, FailoverExhaustedError, RecordingStoppedError and
+   FailoverRepeatedCandidateError are built from fixed provider, status and
+   reason codes; no provider text and no cause message. This changes the text of
+   a 401/402/403 refusal with the switch off too.
+   sanitizeProviderErrorText, used by every other provider error: it redacted
+   only an exact copy of the whole key, so a masked echo of a key kept its first
+   and last characters. It now also redacts any run of four or more consecutive
+   key characters. The rest of the provider body (200 characters) still passes
+   into those older errors, logs, run records and events. Not removed: those
+   errors predate this feature.
+B. Exhaustion could be cleared by accident. Fixed: exhausted and rejected are
+   two independent latched marks (table key_marks). An access refusal adds
+   rejected without touching exhausted; an accepted access check clears rejected
+   only; only "mark as available" clears exhausted.
+C. A sibling's destination was followed blindly and the follow left no trace.
+   Fixed: the follow shortcut is gone. Every refusal makes the store choose the
+   destination at that moment, inside the transaction, on current health,
+   availability, order and exclusions, and every recording's transition gets
+   its own event and notice, also when it ends on the sibling's key.
+D. Repeated candidate detected after commitment. Fixed: the recording's refused
+   credential ids go into candidate selection and are excluded before any move
+   is committed. A key re-enabled meanwhile is not handed back to the recording
+   it refused; the next healthy key is tried; no move that did not happen is
+   recorded. The after-the-fact check remains only as a defensive stop.
+E. A read that started before a change could replace the newer snapshot. Fixed
+   with an ordering gate (web/lib/snapshotGate.ts) used by the accounts screen
+   and by the banner: reads that began before a change started or finished, or
+   that arrive after a newer read, are dropped.
+F. Notice wording. Notices now tell the event in the past tense and never claim
+   that a key is unused or a destination in use now. Current routing is shown
+   apart (the "Nuevos trabajos" line; one sentence after the banner). The
+   stopped-recording notice (Spanish) and RecordingStoppedError say that
+   transcribing the recording again repeats the parts already done and that
+   those can be charged again.
+
+Found while testing and fixed: the log-capturing test helper replaced standard
+output and could swallow a test result of the runner (one of 28 tests was not
+counted in one run). It now captures standard error only. The 270 total
+reported for 0.43.1 matched the expected count, so nothing was hidden then.
+
+Tests added for B to E as the reviewer's scenarios and for the disclosure rule
+of A. tests/sttFailover.test.ts now has 29 tests; exact totals are in the
+HISTORY entry for 0.43.2.
+
+Not done: review of 0.43.2; any browser exercise of the screen; deployment.
+
 ## 2026-11-12 - Automatic account failover: independent review of 0.43.0 and fixes in 0.43.1
 
 Review, as relayed by the requesting Cortex session: Codex gpt-6-astra,

@@ -154,7 +154,11 @@ export function classifyAssemblyAiSubmissionRefusal(
 
 function asSubmissionRefusal(error: unknown, phase: "upload" | "create"): unknown {
   const refusal = classifyAssemblyAiSubmissionRefusal(error, phase);
-  if (refusal) return new ProviderRefusalError(refusal, (error as Error).message);
+  if (refusal) {
+    // Same prefix as the error it replaces, without the provider's text.
+    const source = error as ProviderHttpError;
+    return new ProviderRefusalError(refusal, `${source.provider} error ${source.status}`);
+  }
   const status = error instanceof ProviderHttpError || error instanceof InsufficientCreditsError
     ? error.status : undefined;
   if (status === 400 && !(error instanceof InsufficientCreditsError)) return error;

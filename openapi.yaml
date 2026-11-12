@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Media2Text API
-  version: 0.43.1
+  version: 0.43.2
   description: |
     Minimal local HTTP API for Media2Text, backed by the youtube2text engine.
     Notes:
@@ -21,14 +21,27 @@ paths:
       summary: Read masked provider account metadata from loopback
       description: "Internal web-to-API route. Requires the operator API key and a
         loopback socket peer. No full saved key is returned. Cache-Control:
-        no-store."
+        no-store. With view=notices it returns only pending failover notices and
+        current routing, for the banner shown on every screen: no account
+        listing and no key suffix of the existing configuration."
+      parameters:
+        - name: view
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - notices
       responses:
-        "200": &a1
-          description: Masked metadata only; access acceptance never establishes credit.
+        "200":
+          description: The masked account snapshot, or with view=notices the
+            notices-only view.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProviderAccountsSnapshot"
+                oneOf:
+                  - $ref: "#/components/schemas/ProviderAccountsSnapshot"
+                  - $ref: "#/components/schemas/FailoverNoticesView"
         "401": &a2
           description: Operator API key required
           content:
@@ -68,7 +81,12 @@ paths:
             schema:
               $ref: "#/components/schemas/ProviderAccountAction"
       responses:
-        "200": *a1
+        "200":
+          description: Masked metadata only; access acceptance never establishes credit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderAccountsSnapshot"
         "400":
           description: Invalid action
           content:
@@ -2678,30 +2696,38 @@ components:
             - type: "null"
         health:
           $ref: "#/components/schemas/CredentialHealth"
-    CredentialHealth:
+    CredentialMark:
       type: object
-      description: Set only from a definitive provider answer. Rejected and
-        exhausted keys are skipped for new work while automatic failover is on.
       additionalProperties: false
       required:
-        - state
         - since
         - status
       properties:
-        state:
-          type: string
-          enum:
-            - ok
-            - rejected
-            - exhausted
         since:
-          anyOf:
-            - type: string
-              format: date-time
-            - type: "null"
+          type: string
+          format: date-time
         status:
           anyOf:
             - type: integer
+            - type: "null"
+    CredentialHealth:
+      type: object
+      description: Two independent latched facts, each set only from a definitive
+        provider answer. Only the operator's reset clears exhausted; an accepted
+        access check also clears rejected. A key with either mark is skipped for
+        new work while automatic failover is on.
+      additionalProperties: false
+      required:
+        - exhausted
+        - rejected
+      properties:
+        exhausted:
+          anyOf:
+            - $ref: "#/components/schemas/CredentialMark"
+            - type: "null"
+        rejected:
+          anyOf:
+            - $ref: "#/components/schemas/CredentialMark"
             - type: "null"
     ProviderAccount:
       type: object
@@ -2825,6 +2851,37 @@ components:
         lastAt:
           type: string
           format: date-time
+    FailoverNoticesView:
+      type: object
+      description: Pending notices and where new work goes now. A key hint appears
+        only inside a notice.
+      additionalProperties: false
+      required:
+        - notices
+        - routing
+      properties:
+        notices:
+          type: array
+          items:
+            $ref: "#/components/schemas/FailoverNotice"
+        routing:
+          type: object
+          additionalProperties: false
+          required:
+            - enabled
+            - blocked
+            - provider
+            - accountLabel
+          properties:
+            enabled:
+              type: boolean
+            blocked:
+              type: boolean
+            provider: *a2
+            accountLabel:
+              anyOf:
+                - *a3
+                - type: "null"
     FailoverState:
       type: object
       additionalProperties: false

@@ -29,6 +29,7 @@ import {
   InsufficientCreditsError,
   ProviderHttpError,
   ProviderRefusalError,
+  sanitizeProviderErrorText,
   type ProviderRefusalKind,
 } from "../src/transcription/errors.js";
 import type { TranscriptionProvider } from "../src/transcription/index.js";
@@ -38,22 +39,29 @@ import type { TranscriptJson, TranscriptionOptions } from "../src/transcription/
 import { TranscriptStore } from "../src/transcripts/store.js";
 import { UsageLedger, type UsagePolicy } from "../src/usage/index.js";
 import { proxyPublicMediaStatus } from "../web/lib/publicStatusProxy.js";
+import { proxyCredentials } from "../web/lib/credentialProxy.js";
+import { failoverNoticeText, failoverNoticeTitle, failoverRoutingText, type FailoverNotice } from "../web/lib/failoverNotices.js";
+import { createSnapshotGate } from "../web/lib/snapshotGate.js";
+import { issueWebSessionToken, WEB_SESSION_COOKIE } from "../web/lib/webAuth.js";
 
 // Every provider in this file is a local fake. Nothing here can reach a real
 // speech-to-text service or spend credit.
 const master = "ab".repeat(32);
-const K1 = "synthetic-failover-key-AAAA1111";
-const K2 = "synthetic-failover-key-BBBB2222";
-const K3 = "synthetic-failover-key-CCCC3333";
-const K4 = "synthetic-failover-key-DDDD4444";
-const LEGACY_KEY = "synthetic-legacy-environment-key";
+// The last four characters are distinctive and not hexadecimal, so a leaked key
+// hint cannot be confused with part of an identifier or a timestamp.
+const K1 = "Gz7Q-synthetic-failover-key-one-QZX1";
+const K2 = "Hy8R-synthetic-failover-key-two-WVY2";
+const K3 = "Jx9S-synthetic-failover-key-three-HJK3";
+const K4 = "Kw6T-synthetic-failover-key-four-MNP4";
+const LEGACY_KEY = "Lv5U-synthetic-legacy-environment-key-RTG5";
 const ALL_KEYS = [K1, K2, K3, K4];
+const HINTS = [...ALL_KEYS, LEGACY_KEY].map((key) => key.slice(-4));
 
 type Call = { path: string; opts: TranscriptionOptions };
 type Behaviour = (call: Call) => TranscriptJson | Promise<TranscriptJson>;
 const completed = (text: string) => (): TranscriptJson => ({ id: `fake-${text}`, status: "completed", text });
 const refuse = (provider: SttProviderId, kind: ProviderRefusalKind, status: number) => (): TranscriptJson => {
-  throw new ProviderRefusalError({ provider, kind, status }, `${provider} API error (${status}): synthetic refusal`);
+  throw new ProviderRefusalError({ provider, kind, status }, `${provider} API error (${status})`);
 };
 const fail = (error: Error) => (): TranscriptJson => { throw error; };
 function deferred<T = void>() {
@@ -81,7 +89,8 @@ function fixtureConfig(): AppConfig {
 }
 
 /** `pipeline` replaces the real pipeline, to drive several recordings of one run at once. */
-function fixture(usagePolicy: UsagePolicy = policy(), caps: { maxAudioBytes?: number } = {}, pipeline?: PipelineFn) {
+function fixture(usagePolicy: UsagePolicy = policy(), caps: { maxAudioBytes?: number } = {}, pipeline?: PipelineFn,
+  realProvider?: (config: AppConfig) => TranscriptionProvider) {
   const root = mkdtempSync(join(tmpdir(), "m2t-failover-"));
   const config = configSchema.parse({ outputDir: join(root, "output"), audioDir: join(root, "audio"),
     sttProvider: "deepgram", deepgramApiKey: LEGACY_KEY, commentsEnabled: false, assemblyAiCreditsCheck: "none" });
@@ -104,7 +113,7 @@ function fixture(usagePolicy: UsagePolicy = policy(), caps: { maxAudioBytes?: nu
       return (behaviours.get(key) ?? completed("default"))({ path, opts });
     },
   });
-  const deps = { createTranscriptionProvider, getAudioDurationSeconds: async () => 120, usageLedger: ledger,
+  const deps = { createTranscriptionProvider: realProvider ?? createTranscriptionProvider, getAudioDurationSeconds: async () => 120, usageLedger: ledger,
     splitAudioByLimit: async (path: string) => ({ cleanup: async () => undefined,
       chunks: [{ path, startSeconds: 0, overlapSeconds: 0 }, { path, startSeconds: 60, overlapSeconds: 0 }] }) };
   const manager = new RunManager(config, { persistRuns: false, maxBufferedEventsPerRun: 50, credentialStore: store,
@@ -121,15 +130,25 @@ function fixture(usagePolicy: UsagePolicy = policy(), caps: { maxAudioBytes?: nu
   const keyOfAccount = (accountId: string, token: string) =>
     store.list().find((item) => item.id === accountId)!.keys.find((key) => key.hint.endsWith(token.slice(-4)))!;
   const keyId = (accountId: string, token: string) => keyOfAccount(accountId, token).id;
-  const health = (accountId: string, token: string) => keyOfAccount(accountId, token).health.state;
+  const marks = (accountId: string, token: string) => keyOfAccount(accountId, token).health;
+  const health = (accountId: string, token: string) => {
+    const mark = marks(accountId, token);
+    return mark.exhausted && mark.rejected ? "exhausted+rejected" : mark.exhausted ? "exhausted" : mark.rejected ? "rejected" : "ok";
+  };
   const privateBytes = () => readFileSync(join(dir, "credentials.sqlite"));
   const auditRows = () => {
     const db = new DatabaseSync(join(dir, "credentials.sqlite"), { readOnly: true });
     try { return db.prepare("SELECT action, account_id, credential_id FROM audit ORDER BY id").all() as Array<{ action: string }>; }
     finally { db.close(); }
   };
-  const f = { root, dir, config, store, source, ledger, behaviours, calls, events, manager, deps, request, start, job, keyId, health,
-    privateBytes, auditRows, usedKeys: () => calls.map((call) => call.key),
+  /** Every stored row of the audit trail, events and notices, exactly as written. */
+  const storedTrail = () => {
+    const db = new DatabaseSync(join(dir, "credentials.sqlite"), { readOnly: true });
+    try { return JSON.stringify(["audit", "failover_events", "failover_notices", "key_marks", "work_selections"].map((table) => db.prepare(`SELECT * FROM ${table}`).all())); }
+    finally { db.close(); }
+  };
+  const f = { root, dir, config, store, source, ledger, behaviours, calls, events, manager, deps, request, start, job, keyId, health, marks,
+    privateBytes, auditRows, storedTrail, usedKeys: () => calls.map((call) => call.key),
     /** Simulates a process restart of the private store (the manager keeps the old handle). */
     reopen: () => { f.store.close(); f.store = new CredentialStore(dir, master, [config.outputDir, config.audioDir]); return f.store; },
     cleanup: () => { try { f.store.close(); } catch { /* already closed */ } rmSync(root, { recursive: true, force: true }); } };
@@ -150,12 +169,12 @@ test("failover: switch is off by default and an existing private database is upg
     assert.deepEqual(f.store.pinForNewWork("deepgram"), f.store.pin("deepgram"));
     // A database written before this release has none of the new tables.
     const legacy = new DatabaseSync(join(f.dir, "credentials.sqlite"));
-    for (const table of ["failover_order", "key_order", "key_health", "failover_events", "failover_notices"]) legacy.exec(`DROP TABLE ${table}`);
+    for (const table of ["failover_order", "key_order", "key_marks", "failover_events", "failover_notices"]) legacy.exec(`DROP TABLE ${table}`);
     legacy.close();
     const reopened = f.reopen();
     assert.equal(reopened.failoverEnabled(), false);
     assert.equal(reopened.resolve(reopened.pin("deepgram")!), K1);
-    assert.equal(reopened.list()[0]!.keys[0]!.health.state, "ok");
+    assert.deepEqual(reopened.list()[0]!.keys[0]!.health, { exhausted: null, rejected: null });
     assert.deepEqual(reopened.notices(), []);
   } finally { f.cleanup(); }
 });
@@ -304,6 +323,7 @@ test("failover: moves to the next listed account only after every key is refused
     assert.equal(blocked.status, "error");
     assert.match(blocked.error ?? "", /no other enabled, healthy key or account is left/);
     assert.match(blocked.error ?? "", /deepgram refused the request \(exhausted, HTTP 402\)/);
+    assert.equal((blocked.error ?? "").includes("Original error"), false, "no text of the causing error is copied");
     assert.equal(f.usedKeys().includes(K4), false, "an account outside the list must never take over");
     assert.equal(f.health(unlisted, K4), "ok");
     assert.ok(f.store.notices().some((notice) => notice.kind === "blocked" && notice.to === null));
@@ -400,7 +420,7 @@ test("failover: no move on timeout, network error, 5xx, rate limit or any failur
 });
 
 test("failover: with the switch off a definitive refusal fails exactly like an unpinned run", async () => {
-  const refusalMessage = "deepgram API error (402): synthetic refusal";
+  const refusalMessage = "deepgram API error (402): no credit or quota left";
   // Reference: the same pipeline without any account registry.
   const reference = fixture();
   let expected: { errors: string[]; done: PipelineEvent[]; failed: number; minutes: number };
@@ -518,6 +538,7 @@ test("failover: a split recording continues on the same service but never change
     const error = other.events.flatMap((event) => event.type === "video:error" ? [event.error] : [])[0] ?? "";
     assert.match(error, /^Recording stopped: deepgram refused the request \(exhausted, HTTP 402\) after part of this recording was already accepted by deepgram, and the next account uses assemblyai/);
     assert.match(error, /not re-sent automatically/);
+    assert.match(error, /Transcribing it again with assemblyai repeats the parts already done, and those parts can be charged again\.$/);
 
     assert.equal(other.health(a, K1), "exhausted", "the refusal itself is always recorded");
     const stoppedEvents = other.store.failoverEvents();
@@ -608,16 +629,19 @@ test("failover: each attempt keeps its own pin for guards and revocation while a
   } finally { f.cleanup(); }
 });
 
-test("failover: a sibling recording that already moved the run is followed once, and never across services part-way", async () => {
-  // Same service: the second recording follows the run's new key without a second recorded move.
+test("failover: a recording that follows a sibling's move has its own audited, noticed transition, never across services part-way", async () => {
+  // Same service: the second recording ends on the same key, and that is its own recorded transition.
   const outcomes: string[] = [];
   const same = fixture(policy(), {}, async (_input, effective, options) => {
     const session = createSttSession({ config: effective, providerFactory: same.deps.createTranscriptionProvider, failover: options.failover,
       assertCredentialAvailable: options.assertCredentialAvailable, abortSignal: options.abortSignal, isCancelled: () => false });
     const first = session.startItem(); const second = session.startItem();
     await first.transcribePiece("first", pieceOptions, 0);
+    // The operator has seen and dismissed the notice of the first move.
+    same.store.dismissNotice(same.store.notices()[0]!.id);
     await second.transcribePiece("second-piece-2", pieceOptions, 1);
     outcomes.push(second.engine().config.deepgramApiKey ?? "");
+    first.close(); second.close();
   });
   try {
     const a = same.store.create("deepgram", "Personal", [K2]); same.store.addKey(a, K1);
@@ -626,8 +650,9 @@ test("failover: a sibling recording that already moved the run is followed once,
     const run = await same.job();
     assert.equal(run.status, "done");
     assert.deepEqual(same.usedKeys(), [K1, K2, K1, K2]); assert.deepEqual(outcomes, [K2]);
-    assert.deepEqual(same.store.failoverEvents().map((event) => event.kind), ["moved"], "no double move for one run");
-    assert.equal(same.store.notices().length, 1); assert.equal(same.store.notices()[0]!.count, 1);
+    assert.deepEqual(same.store.failoverEvents().map((event) => event.kind), ["moved", "moved"], "each recording's transition is audited");
+    assert.equal(same.store.notices().length, 1, "the follow is announced although the first notice was dismissed");
+    assert.equal(same.store.notices()[0]!.count, 1);
     assert.equal(same.health(a, K1), "exhausted"); assert.equal(same.health(a, K2), "ok");
   } finally { same.cleanup(); }
 
@@ -732,14 +757,16 @@ test("failover: every definitive refusal is recorded; the loop ends with the key
   };
 
   // Forty keys, far more than any fixed cap: each refusal is recorded, then the registry has nothing left.
-  const recorded: string[] = [];
-  const many = session(({ credentialId }) => {
-    recorded.push(credentialId);
+  const recorded: string[] = []; const excluded: string[][] = [];
+  const many = session(({ credentialId, refused }) => {
+    recorded.push(credentialId); excluded.push(refused);
     const next = Number(credentialId.slice(4)) + 1;
     return next < 40 ? { moved: true, config, credentialId: `key-${next}` } : { moved: false, reason: "no_candidate" };
   });
   await assert.rejects(many.item.transcribePiece("piece", pieceOptions, 0), FailoverExhaustedError);
   assert.deepEqual(recorded, Array.from({ length: 40 }, (_unused, index) => `key-${index}`));
+  assert.deepEqual(excluded[0], ["key-0"]); assert.deepEqual(excluded[2], ["key-0", "key-1", "key-2"]);
+  assert.equal(excluded[39]!.length, 40, "the registry is always told every key this recording was refused with");
   many.item.close(); many.item.close();
   assert.equal(many.tracked.length, 80, "every key the recording owned was tracked and released exactly once");
   assert.equal(many.tracked.at(-1), "-key-39");
@@ -748,7 +775,7 @@ test("failover: every definitive refusal is recorded; the loop ends with the key
     assert.equal(many.tracked.filter((entry) => entry === `-key-${index}`).length, 1);
   }
 
-  // A key already refused for this recording is never tried again: explicit stopping reason.
+  // Defensive: a registry that ignores those exclusions and offers a refused key again is stopped, with its own reason.
   const repeated: string[] = [];
   const loop = session(({ credentialId }) => {
     repeated.push(credentialId);
@@ -772,6 +799,231 @@ test("failover: every definitive refusal is recorded; the loop ends with the key
   const stoppedItem = session(({ sameProviderOnly }) => { partial.push(sameProviderOnly); return { moved: false, reason: "recording_stopped", nextProvider: "assemblyai" }; });
   await assert.rejects(stoppedItem.item.transcribePiece("piece-3", pieceOptions, 2), RecordingStoppedError);
   assert.deepEqual(partial, [true]);
+});
+
+test("failover: exhaustion is its own latched fact; a later access refusal or accepted check never clears it", () => {
+  const f = fixture();
+  try {
+    const a = f.store.create("deepgram", "Personal", [K2]); f.store.addKey(a, K1); // K1 is current
+    f.store.select(a); f.store.setFailover(true);
+    const k1 = f.keyId(a, K1); const k2 = f.keyId(a, K2);
+    const pin: CredentialPin = { provider: "deepgram", accountId: a, credentialId: k1 };
+    const check = (state: "accepted" | "rejected") => f.store.recordCheck(pin, { state, checkedAt: new Date().toISOString() });
+
+    f.store.recordRefusal({ pin, kind: "exhausted", status: 402, workIds: [], recordOnly: true });
+    const exhausted = f.marks(a, K1).exhausted;
+    assert.equal(exhausted?.status, 402); assert.equal(f.marks(a, K1).rejected, null);
+
+    // The exhausted key later gets an authentication refusal: both facts hold.
+    f.store.recordRefusal({ pin, kind: "rejected", status: 401, workIds: [], recordOnly: true });
+    assert.equal(f.health(a, K1), "exhausted+rejected");
+    assert.deepEqual(f.marks(a, K1).exhausted, exhausted, "the access refusal does not replace or restart the exhaustion");
+    assert.equal(f.marks(a, K1).rejected?.status, 401);
+
+    // An accepted access check clears the access fact only. Credit is unchanged, so the key stays skipped.
+    check("accepted");
+    assert.equal(f.health(a, K1), "exhausted");
+    assert.deepEqual(f.marks(a, K1).exhausted, exhausted);
+    assert.equal(f.store.pinForNewWork("deepgram")?.credentialId, k2);
+    check("rejected"); check("accepted"); check("accepted");
+    assert.equal(f.health(a, K1), "exhausted");
+    const actions = f.auditRows().map((row) => row.action);
+    assert.equal(actions.filter((action) => action === "health_rejected_cleared").length, 2);
+    assert.equal(actions.includes("health_exhausted_cleared"), false);
+
+    // Only "mark as available" clears exhaustion.
+    f.store.resetKeyHealth(a, k1);
+    assert.equal(f.health(a, K1), "ok");
+    assert.equal(f.store.pinForNewWork("deepgram")?.credentialId, k1);
+    assert.ok(f.auditRows().some((row) => row.action === "health_exhausted_cleared"));
+  } finally { f.cleanup(); }
+});
+
+test("failover: a sibling's destination is re-validated; an unhealthy one is not followed and the move is still announced", async () => {
+  let k2 = ""; let account = ""; const destinations: string[] = [];
+  const f = fixture(policy(), {}, async (_input, effective, options) => {
+    const session = createSttSession({ config: effective, providerFactory: f.deps.createTranscriptionProvider, failover: options.failover,
+      assertCredentialAvailable: options.assertCredentialAvailable, abortSignal: options.abortSignal, isCancelled: () => false });
+    const first = session.startItem(); const second = session.startItem();
+    // Recording A is refused on K1 and moves the run to K2.
+    await first.transcribePiece("recording-a", pieceOptions, 0);
+    destinations.push(first.engine().config.deepgramApiKey ?? "");
+    // The operator dismisses that notice; then another run marks K2 exhausted.
+    f.store.dismissNotice(f.store.notices()[0]!.id);
+    f.store.recordRefusal({ pin: { provider: "deepgram", accountId: account, credentialId: k2 }, kind: "exhausted", status: 402,
+      workIds: [], recordOnly: true });
+    // Recording B, still on K1, is refused now.
+    await second.transcribePiece("recording-b", pieceOptions, 0);
+    destinations.push(second.engine().config.deepgramApiKey ?? "");
+    first.close(); second.close();
+  });
+  try {
+    account = f.store.create("deepgram", "Personal", [K3]); f.store.addKey(account, K2); f.store.addKey(account, K1); // K1 is current
+    f.store.select(account); f.store.setFailover(true);
+    const k1 = f.keyId(account, K1); k2 = f.keyId(account, K2); const k3 = f.keyId(account, K3);
+    f.store.setKeyOrder(account, [k1, k2, k3]);
+    f.behaviours.set(K1, refuse("deepgram", "exhausted", 402));
+    f.behaviours.set(K2, ({ path }) => path === "recording-a" ? completed("a")() : completed("must-not-run")());
+    f.behaviours.set(K3, completed("b"));
+
+    const run = await f.job();
+    assert.equal(run.status, "done");
+    assert.deepEqual(f.usedKeys(), [K1, K2, K1, K3], "B must not be sent to the key that became exhausted");
+    assert.deepEqual(destinations, [K2, K3]);
+    assert.deepEqual(f.store.failoverEvents().map((event) => [event.kind, event.from.credentialId, event.to?.credentialId]),
+      [["moved", k1, k3], ["moved", k1, k2]], "each recording's actual transition is audited");
+    const pending = f.store.notices();
+    assert.equal(pending.length, 1, "B's move is announced although A's notice was dismissed");
+    assert.equal(pending[0]!.to?.keyHint, `••••${K3.slice(-4)}`);
+    assert.equal(f.store.workSelection(`run:${run.runId}`)?.pin?.credentialId, k3);
+  } finally { f.cleanup(); }
+});
+
+test("failover: a key re-enabled mid-recording is not handed back to the recording it refused", async () => {
+  const f = fixture();
+  try {
+    const a = f.store.create("deepgram", "Personal", [K3]); f.store.addKey(a, K2); f.store.addKey(a, K1); // K1 is current
+    f.store.select(a); f.store.setFailover(true);
+    const k1 = f.keyId(a, K1); const k2 = f.keyId(a, K2); const k3 = f.keyId(a, K3);
+    f.store.setKeyOrder(a, [k1, k2, k3]);
+    f.behaviours.set(K1, refuse("deepgram", "exhausted", 402));
+    // While the recording is on K2 the operator marks K1 as available again; then K2 is refused too.
+    f.behaviours.set(K2, () => { f.store.resetKeyHealth(a, k1); return refuse("deepgram", "exhausted", 402)(); });
+    f.behaviours.set(K3, completed("third-key"));
+
+    const run = await f.job();
+    assert.equal(run.stats?.succeeded, 1, "the healthy third key is tried instead of stopping");
+    assert.deepEqual(f.usedKeys(), [K1, K2, K3]);
+    assert.deepEqual(f.store.failoverEvents().map((event) => [event.kind, event.from.credentialId, event.to?.credentialId]),
+      [["moved", k2, k3], ["moved", k1, k2]], "no move back to the re-enabled key is recorded");
+    assert.equal(f.store.workSelection(`run:${run.runId}`)?.pin?.credentialId, k3);
+    assert.equal(f.health(a, K1), "ok", "the operator's reset stands for new work");
+    assert.equal(f.store.pinForNewWork("deepgram")?.credentialId, k1);
+    // The store itself refuses to offer an excluded key, whatever its health.
+    assert.deepEqual(f.store.recordRefusal({ pin: { provider: "deepgram", accountId: a, credentialId: k3 }, kind: "rejected", status: 401,
+      workIds: [], exclude: [k1, k2, k3] }), { moved: false, reason: "no_candidate" });
+  } finally { f.cleanup(); }
+});
+
+test("disclosure: a provider body and key characters never reach logs, run records, events, the audit trail or error texts", async () => {
+  const REFUSAL_BODY = "PROVIDER-REFUSAL-BODY"; const OTHER_BODY = "PROVIDER-SERVER-BODY";
+  const echo = (key: string, marker: string) => JSON.stringify({ err_msg: `${marker} for key ${key.slice(0, 8)}****${key.slice(-4)} and ****${key.slice(-4)}` });
+  // What a key must never leave behind outside the authenticated accounts screen and its notice.
+  const fragments = [K1, K2, K3].flatMap((key) => [key, key.slice(-4), key.slice(0, 4), key.slice(0, 8)]);
+  const assertClean = (label: string, value: unknown, bodies: string[]) => {
+    const text = typeof value === "string" ? value : JSON.stringify(value);
+    for (const fragment of [...fragments, ...bodies]) assert.equal(text.includes(fragment), false, `${label} must not contain ${fragment}`);
+  };
+
+  // The sanitizer that keeps provider text in the errors that existed before this feature.
+  const masked = sanitizeProviderErrorText(`Incorrect API key provided: ${K1.slice(0, 8)}****${K1.slice(-4)}. ${K1} was refused.`, [K1]);
+  assertClean("sanitized text", masked, []);
+  assert.match(masked, /^Incorrect API key provided: \[redacted\]\*\*\*\*\[redacted\]\. \[redacted\] was refused\.$/);
+  assert.equal(sanitizeProviderErrorText("Too many requests. Please try again later", [K1]), "Too many requests. Please try again later");
+
+  const f = fixture(policy(), {}, undefined, (config) => new DeepgramProvider(config.deepgramApiKey ?? "", "nova-3", true, undefined, 1000));
+  try {
+    const a = f.store.create("deepgram", "Cuenta personal", [K2]); f.store.addKey(a, K1); // K1 is current
+    const b = f.store.create("deepgram", "Cuenta de respaldo", [K3]);
+    f.store.select(a); f.store.setFailoverOrder([b]); f.store.setFailover(true);
+    const answers = new Map<string, () => Response>([
+      [K1, () => new Response(echo(K1, REFUSAL_BODY), { status: 402 })],
+      [K2, () => new Response(echo(K2, REFUSAL_BODY), { status: 401 })],
+      [K3, () => new Response(echo(K3, OTHER_BODY), { status: 500 })],
+    ]);
+    const deepgram = async (_url: string, init?: RequestInit) => {
+      const key = String(new Headers(init?.headers).get("authorization")).replace("Token ", "");
+      return answers.get(key)!();
+    };
+
+    // Two definitive refusals move the work twice; the third key fails with an unclassified server error.
+    const first = await captureLogs(() => withFetch(deepgram, () => f.job()));
+    assert.equal(first.result.stats?.failed, 1);
+    assert.equal(f.store.failoverEvents().filter((event) => event.kind === "moved").length, 2);
+    const serverError = f.events.flatMap((event) => event.type === "video:error" ? [event.error] : [])[0] ?? "";
+    assert.match(serverError, /^Deepgram API error \(500\): /, "an unclassified error keeps its previous form");
+    assert.ok(serverError.includes("[redacted]") && serverError.includes(OTHER_BODY), "its provider text stays, with every key fragment redacted");
+    assertClean("server error text", serverError, [REFUSAL_BODY]);
+
+    // Nothing is left for the next job once the third key is refused as well.
+    answers.set(K3, () => new Response(echo(K3, REFUSAL_BODY), { status: 402 }));
+    const second = await captureLogs(() => withFetch(deepgram, () => f.job()));
+    assert.equal(second.result.status, "error");
+    assert.equal(second.result.error, "Automatic account change stopped: deepgram refused the request (exhausted, HTTP 402) " +
+      "and no other enabled, healthy key or account is left.");
+
+    for (const [label, value] of [
+      ["logs", [...first.lines, ...second.lines].join("\n")], ["run records", f.manager.listRuns()], ["pipeline events", f.events],
+      ["audit trail, events and stored notices", f.storedTrail()], ["failover events", f.store.failoverEvents()],
+    ] as const) {
+      assertClean(label, value, label === "logs" || label === "pipeline events" || label === "run records" ? [REFUSAL_BODY] : [REFUSAL_BODY, OTHER_BODY]);
+    }
+    assert.ok([...first.lines, ...second.lines].some((line) => line.includes("Automatic account change: deepgram refused the request (exhausted, HTTP 402)")));
+
+    // The one place a key hint is shown: the notice of the authenticated accounts screen, derived when it is rendered.
+    const rendered = JSON.stringify(f.store.notices());
+    assert.ok(rendered.includes(`••••${K1.slice(-4)}`) && rendered.includes(`••••${K3.slice(-4)}`));
+    for (const key of [K1, K2, K3]) assert.equal(rendered.includes(key), false);
+  } finally { f.cleanup(); }
+});
+
+test("screen order: a read that began before a change never replaces what the change returned", () => {
+  // The reviewer's scenario: a periodic read starts, the operator turns the switch on, the old read arrives last.
+  const gate = createSnapshotGate();
+  const staleRead = gate.beginRead();
+  gate.changed();                       // the change starts
+  const duringChange = gate.beginRead();
+  gate.changed();                       // the change has answered: the switch is on
+  assert.equal(gate.accepts(staleRead), false, "the read from before the change must not turn the switch off again");
+  assert.equal(gate.accepts(duringChange), false, "a read that began while the change ran may also be older");
+  const fresh = gate.beginRead();
+  assert.equal(gate.accepts(fresh), true);
+  // Two reads without a change in between: the older one must not overwrite the newer one.
+  const older = gate.beginRead(); const newer = gate.beginRead();
+  assert.equal(gate.accepts(newer), true); assert.equal(gate.accepts(older), false);
+  // A failed change still invalidates the reads around it.
+  const beforeFailure = gate.beginRead(); gate.changed(); gate.changed();
+  assert.equal(gate.accepts(beforeFailure), false);
+});
+
+test("notice wording: past events in the past tense, current routing apart, and the cost of repeating a stopped recording", () => {
+  const es = (spanish: string) => spanish; const en = (_spanish: string, english: string) => english;
+  const from = { accountId: "a", label: "Cuenta personal", provider: "deepgram" as const, keyHint: "••••QZX1" };
+  const notice = (over: Partial<FailoverNotice>): FailoverNotice => ({ id: "n", kind: "moved", reason: "exhausted", status: 402, from,
+    to: { accountId: "b", label: "Cuenta de respaldo", provider: "assemblyai", keyHint: "••••HJK3" }, serviceChanged: true, count: 1,
+    firstAt: "2026-11-12T10:00:00.000Z", lastAt: "2026-11-12T10:00:00.000Z", ...over });
+  const present = [/ha dejado de usarse/, /deja de usarse/, /Ahora se usa/, /se usa ahora/, /is no longer used/, /is used now/];
+
+  const moved = failoverNoticeText(notice({}), es);
+  assert.match(moved, /^Deepgram rechazó una petición con la clave ••••QZX1 de la cuenta «Cuenta personal»: respondió que no quedaba saldo o cuota \(HTTP 402\)\./);
+  assert.match(moved, /El trabajo afectado continuó con la cuenta «Cuenta de respaldo» \(AssemblyAI\), clave ••••HJK3\./);
+  assert.match(moved, /El servicio de transcripción cambió de Deepgram a AssemblyAI: la calidad de esas transcripciones puede ser distinta\./);
+  assert.match(moved, / Ocurrió el /);
+  const sameAccount = failoverNoticeText(notice({ to: { ...from, keyHint: "••••WVY2" }, serviceChanged: false, reason: "rejected", status: 401, count: 3 }), es);
+  assert.match(sameAccount, /rechazó peticiones .*: no aceptó la clave o su permiso \(HTTP 401\)\. Los trabajos afectados continuaron con la clave ••••WVY2 de la misma cuenta\. Ocurrió 3 veces/);
+  assert.equal(sameAccount.includes("cambió de"), false);
+  const blocked = failoverNoticeText(notice({ kind: "blocked", to: null, serviceChanged: false }), es);
+  assert.match(blocked, /No quedaba ninguna otra clave o cuenta disponible en tu lista y el trabajo falló\./);
+
+  const stopped = failoverNoticeText(notice({ kind: "stopped", serviceChanged: false }), es);
+  assert.match(stopped, /Una grabación que ya estaba transcrita en parte se detuvo sin completarse/);
+  assert.match(stopped, /Ninguna cuenta continuó esa grabación\./);
+  assert.match(stopped, /Si la transcribes de nuevo, se repetirán también las partes que ya estaban hechas, y esas partes se te pueden cobrar otra vez\./);
+  assert.equal(stopped.includes("continuó con"), false, "a stopped recording must not read as a takeover");
+  assert.equal(failoverNoticeTitle(notice({ kind: "stopped" }), es), "Grabación detenida");
+  assert.match(failoverNoticeText(notice({ kind: "stopped", serviceChanged: false }), en), /the parts that were already done are repeated too, and those parts can be charged again\./);
+
+  for (const text of [moved, sameAccount, blocked, stopped, failoverNoticeText(notice({}), en)]) {
+    for (const pattern of present) assert.equal(pattern.test(text), false, `a past event must not be told as the current state: ${pattern}`);
+  }
+  // Current routing is a separate sentence, in the present tense, without any key hint.
+  const routing = { enabled: true, blocked: false, provider: "assemblyai" as const, accountLabel: "Cuenta de respaldo" };
+  assert.equal(failoverRoutingText(routing, es), "Ahora mismo los trabajos nuevos van a la cuenta «Cuenta de respaldo» (AssemblyAI).");
+  assert.equal(failoverRoutingText({ ...routing, enabled: false, accountLabel: null, provider: "deepgram" }, es),
+    "Ahora mismo los trabajos nuevos usan la configuración existente de Deepgram. El cambio automático está desactivado.");
+  assert.equal(failoverRoutingText({ ...routing, blocked: true }, es), "Ahora mismo no queda ninguna clave o cuenta disponible para los trabajos nuevos.");
+  assert.match(new RecordingStoppedError({ provider: "deepgram", kind: "exhausted", status: 402 }, "assemblyai").message,
+    /repeats the parts already done, and those parts can be charged again\.$/);
 });
 
 test("failover: legacy environment keys and local disable never start an automatic move", async () => {
@@ -817,12 +1069,22 @@ async function withFetch<T>(handler: (url: string, init?: RequestInit) => Promis
   try { return await run(); } finally { globalThis.fetch = original; }
 }
 const transcribeOptions = { pollIntervalMs: 0, maxPollMinutes: 1, retries: 0, providerTimeoutMs: 1000 };
+/**
+ * Captures everything the application logs. Only stderr is intercepted: stdout
+ * carries the test runner's own result stream, and swallowing it would hide a
+ * test result. The logger sends its informational lines to stderr too while
+ * Y2T_JSON_EVENTS is set, so nothing the application logs is missed.
+ */
 async function captureLogs<T>(run: () => Promise<T>): Promise<{ result: T; lines: string[] }> {
   const lines: string[] = [];
-  const stderrWrite = process.stderr.write; const stdoutWrite = process.stdout.write;
-  process.stderr.write = process.stdout.write = ((chunk: unknown) => { lines.push(String(chunk)); return true; }) as typeof process.stderr.write;
+  const stderrWrite = process.stderr.write; const jsonEvents = process.env.Y2T_JSON_EVENTS;
+  process.env.Y2T_JSON_EVENTS = "1";
+  process.stderr.write = ((chunk: unknown) => { lines.push(String(chunk)); return true; }) as typeof process.stderr.write;
   try { return { result: await run(), lines }; }
-  finally { process.stderr.write = stderrWrite; process.stdout.write = stdoutWrite; }
+  finally {
+    process.stderr.write = stderrWrite;
+    if (jsonEvents === undefined) delete process.env.Y2T_JSON_EVENTS; else process.env.Y2T_JSON_EVENTS = jsonEvents;
+  }
 }
 
 test("typed errors: Deepgram refuses definitively only on documented 401, 402 and 403", async () => {
@@ -839,8 +1101,7 @@ test("typed errors: Deepgram refuses definitively only on documented 401, 402 an
 
     const exhausted = await attempt(402, JSON.stringify({ err_code: "ASR_PAYMENT_REQUIRED", err_msg: `Project does not have enough credits ${K1}` }));
     assert.deepEqual(definitiveRefusalOf(exhausted), { provider: "deepgram", kind: "exhausted", status: 402 });
-    assert.match(exhausted.message, /^Deepgram API error \(402\): /, "the message keeps its previous form");
-    assert.equal(exhausted.message.includes(K1), false, "a key echoed by the provider is redacted");
+    assert.equal(exhausted.message, "Deepgram API error (402): no credit or quota left", "fixed codes only, no provider text");
     assert.deepEqual(definitiveRefusalOf(await attempt(401, '{"err_code":"INVALID_AUTH","err_msg":"Invalid credentials."}')),
       { provider: "deepgram", kind: "rejected", status: 401 });
     assert.equal(definitiveRefusalOf(await attempt(403, '{"err_code":"INSUFFICIENT_PERMISSIONS"}'))?.kind, "rejected");
@@ -889,7 +1150,7 @@ test("typed errors: OpenAI is definitive only for its documented 401, region 403
     }, async () => { try { await provider.transcribe(f.source, transcribeOptions); } catch (error) { return error as Error; } throw new Error("expected a failure"); });
     const exhausted = await attempt(429, body({ type: "insufficient_quota", message: "You exceeded your current quota" }));
     assert.deepEqual(definitiveRefusalOf(exhausted), { provider: "openai_whisper", kind: "exhausted", status: 429 });
-    assert.match(exhausted.message, /^OpenAI Whisper API error \(429\): /);
+    assert.equal(exhausted.message, "OpenAI Whisper API error (429): no credit or quota left");
     assert.equal(definitiveRefusalOf(await attempt(401, body({ message: "Incorrect API key provided" })))?.kind, "rejected");
     assert.equal(definitiveRefusalOf(await attempt(403, region))?.kind, "rejected");
     assert.equal(definitiveRefusalOf(await attempt(429, body({ type: "rate_limit_error", code: "rate_limit_exceeded" }))), undefined);
@@ -947,7 +1208,7 @@ test("typed errors: AssemblyAI is definitive only for documented shapes before t
   // Before acceptance.
   const uploadRejected = await outcome((client) => { client.uploadAudio = async () => { throw new ProviderHttpError("AssemblyAI upload", 401, "Authentication error"); }; });
   assert.deepEqual(definitiveRefusalOf(uploadRejected), { provider: "assemblyai", kind: "rejected", status: 401 });
-  assert.equal(uploadRejected?.message, "AssemblyAI upload error 401: Authentication error", "the message keeps its previous form");
+  assert.equal(uploadRejected?.message, "AssemblyAI upload error 401: key or permission rejected", "same prefix, fixed reason, no provider text");
   const createExhausted = await outcome((client) => { client.createTranscript = async () => { throw new ProviderHttpError("AssemblyAI", 400, balance); }; });
   assert.deepEqual(definitiveRefusalOf(createExhausted), { provider: "assemblyai", kind: "exhausted", status: 400 });
 
@@ -994,7 +1255,7 @@ test("typed errors: AssemblyAI is definitive only for documented shapes before t
     const refused = await drive((url) => url.endsWith("/upload") ? uploaded() : new Response(JSON.stringify({ error: balance }), { status: 400 }));
     assert.deepEqual(refused.seen, ["POST /upload", "POST /transcript"]);
     assert.deepEqual(definitiveRefusalOf(refused.error), { provider: "assemblyai", kind: "exhausted", status: 400 });
-    assert.match(refused.error?.message ?? "", /^AssemblyAI error 400: /);
+    assert.equal(refused.error?.message, "AssemblyAI error 400: no credit or quota left");
     // After the upload, a create call with no answer.
     const unanswered = await drive((url) => { if (url.endsWith("/upload")) return uploaded(); throw new TypeError("fetch failed"); });
     assert.deepEqual(unanswered.seen, ["POST /upload", "POST /transcript"]);
@@ -1020,6 +1281,29 @@ test("legacy key pool never logs key characters when it cools a key down", async
   assert.equal(cooldown.length, 2);
   assert.ok(cooldown.some((line) => line.includes("Deepgram key #1 of 2")));
   for (const line of lines) for (const key of [K1, K2]) assert.equal(line.includes(key.slice(0, 4)), false, "no key prefix in logs");
+});
+
+test("web proxy: the banner's read needs the operator session and forwards only the exact notices view", async () => {
+  const previous = { ...process.env }; const fetchBefore = globalThis.fetch;
+  Object.assign(process.env, { Y2T_WEB_AUTH_SECRET: "web-auth-secret-for-synthetic-tests-32", Y2T_WEB_AUTH_PASSPHRASE: "synthetic-passphrase",
+    Y2T_API_KEY: "operator-key-synthetic-32-characters", Y2T_API_BASE_URL: "http://api.example.test" });
+  const forwarded: string[] = [];
+  try {
+    globalThis.fetch = (async (url: unknown) => { forwarded.push(String(url)); return Response.json({ notices: [] }); }) as typeof fetch;
+    const session = await issueWebSessionToken();
+    const read = (query: string, cookie = `${WEB_SESSION_COOKIE}=${session}`) =>
+      proxyCredentials(new Request(`https://console.test/api/provider-accounts${query}`, { headers: { cookie } }));
+    assert.equal((await read("?view=notices", "")).status, 401);
+    assert.deepEqual(forwarded, []);
+    assert.equal((await read("?view=notices&debug=1")).status, 200);
+    await read("?view=everything"); await read("");
+    assert.deepEqual(forwarded, ["http://api.example.test/provider-accounts?view=notices",
+      "http://api.example.test/provider-accounts", "http://api.example.test/provider-accounts"]);
+  } finally {
+    globalThis.fetch = fetchBefore;
+    for (const key of Object.keys(process.env)) if (!(key in previous)) delete process.env[key];
+    Object.assign(process.env, previous);
+  }
 });
 
 test("account API and public status: order, switch, notice, dismissal and the fixed default status shape", async () => {
@@ -1085,7 +1369,7 @@ test("account API and public status: order, switch, notice, dismissal and the fi
     assert.equal(cross.from.label, "Cuenta personal"); assert.equal(cross.to?.label, "Cuenta de respaldo");
     assert.equal(cross.to?.provider, "assemblyai"); assert.equal(cross.from.keyHint, `••••${K1.slice(-4)}`);
     assert.equal(read.failover.effective?.accountId, b);
-    assert.equal(read.accounts.find((item) => item.id === a)!.keys.every((key) => key.health.state === "exhausted" && key.health.since), true);
+    assert.equal(read.accounts.find((item) => item.id === a)!.keys.every((key) => key.health.exhausted?.since && key.health.rejected === null), true);
     assertNoSecret("account snapshot", read);
 
     const degraded = await status(); assertFixedShape(degraded);
@@ -1098,10 +1382,22 @@ test("account API and public status: order, switch, notice, dismissal and the fi
       pending_notices: 2, service_changed: true, blocked: false });
     for (const text of [JSON.stringify(degraded), JSON.stringify(detailed)]) {
       assertNoSecret("public status", text);
-      for (const privateText of ["Cuenta personal", "Cuenta de respaldo", K1.slice(-4), K2.slice(-4), K3.slice(-4), a, b]) {
+      for (const privateText of ["Cuenta personal", "Cuenta de respaldo", ...HINTS, "••••", a, b]) {
         assert.equal(text.includes(privateText), false, "the public status exposes no alias, key hint or identifier");
       }
     }
+
+    // The banner shown on every screen reads notices and current routing only.
+    const view = await (await fetch(`${base}/provider-accounts?view=notices`, { headers })).json() as
+      { notices: FailoverNotice[]; routing: Record<string, unknown> };
+    assert.deepEqual(Object.keys(view).sort(), ["notices", "routing"], "no account listing and no legacy keys");
+    assert.equal(view.notices.length, 2);
+    assert.deepEqual(view.routing, { enabled: true, blocked: false, provider: "assemblyai", accountLabel: "Cuenta de respaldo" });
+    assert.equal(JSON.stringify(view.routing).includes("••••"), false, "current routing carries no key hint");
+    assert.equal(JSON.stringify(view).includes(LEGACY_KEY.slice(-4)), false, "no suffix of the existing configuration leaves the accounts screen");
+    assert.ok(JSON.stringify(read).includes(LEGACY_KEY.slice(-4)), "only the authenticated accounts screen lists the existing keys");
+    assertNoSecret("notices view", view);
+    assert.equal((await fetch(`${base}/provider-accounts?view=notices`)).status, 401);
     assertFixedShape(await status("?include=everything"));
 
     // The web origin forwards only the exact opt-in.

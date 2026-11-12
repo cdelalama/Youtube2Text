@@ -1,4 +1,4 @@
-<!-- doc-version: 0.43.1 -->
+<!-- doc-version: 0.43.2 -->
 # Project Context - Media2Text
 
 ## Vision
@@ -53,10 +53,10 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
 ## Current Status (2026-11-12)
-v0.43.1 candidate in source on task branch `work/stt-failover-20261112` adds
+v0.43.2 candidate in source on task branch `work/stt-failover-20261112` adds
 automatic key and account failover with operator notice (D-029), off by default.
-It is not deployed. The independent review of 0.43.0 asked for seven changes;
-0.43.1 makes them and awaits re-review; see `docs/llm/REVIEWS.md` and
+It is not deployed. Two independent reviews (of 0.43.0 and 0.43.1) said do not
+merge yet; 0.43.2 answers the second and awaits a third; see `docs/llm/REVIEWS.md` and
 `docs/operations/STT_FAILOVER_2026-11-12.md`. The installed runtime is below.
 
 ## Installed runtime (2026-10-24)

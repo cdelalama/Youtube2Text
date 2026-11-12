@@ -35,8 +35,8 @@ ficticias. Conserva la evidencia de instalación y no debe usarse para transcrib
 
 ## Cambio automático de clave o cuenta
 
-**Todavía no está instalado.** Llega con la versión 0.43.1, que está preparada
-en el código y pendiente de una segunda revisión independiente y de
+**Todavía no está instalado.** Llega con la versión 0.43.2, que está preparada
+en el código y pendiente de una nueva revisión independiente y de
 instalación. El NAS sigue con la 0.42.2, donde esta sección no aparece. Cuando
 se instale, nada cambia hasta que actives el interruptor: viene desactivado.
 
@@ -81,35 +81,51 @@ también en Ajustes, y se queda hasta que pulses **Descartar aviso** en Ajustes.
 La pantalla se actualiza sola cada 20 segundos. Recibes un aviso **cada vez**
 que hay un cambio automático: descartar uno no silencia el siguiente, aunque
 sea igual; mientras no lo descartes, las repeticiones se suman en el mismo
-aviso con un contador. Dice:
+aviso con un contador.
 
-- qué cuenta y qué clave (sus cuatro últimos caracteres) han dejado de usarse;
-- por qué: **sin saldo o cuota** o **clave rechazada**, con el código de respuesta;
-- qué cuenta y clave se usan ahora;
-- si ha cambiado el servicio, una frase clara: «Ha cambiado el servicio de
-  transcripción: de X a Y. La calidad de las transcripciones puede ser distinta.»
+El aviso cuenta **lo que pasó**, en pasado:
 
-Si el aviso dice que no queda ninguna clave o cuenta disponible, los trabajos
-fallan hasta que hagas una de estas tres cosas: recargar saldo, añadir una
-clave nueva o marcar una clave como disponible.
+- qué servicio rechazó una petición, y con qué cuenta y clave (sus cuatro
+  últimos caracteres);
+- por qué: respondió que **no quedaba saldo o cuota**, o **no aceptó la clave o
+  su permiso**, con el código de respuesta;
+- con qué cuenta y clave continuó el trabajo afectado;
+- si cambió el servicio, una frase clara: «El servicio de transcripción cambió
+  de X a Y: la calidad de esas transcripciones puede ser distinta.»
+
+El aviso no dice qué se está usando ahora, porque eso puede haber cambiado
+desde entonces. Lo que se usa en este momento lo ves aparte: en la frase «Ahora
+mismo los trabajos nuevos van a…» que sigue al aviso, y en la línea **Nuevos
+trabajos** de Ajustes.
+
+Si el aviso dice que no quedaba ninguna clave o cuenta disponible, ese trabajo
+falló. Los trabajos nuevos seguirán fallando hasta que hagas una de estas tres
+cosas: recargar saldo, añadir una clave nueva o marcar una clave como disponible.
 
 Si el aviso se titula **Grabación detenida**, una grabación larga que ya estaba
-transcrita en parte se ha parado sin completarse: la siguiente cuenta de tu
-lista es de otro servicio, y Media2Text no mezcla dos servicios en una misma
-transcripción ni paga dos veces la parte ya hecha. Ninguna cuenta ha tomado el
-relevo para esa grabación. Vuelve a lanzarla y se transcribirá entera con el
-servicio siguiente. Los trabajos nuevos sí cambian de cuenta, con su propio aviso.
+transcrita en parte se paró sin completarse: la siguiente cuenta de tu lista
+era de otro servicio, y Media2Text no mezcla dos servicios en una misma
+transcripción. Ninguna cuenta continuó esa grabación. **Si la transcribes de
+nuevo, se repetirán también las partes que ya estaban hechas, y esas partes se
+te pueden cobrar otra vez.** Decide tú si compensa. Los trabajos nuevos sí
+cambian de cuenta, con su propio aviso.
 
-Estado de cada clave. Junto a cada clave verás **Sin saldo o cuota desde…** o
-**Rechazada por el servicio desde…** cuando el servicio lo haya dicho. Con el
-interruptor activado, esa clave no se usa para trabajos nuevos. La marca no se
-quita sola: una transcripción que termine bien no la borra, porque pudo
-aceptarse antes del rechazo. Solo la quitas tú. Para volver a usarla:
+Estado de cada clave. Una clave puede tener dos marcas distintas, cada una con
+su fecha, y puede tener las dos a la vez:
 
-- Sin saldo: recarga en la web del servicio y pulsa **Marcar como disponible**.
-  **Comprobar acceso** no sirve para esto, porque no puede confirmar el saldo.
-- Rechazada: corrige o renueva la clave y pulsa **Comprobar acceso** o
-  **Marcar como disponible**.
+- **Sin saldo o cuota desde…**: el servicio dijo que no quedaba saldo. Solo se
+  quita con **Marcar como disponible**, después de recargar en la web del
+  servicio. **Comprobar acceso** no la quita nunca, porque no puede confirmar
+  el saldo.
+- **Rechazada por el servicio desde…**: el servicio no aceptó la clave. Se
+  quita cuando **Comprobar acceso** sale aceptado, o con **Marcar como
+  disponible**, después de corregir o renovar la clave.
+
+Con el interruptor activado, una clave con cualquiera de las dos marcas no
+recibe trabajos nuevos. Las marcas no se quitan solas: una transcripción que
+termine bien no las borra, porque pudo aceptarse antes del rechazo. Solo las
+quitas tú. Los cuatro últimos caracteres de una clave solo se muestran en esta
+pantalla y en estos avisos; no aparecen en registros ni en mensajes de error.
 
 La línea **Nuevos trabajos** indica qué cuenta se está usando de verdad en cada
 momento. Cada transcripción guarda además el servicio que la hizo.

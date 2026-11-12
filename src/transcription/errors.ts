@@ -28,10 +28,21 @@ export class InsufficientCreditsError extends Error {
   }
 }
 
+const REFUSAL_REASON: Record<ProviderRefusalKind, string> = {
+  rejected: "key or permission rejected",
+  exhausted: "no credit or quota left",
+};
+
+/**
+ * Its message is built from fixed codes only: the adapter's own prefix with the
+ * HTTP status, plus the reason. It never carries the provider's response text,
+ * which can echo part of the key (some providers answer an invalid key with its
+ * first and last characters).
+ */
 export class ProviderRefusalError extends Error {
   name = "ProviderRefusalError";
-  constructor(public refusal: DefinitiveRefusal, message: string) {
-    super(message);
+  constructor(public refusal: DefinitiveRefusal, prefix: string) {
+    super(`${prefix}: ${REFUSAL_REASON[refusal.kind]}`);
   }
 }
 
@@ -63,6 +74,16 @@ export class ProviderHttpError extends Error {
   }
 }
 
+const MIN_SECRET_FRAGMENT = 4;
+
+/**
+ * Provider text kept in an error message. Besides the whole secret, every run
+ * of four or more consecutive characters of a secret is redacted, so a masked
+ * echo such as "sk-ab...wxyz" cannot expose the first or last characters of a
+ * key. Unrelated text that happens to share such a run is redacted too; that is
+ * accepted. Everything else in the provider body still passes through, cut to
+ * `maxLen` characters.
+ */
 export function sanitizeProviderErrorText(
   text: string,
   secrets: string[] = [],
@@ -74,8 +95,32 @@ export function sanitizeProviderErrorText(
     out = out.split(secret).join("[redacted]");
   }
   out = out.replace(/[\r\n\t]+/g, " ").trim();
-  if (out.length > maxLen) {
-    out = `${out.slice(0, maxLen)}...`;
+  const truncated = out.length > maxLen;
+  if (truncated) out = out.slice(0, maxLen);
+  for (const secret of secrets) {
+    if (!secret || secret.length < 2 * MIN_SECRET_FRAGMENT) continue;
+    out = redactFragments(out, secret);
+  }
+  return truncated ? `${out}...` : out;
+}
+
+function redactFragments(text: string, secret: string): string {
+  let out = "";
+  for (let index = 0; index < text.length; ) {
+    let length = 0;
+    while (
+      index + length < text.length &&
+      secret.includes(text.slice(index, index + length + 1))
+    ) {
+      length += 1;
+    }
+    if (length >= MIN_SECRET_FRAGMENT) {
+      out += "[redacted]";
+      index += length;
+    } else {
+      out += text[index];
+      index += 1;
+    }
   }
   return out;
 }

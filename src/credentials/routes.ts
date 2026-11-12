@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { parse as parseUrl } from "node:url";
 import { z } from "zod";
 import type { AppConfig } from "../config/schema.js";
 import type { RunManager } from "../api/runManager.js";
@@ -56,7 +57,17 @@ export function credentialRoutes(store: CredentialStore | undefined, baseConfig:
       }
       // Never inherit the optional development bypass for this sensitive surface.
       if (!process.env.Y2T_API_KEY?.trim()) { json(res, 503, { error: "api_auth_not_configured" }); return; }
-      if (req.method === "GET") { json(res, 200, snapshot()); return; }
+      if (req.method === "GET") {
+        // The banner shown on every screen reads notices only: no account
+        // listing and no legacy key suffix leaves this route for it.
+        if (parseUrl(req.url ?? "", true).query?.view === "notices") {
+          const provider = effectiveConfig().sttProvider;
+          json(res, 200, store?.noticesView(provider)
+            ?? { notices: [], routing: { enabled: false, blocked: false, provider, accountLabel: null } });
+          return;
+        }
+        json(res, 200, snapshot()); return;
+      }
       if (req.method !== "POST") { json(res, 405, { error: "method_not_allowed" }); return; }
       if (!store) { json(res, 503, { error: "credential_store_not_configured" }); return; }
       const chunks: Buffer[] = [];

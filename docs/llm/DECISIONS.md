@@ -36,23 +36,38 @@ Decision details:
 - Only accounts in the operator's ordered list, enabled, with a key that is not
   revoked and not marked rejected or exhausted, can take over. Order: remaining
   keys of the same account, then the list from the top.
-- Key health (ok, rejected, exhausted) is set only from a definitive provider
-  answer and is latched: only the operator clears it, by his reset or by a
-  successful access check (for rejected only; an access check never proves
-  credit). A completed request never clears it, because it may have been
-  accepted before the refusal.
+- A key carries two independent, latched facts, each set only from a
+  definitive provider answer: exhausted (no credit or quota) and rejected
+  (access refused). Only the operator's "mark as available" clears exhausted.
+  An accepted access check clears rejected only; it never proves credit, so it
+  never touches exhausted, whatever happened to the key in between. A completed
+  request clears neither, because it may have been accepted before the refusal.
+  A key with either fact is skipped for new work.
 - Accepted work keeps its pin. It moves only on a refusal of its own request,
   with an audit event naming it. Nothing is re-pinned silently.
 - Every attempt is guarded and revocable by its own pin for its whole life,
   even after another recording of the same run moved the run to another key.
 - Every definitive refusal is recorded. There is no attempt counter: a key
   refused for a recording is not tried again for it, so the keys bound the loop.
+  The registry is told those keys and excludes them before it commits a move.
+- The destination of every move is chosen at that moment, inside the same
+  transaction, on current health, availability and order. An earlier move of
+  the same run is never reused blindly; a recording that ends on the same key
+  as a sibling has its own audit event and notice.
 - Existing usage caps apply to the service that ends up doing the work. Nothing
   raises a cap. If nothing is left, the job fails closed with a clear reason.
 - Every move is audited without secret values and shown as a notice until
   dismissed; a service change is stated in plain words. Pending repeats share
   one notice with a counter; a dismissed notice never silences the next move.
-  The transcript record names the service that actually did the work.
+  A notice tells the past event in the past tense; where new work goes now is
+  shown apart. The transcript record names the service that did the work.
+- Key hints (the last four characters, accepted in D-028) appear only on the
+  authenticated accounts screen and inside its failover notice, derived when it
+  is rendered. They never appear in logs, audit rows, failover events, the
+  public status route, error messages or any response another screen needs; the
+  banner on other screens reads notices and current routing only. Errors of
+  this feature are built from fixed provider, status and reason codes and carry
+  no provider text.
 - Transcript Ready v1 is frozen and has no provider field; it is unchanged.
 - The public status route keeps its fixed default shape, which a deployed
   monitor pins exactly. The named check is added only on request.
@@ -60,7 +75,8 @@ Decision details:
   This is decided before any pin is rewritten. The refusal is recorded, a
   distinct "recording stopped" transition is written, the recording keeps its
   real provider pin, and the notice says it stopped, not that another account
-  took over.
+  took over, and that transcribing it again repeats the parts already done,
+  which can be charged again.
 
 Rejected options: generic failover on any error (duplicate billing after an
 ambiguous submission, see STT_PROVIDER_AUDIT_2026-10-23.md); reusing the legacy
@@ -70,10 +86,10 @@ adding a fourth check to the default status response (it would break the fixed
 monitor contract); sending Telegram from Media2Text (the homelab sender is
 Sentinel; no bot token belongs here).
 
-State: source prepared on a task branch; not deployed. Candidate 0.43.0 was
-reviewed by a different model family (do not merge yet: one blocker, six
-should-fix); 0.43.1 answers them and awaits re-review, see REVIEWS.md. An
-immediate push message needs separate Home Infra and Sentinel work and an
+State: source prepared on a task branch; not deployed. Candidates 0.43.0 and
+0.43.1 were each reviewed by a different model family (do not merge yet both
+times); 0.43.2 answers the second review and awaits a third, see REVIEWS.md.
+An immediate push message needs separate Home Infra and Sentinel work and an
 operator choice.
 See ../operations/STT_FAILOVER_2026-11-12.md.
 

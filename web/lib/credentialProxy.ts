@@ -35,8 +35,10 @@ export async function proxyCredentials(request: Request): Promise<Response> {
     const signature = createHmac("sha256", proofSecret).update(`m2t-credential-admin-v1\nPOST\n/provider-accounts\n${expires}\n${nonce}\n${digest}`).digest("hex");
     upstreamHeaders.set("x-m2t-admin-proof", `${expires}.${nonce}.${signature}`);
   }
+  // The only query forwarded is the exact notices-only view, on a read.
+  const noticesOnly = request.method === "GET" && new URL(request.url).searchParams.get("view") === "notices";
   try {
-    const response = await fetch(`${apiBaseUrlServer()}/provider-accounts`, { method: request.method, body: body ? new Uint8Array(body).buffer : undefined,
+    const response = await fetch(`${apiBaseUrlServer()}/provider-accounts${noticesOnly ? "?view=notices" : ""}`, { method: request.method, body: body ? new Uint8Array(body).buffer : undefined,
       headers: upstreamHeaders, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(15_000) });
     return new Response(response.body, { status: response.status, headers: { ...headers, "content-type": "application/json" } });
   } catch { return fail("api_unreachable", 502); }

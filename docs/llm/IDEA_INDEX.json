@@ -467,7 +467,7 @@
         }
       ],
       "authority": "Carlos answered the direct question on 2026-11-12; D-029 records his words and supersedes only the D-028 exclusion of automatic account failover.",
-      "rationale": "Source is prepared on task branch work/stt-failover-20261112 with the switch off by default. Candidate 0.43.0 was independently reviewed (do not merge yet: one blocker, six should-fix); 0.43.1 answers them and awaits re-review. It is not deployed, so the request is not yet delivered."
+      "rationale": "Source is prepared on task branch work/stt-failover-20261112 with the switch off by default. Candidates 0.43.0 and 0.43.1 were each independently reviewed (do not merge yet both times); 0.43.2 answers the second review and awaits a third. It is not deployed, so the request is not yet delivered."
     },
     {
       "id": "IDEA-0010",

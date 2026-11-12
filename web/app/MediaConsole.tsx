@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { components } from "../lib/apiTypes.gen";
-import ProviderAccounts, { failoverNoticeText, REFRESH_MS, type FailoverNotice } from "./settings/ProviderAccounts";
+import ProviderAccounts, { REFRESH_MS } from "./settings/ProviderAccounts";
+import { failoverNoticeText, failoverNoticeTitle, failoverRoutingText, type FailoverNotice, type FailoverRouting } from "../lib/failoverNotices";
+import { createSnapshotGate } from "../lib/snapshotGate";
 
 type RunRecord = components["schemas"]["RunRecord"];
 type ChannelInfo = components["schemas"]["ChannelInfo"];
@@ -339,7 +341,9 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
   const [uploadFile, setUploadFile] = useState<File | undefined>();
   const [toast, setToast] = useState<string | undefined>();
   const [failoverNotices, setFailoverNotices] = useState<FailoverNotice[]>([]);
+  const [failoverRouting, setFailoverRouting] = useState<FailoverRouting | undefined>();
   const lastNoticeRefresh = useRef(0);
+  const noticeGate = useRef(createSnapshotGate()).current;
   const [busy, setBusy] = useState<string | undefined>();
   const [settingsDraft, setSettingsDraft] = useState<Record<string, string>>({});
   const [watchDraftUrl, setWatchDraftUrl] = useState("");
@@ -369,11 +373,16 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
     window.setTimeout(() => setToast(undefined), 2600);
   }
 
-  // Automatic account changes stay visible on every screen until dismissed in Settings.
+  // Automatic account changes stay visible on every screen until dismissed in
+  // Settings. The banner reads notices only: no account listing and no key
+  // suffix of the existing configuration reaches the other screens.
   async function refreshFailoverNotices() {
     lastNoticeRefresh.current = Date.now();
-    const accounts = await maybeJson<{ failover?: { notices?: FailoverNotice[] } }>("/api/provider-accounts");
-    if (accounts) setFailoverNotices(accounts.failover?.notices ?? []);
+    const read = noticeGate.beginRead();
+    const view = await maybeJson<{ notices?: FailoverNotice[]; routing?: FailoverRouting }>("/api/provider-accounts?view=notices");
+    if (!view || !noticeGate.accepts(read)) return;
+    setFailoverNotices(view.notices ?? []);
+    setFailoverRouting(view.routing);
   }
 
   async function refreshAll() {
@@ -685,9 +694,10 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
           {failoverNotices.length > 0 ? (
             <div role="alert">
               <button className="m2t-failover-banner" onClick={() => go("settings")}>
-                <strong>{t(lang, "Aviso de las cuentas de transcripción.", "Transcription accounts notice.")}</strong>{" "}
+                <strong>{failoverNoticeTitle(failoverNotices[0]!, (es, en) => t(lang, es, en))}.</strong>{" "}
                 {failoverNoticeText(failoverNotices[0]!, (es, en) => t(lang, es, en))}
                 {failoverNotices.length > 1 ? t(lang, ` Hay ${failoverNotices.length - 1} aviso(s) más.`, ` There are ${failoverNotices.length - 1} more notice(s).`) : ""}{" "}
+                {failoverRouting ? `${failoverRoutingText(failoverRouting, (es, en) => t(lang, es, en))} ` : ""}
                 {screen === "settings"
                   ? t(lang, "Descártalo más abajo, en Cuentas de transcripción.", "Dismiss it below, under Transcription accounts.")
                   : t(lang, "Abre Ajustes para revisarlo y descartarlo.", "Open Settings to review and dismiss it.")}
@@ -1125,7 +1135,11 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
     return (
       <section className="m2t-page">
         <PageIntro title={t(lang, "Ajustes", "Settings")} text={t(lang, "Elige cómo transcribir y gestiona las cuentas de tus proveedores.", "Choose how to transcribe and manage your provider accounts.")} />
-        <ProviderAccounts lang={lang} settingsRevision={settings?.updatedAt} onNoticesChanged={setFailoverNotices} onProviderSelected={(provider) => {
+        <ProviderAccounts lang={lang} settingsRevision={settings?.updatedAt} onChanged={() => {
+          // A read that began before this change must not bring the old notices back.
+          noticeGate.changed();
+          void refreshFailoverNotices();
+        }} onProviderSelected={(provider) => {
           setSettingsDraft((previous) => ({ ...previous, sttProvider: provider }));
           void maybeJson<SettingsGetResponse>("/api/settings").then((next) => { if (next) setSettings(next); });
         }} />

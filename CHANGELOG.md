@@ -5,6 +5,43 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.43.2] - 2026-11-12
+
+Answers the second independent review (of 0.43.1: do not merge yet). Still
+source on task branch `work/stt-failover-20261112`; not deployed; a third review
+is pending. See `docs/llm/REVIEWS.md`.
+
+### Added
+
+- A notices-only read (`GET /provider-accounts?view=notices`) for the banner
+  shown on every screen: pending notices and current routing, with no account
+  listing and no key suffix of the existing configuration.
+
+### Changed
+
+- Key hints (last four characters) appear only on the authenticated accounts
+  screen and inside its failover notice. Refusal and failover errors are built
+  from fixed provider, status and reason codes and no longer carry provider
+  text; provider text kept in older errors has every key fragment of four or
+  more characters redacted.
+- "Out of credit" and "rejected" are two independent marks on a key. Only "mark
+  as available" clears "out of credit"; an accepted access check clears only
+  "rejected".
+- The destination of every move is chosen at that moment, on current health,
+  order and the keys the recording was already refused with; a recording that
+  ends on the same key as a sibling gets its own audit event and notice.
+- Notices describe the event in the past tense; current routing is shown apart.
+  The stopped-recording notice and error say that transcribing it again repeats
+  the parts already done and that those can be charged again.
+
+### Fixed
+
+- A periodic refresh that started before a change could replace the newer
+  screen state (the switch showing off after it was turned on).
+- A key re-enabled while a recording was running could be offered back to the
+  recording it had refused, leaving a healthy key untried.
+- A test helper captured standard output and could hide a test result.
+
 ## [0.43.1] - 2026-11-12
 
 Answers the independent review of 0.43.0 (do not merge yet: one blocker, six

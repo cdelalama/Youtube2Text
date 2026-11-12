@@ -514,26 +514,23 @@ export class RunManager {
           if (left > 0) outstanding.set(credentialId, left); else outstanding.delete(credentialId);
         };
       },
-      onDefinitiveRefusal: ({ credentialId, refusal, sameProviderOnly, recordOnly }) => {
+      onDefinitiveRefusal: ({ credentialId, refusal, refused, sameProviderOnly, recordOnly }) => {
         try {
-          const refused = pinOf(credentialId);
-          // A sibling recording may already have moved this run; following it
-          // is not a second move, but it still has to be allowed for THIS one.
-          const follow = current.credentialId === credentialId ? undefined : current;
-          const outcome = store.recordRefusal({ pin: refused, kind: refusal.kind, status: refusal.status, workIds,
-            sameProviderOnly, recordOnly, follow });
+          // The store chooses the destination now, on current health, order and
+          // the keys this recording was already refused with, and records this
+          // recording's own transition. An earlier move of the run is not reused.
+          const outcome = store.recordRefusal({ pin: pinOf(credentialId), kind: refusal.kind, status: refusal.status,
+            workIds, sameProviderOnly, recordOnly, exclude: refused });
           if (!outcome.moved) {
             return outcome.reason === "recording_stopped"
               ? { moved: false, reason: "recording_stopped", nextProvider: outcome.next.provider }
               : { moved: false, reason: outcome.reason };
           }
-          if (!follow) {
-            // The store has committed the move; keep this run in step with it.
-            current = outcome.pin;
-            pins.set(current.credentialId, current);
-            this.credentialSelections.set(runId, current);
-          }
-          return { moved: true, config: applyCredential(acceptedConfig, outcome.pin, store), credentialId: outcome.pin.credentialId };
+          // The store has committed the move; new recordings of this run start there.
+          current = outcome.pin;
+          pins.set(current.credentialId, current);
+          this.credentialSelections.set(runId, current);
+          return { moved: true, config: applyCredential(acceptedConfig, current, store), credentialId: current.credentialId };
         } catch {
           // Without a recorded decision the work must fail exactly as before.
           return { moved: false, reason: "error" };

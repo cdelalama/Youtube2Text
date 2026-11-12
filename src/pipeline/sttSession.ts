@@ -28,6 +28,8 @@ export type PipelineFailover = {
   onDefinitiveRefusal(input: {
     credentialId: string;
     refusal: DefinitiveRefusal;
+    /** Every pin this recording was already refused with, this one included. */
+    refused: string[];
     /** Part of this recording was already accepted by this provider. */
     sameProviderOnly: boolean;
     /** The run was cancelled: record the key's health, decide nothing. */
@@ -38,14 +40,17 @@ export type PipelineFailover = {
     | { moved: false; reason: "recording_stopped"; nextProvider: SttProviderId };
 };
 
+// These messages are built from fixed codes only (provider, reason, HTTP
+// status). They never include the provider's response text or the message of
+// the error that caused them, which could echo part of a key.
+
 /** Every listed key and account has been definitively refused; the job fails closed. */
 export class FailoverExhaustedError extends Error {
   name = "FailoverExhaustedError";
-  constructor(refusal: DefinitiveRefusal, cause: unknown) {
+  constructor(refusal: DefinitiveRefusal) {
     super(
       `Automatic account change stopped: ${refusal.provider} refused the request ` +
-        `(${refusal.kind}, HTTP ${refusal.status}) and no other enabled, healthy key or account is left. ` +
-        `Original error: ${messageOf(cause)}`
+        `(${refusal.kind}, HTTP ${refusal.status}) and no other enabled, healthy key or account is left.`
     );
   }
 }
@@ -57,24 +62,27 @@ export class FailoverExhaustedError extends Error {
  */
 export class RecordingStoppedError extends Error {
   name = "RecordingStoppedError";
-  constructor(refusal: DefinitiveRefusal, nextProvider: SttProviderId, cause: unknown) {
+  constructor(refusal: DefinitiveRefusal, nextProvider: SttProviderId) {
     super(
       `Recording stopped: ${refusal.provider} refused the request (${refusal.kind}, HTTP ${refusal.status}) ` +
         `after part of this recording was already accepted by ${refusal.provider}, and the next account uses ` +
-        `${nextProvider}. It was not re-sent automatically, to avoid paying twice and mixing services in one ` +
-        `transcript. Run it again to transcribe it with ${nextProvider}. Original error: ${messageOf(cause)}`
+        `${nextProvider}. It was not re-sent automatically. Transcribing it again with ${nextProvider} repeats ` +
+        "the parts already done, and those parts can be charged again."
     );
   }
 }
 
-/** The registry offered a key this recording was already refused with; stop instead of looping. */
+/**
+ * Defensive only: the registry excludes the keys a recording was refused with,
+ * so it should never offer one again. If it does, stop instead of looping.
+ */
 export class FailoverRepeatedCandidateError extends Error {
   name = "FailoverRepeatedCandidateError";
-  constructor(refusal: DefinitiveRefusal, cause: unknown) {
+  constructor(refusal: DefinitiveRefusal) {
     super(
       `Automatic account change stopped: ${refusal.provider} refused the request ` +
         `(${refusal.kind}, HTTP ${refusal.status}) and the only key offered next had already been refused for ` +
-        `this recording. Original error: ${messageOf(cause)}`
+        "this recording."
     );
   }
 }
@@ -84,10 +92,6 @@ export class ServiceChangedSignal extends Error {
   constructor(public from: SttProviderId, public to: SttProviderId) {
     super(`Transcription service changed from ${from} to ${to}`);
   }
-}
-
-function messageOf(cause: unknown): string {
-  return cause instanceof Error ? cause.message : String(cause);
 }
 
 /** One engine = one service + one key. It is immutable; a move creates another. */
@@ -197,17 +201,18 @@ export function createSttSession(input: {
             const decision = failover.onDefinitiveRefusal({
               credentialId,
               refusal,
+              refused: [...refused],
               sameProviderOnly: acceptedPieces > 0,
               recordOnly: input.isCancelled(),
             });
             if (!decision.moved) {
-              if (decision.reason === "no_candidate") throw new FailoverExhaustedError(refusal, error);
+              if (decision.reason === "no_candidate") throw new FailoverExhaustedError(refusal);
               if (decision.reason === "recording_stopped") {
-                throw new RecordingStoppedError(refusal, decision.nextProvider, error);
+                throw new RecordingStoppedError(refusal, decision.nextProvider);
               }
               throw error;
             }
-            if (refused.has(decision.credentialId)) throw new FailoverRepeatedCandidateError(refusal, error);
+            if (refused.has(decision.credentialId)) throw new FailoverRepeatedCandidateError(refusal);
             const previous = release;
             engine = engineFor(decision.config, decision.credentialId);
             release = hold(engine);
