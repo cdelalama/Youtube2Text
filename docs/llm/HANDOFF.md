@@ -1,4 +1,4 @@
-## Automatic key and account failover: fourth review answered - 2026-11-12
+## Automatic key and account failover: reviewed for deployment with the switch off - 2026-11-12
 
 Last Updated: 2026-11-12 - Claude (Fable 5.2).
 
@@ -33,8 +33,17 @@ release blockers and two follow-ups, which 0.43.5 answers:
 4. The public status reports degraded while the selected account cannot take
    work, with a fixed sentence and the same default shape.
 
-Findings and fixes are in docs/llm/REVIEWS.md. 0.43.5 has not been reviewed, so
-the gate stays closed.
+Findings and fixes are in docs/llm/REVIEWS.md.
+
+Fifth pass (Codex gpt-6-astra, session 01a1d0dc-defc-71e2-8829-bfc9f0e9e58c, on
+0.43.5): the four points are resolved and both release blockers are closed.
+Merge and deployment with the switch off are acceptable, provided the checks
+pass on the exact final revision and the read-back after deployment shows the
+stored switch off. Three medium follow-ups are tracked; the first one (pending
+notices past the view's limits stop the banner from updating, silently) must be
+fixed before Carlos turns the switch on. The other two: an uncertain provider
+activation shown as a definite failure, and a failed status read that leaves
+the aggregate health green.
 
 What the release adds once installed, all inside Settings > Transcription
 accounts: one switch (off by default), an ordered list of the accounts allowed

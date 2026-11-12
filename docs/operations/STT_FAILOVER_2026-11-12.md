@@ -404,8 +404,9 @@ Recovery is natural: when he dismisses the notices the check returns to ok.
 
 Nothing below was done. The NAS runs 0.42.2.
 
-1. Review of the current candidate by a different model family (the requesting
-   session obtains it from Codex), then merge to `main`.
+1. Review of the current candidate by a different model family: done for
+   0.43.5 (fifth pass, docs/llm/REVIEWS.md): merge and deployment with the
+   switch off are acceptable. Then merge to `main`.
 2. Build and publish immutable API and web images of the reviewed version and
    deploy with
    `docs/operations/DEPLOY_PLAYBOOK.md`. No new secret, environment variable,
@@ -427,6 +428,12 @@ Nothing below was done. The NAS runs 0.42.2.
 
 ## Known limits
 
+- Open from the fifth review, to fix before the switch is turned on: with more
+  than 500 pending notices, or an answer over 262,144 characters, the band
+  stops updating and does not say so.
+- Open from the fifth review: a provider activation whose answer is lost can be
+  shown as failed although it was stored; a failed read of the account state
+  leaves the public status `ok`.
 - A refused request still reaches the provider once per job pinned to that key.
   With AssemblyAI the audio is uploaded before the create call is refused.
 - An access check cannot prove credit, so it never clears "out of credit"; only

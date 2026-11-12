@@ -1,3 +1,42 @@
+## 2026-11-12 - Automatic account failover: fifth independent review (0.43.5): merge and deploy with the switch off
+
+Review obtained by the requesting Cortex session (Claude, claude-fable-5-2),
+which also writes this entry: Codex gpt-6-astra, reasoning effort max,
+read-only, session 01a1d0dc-defc-71e2-8829-bfc9f0e9e58c, candidate code commit
+`1b6bfce` (0.43.5), inline source packet. Model metadata read from the session
+header. The reviewer did not run the tests; the requesting session ran
+`059b491`: backend and web type checks clean, 279 of 279 tests.
+
+Marked RESOLVED: provider-token disclosure; mixed-rollout snapshot disclosure;
+the uncertain POST; unavailable selection in the public status.
+
+Verdict: the two previous release blockers are closed. Merge and deployment
+with failover off are acceptable, provided the checks pass on the exact final
+revision and the deployment read-back confirms that the stored switch is off.
+
+New findings, tracked follow-ups, not blockers for deployment with the switch
+off:
+
+1. Medium. Notice accumulation can stop banner updates: the store returns every
+   pending notice, the web view refuses more than 500 and the proxy refuses a
+   body over 262,144 characters; past either limit the refresh keeps stale or
+   empty state without saying so. Wanted: bounded or paginated answers agreed
+   with the producer, access to every pending notice, a visible refresh failure.
+   **To be resolved before the switch is turned on.**
+2. Medium. An uncertain provider activation can be reported as a definite
+   failure: if the settings PATCH commits and answers 502, the screen says new
+   jobs still use the previous provider even when the read-back shows the new
+   one, and a failed read-back is ignored on that path.
+3. Medium. A failed status read leaves the aggregate health green: the catch
+   branch of `sttFailoverStatus` sets its own check to degraded and
+   `attention: false`.
+
+Before enabling, in the reviewer's words: resolve the notice-limit failure;
+verify both deployed components, the selected saved account and the permitted
+fallback order; pass the focused disclosure and compatibility regressions and
+the fault tests; confirm Transcript Ready v1 compatibility. Findings 2 and 3
+stay tracked.
+
 ## 2026-11-12 - Automatic account failover: fourth independent review (0.43.4) and fixes in 0.43.5
 
 Review, as relayed by the requesting Cortex session: Codex gpt-6-astra,
