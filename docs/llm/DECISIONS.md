@@ -65,9 +65,17 @@ Decision details:
   authenticated accounts screen and inside its failover notice, derived when it
   is rendered. They never appear in logs, audit rows, failover events, the
   public status route, error messages or any response another screen needs; the
-  banner on other screens reads notices and current routing only. Errors of
-  this feature are built from fixed provider, status and reason codes and carry
-  no provider text.
+  banner on other screens reads notices and current routing only.
+- No free provider text leaves an adapter, for any provider error and with the
+  switch on or off, because a provider can echo part of a key and no filter
+  over free text is complete. Outward text is built from fixed parts only:
+  provider name, HTTP status, a category chosen by the code, and at most one
+  provider machine token that matches ^[A-Za-z0-9_.-]{1,64}$ and shares no run
+  of four or more characters with the key in use. What the pipeline decides on
+  is in typed fields, not in the message.
+- A selected account that cannot take work (disabled, or its current key
+  revoked) is its own state. New work is refused and the operator is told why;
+  it is never shown as the existing configuration.
 - Transcript Ready v1 is frozen and has no provider field; it is unchanged.
 - The public status route keeps its fixed default shape, which a deployed
   monitor pins exactly. The named check is added only on request.
@@ -86,9 +94,12 @@ adding a fourth check to the default status response (it would break the fixed
 monitor contract); sending Telegram from Media2Text (the homelab sender is
 Sentinel; no bot token belongs here).
 
-State: source prepared on a task branch; not deployed. Candidates 0.43.0 and
-0.43.1 were each reviewed by a different model family (do not merge yet both
-times); 0.43.2 answers the second review and awaits a third, see REVIEWS.md.
+State: source prepared on a task branch; not deployed. Candidates 0.43.0,
+0.43.1 and 0.43.3 were each reviewed by a different model family (do not merge
+yet each time); 0.43.4 answers the third review and awaits the next one, see
+REVIEWS.md. The reviewer accepted that some behaviour changes with the switch
+off (error wording, key marks, periodic refresh and the band); CHANGELOG 0.43.4
+and the operator guide list them.
 An immediate push message needs separate Home Infra and Sentinel work and an
 operator choice.
 See ../operations/STT_FAILOVER_2026-11-12.md.

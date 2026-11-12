@@ -28,8 +28,9 @@ import {
   definitiveRefusalOf,
   InsufficientCreditsError,
   ProviderHttpError,
+  acceptProviderToken,
+  ProviderError,
   ProviderRefusalError,
-  sanitizeProviderErrorText,
   type ProviderRefusalKind,
 } from "../src/transcription/errors.js";
 import type { TranscriptionProvider } from "../src/transcription/index.js";
@@ -40,7 +41,9 @@ import { TranscriptStore } from "../src/transcripts/store.js";
 import { UsageLedger, type UsagePolicy } from "../src/usage/index.js";
 import { proxyPublicMediaStatus } from "../web/lib/publicStatusProxy.js";
 import { proxyCredentials } from "../web/lib/credentialProxy.js";
-import { failoverNoticeText, failoverNoticeTitle, failoverRoutingText, type FailoverNotice } from "../web/lib/failoverNotices.js";
+import { failoverNoticeText, failoverNoticeTitle, failoverRoutingText, routingRefusesNewWork, type FailoverNotice, type FailoverRouting } from "../web/lib/failoverNotices.js";
+import { runAccountAction } from "../web/lib/accountAction.js";
+import { isExactNoticesQuery } from "../web/lib/failoverNoticesProxy.js";
 import { createSnapshotGate } from "../web/lib/snapshotGate.js";
 import { issueWebSessionToken, WEB_SESSION_COOKIE } from "../web/lib/webAuth.js";
 
@@ -61,7 +64,7 @@ type Call = { path: string; opts: TranscriptionOptions };
 type Behaviour = (call: Call) => TranscriptJson | Promise<TranscriptJson>;
 const completed = (text: string) => (): TranscriptJson => ({ id: `fake-${text}`, status: "completed", text });
 const refuse = (provider: SttProviderId, kind: ProviderRefusalKind, status: number) => (): TranscriptJson => {
-  throw new ProviderRefusalError({ provider, kind, status }, `${provider} API error (${status})`);
+  throw new ProviderRefusalError({ provider, kind, status }, provider);
 };
 const fail = (error: Error) => (): TranscriptJson => { throw error; };
 function deferred<T = void>() {
@@ -393,10 +396,14 @@ test("failover: no move on timeout, network error, 5xx, rate limit or any failur
   const cases: Array<[string, Error]> = [
     ["timeout", new Error("Deepgram request timed out")],
     ["network", new TypeError("fetch failed")],
-    ["5xx", new Error("Deepgram API error (503): Service Unavailable")],
-    ["rate limit", new Error("Deepgram API error (429): Too many requests")],
-    ["post-acceptance provider error", new ProviderHttpError("AssemblyAI", 401, "polling refused")],
-    ["post-acceptance credit wording", new InsufficientCreditsError("AssemblyAI insufficient credits: seen while polling", 402)],
+    ["5xx", new ProviderHttpError("Deepgram", 503)],
+    ["rate limit", new ProviderHttpError("Deepgram", 429)],
+    ["typed timeout", new ProviderError({ provider: "Deepgram", category: "timeout" })],
+    ["typed network", new ProviderError({ provider: "Deepgram", category: "network" })],
+    ["accepted but unreadable answer", new ProviderError({ provider: "Deepgram", category: "invalid-response", status: 200 })],
+    ["post-acceptance provider error", new ProviderHttpError("AssemblyAI", 401)],
+    ["post-acceptance credit wording", new InsufficientCreditsError("AssemblyAI", 402)],
+    ["job ended in error", new ProviderError({ provider: "AssemblyAI", category: "transcription-failed", token: "job-1" })],
     ["poll timeout", new Error("Transcription timed out after 60 minutes; upstream job job-1 was not recreated")],
   ];
   for (const [name, error] of cases) {
@@ -420,7 +427,7 @@ test("failover: no move on timeout, network error, 5xx, rate limit or any failur
 });
 
 test("failover: with the switch off a definitive refusal fails exactly like an unpinned run", async () => {
-  const refusalMessage = "deepgram API error (402): no credit or quota left";
+  const refusalMessage = "deepgram error: payment-or-quota (HTTP 402)";
   // Reference: the same pipeline without any account registry.
   const reference = fixture();
   let expected: { errors: string[]; done: PipelineEvent[]; failed: number; minutes: number };
@@ -905,21 +912,29 @@ test("failover: a key re-enabled mid-recording is not handed back to the recordi
   } finally { f.cleanup(); }
 });
 
-test("disclosure: a provider body and key characters never reach logs, run records, events, the audit trail or error texts", async () => {
-  const REFUSAL_BODY = "PROVIDER-REFUSAL-BODY"; const OTHER_BODY = "PROVIDER-SERVER-BODY";
-  const echo = (key: string, marker: string) => JSON.stringify({ err_msg: `${marker} for key ${key.slice(0, 8)}****${key.slice(-4)} and ****${key.slice(-4)}` });
+test("disclosure: no provider text and no key characters reach logs, run records, events, the audit trail or error texts", async () => {
+  const BODY = "PROVIDER-FREE-TEXT";
+  const echo = (key: string, code?: string) => JSON.stringify({ err_code: code,
+    err_msg: `${BODY} for key ${key.slice(0, 8)}****${key.slice(-4)} and ****${key.slice(-4)}`, request_id: `${BODY}-${key.slice(-4)}` });
   // What a key must never leave behind outside the authenticated accounts screen and its notice.
   const fragments = [K1, K2, K3].flatMap((key) => [key, key.slice(-4), key.slice(0, 4), key.slice(0, 8)]);
-  const assertClean = (label: string, value: unknown, bodies: string[]) => {
+  const assertClean = (label: string, value: unknown) => {
     const text = typeof value === "string" ? value : JSON.stringify(value);
-    for (const fragment of [...fragments, ...bodies]) assert.equal(text.includes(fragment), false, `${label} must not contain ${fragment}`);
+    for (const fragment of [...fragments, BODY]) assert.equal(text.includes(fragment), false, `${label} must not contain ${fragment}`);
   };
 
-  // The sanitizer that keeps provider text in the errors that existed before this feature.
-  const masked = sanitizeProviderErrorText(`Incorrect API key provided: ${K1.slice(0, 8)}****${K1.slice(-4)}. ${K1} was refused.`, [K1]);
-  assertClean("sanitized text", masked, []);
-  assert.match(masked, /^Incorrect API key provided: \[redacted\]\*\*\*\*\[redacted\]\. \[redacted\] was refused\.$/);
-  assert.equal(sanitizeProviderErrorText("Too many requests. Please try again later", [K1]), "Too many requests. Please try again later");
+  // The one provider-supplied value that may leave an adapter: a machine token.
+  assert.equal(acceptProviderToken("ASR_PAYMENT_REQUIRED", [K1]), "ASR_PAYMENT_REQUIRED");
+  assert.equal(acceptProviderToken("insufficient_quota", [K1]), "insufficient_quota");
+  assert.equal(acceptProviderToken("Bad Request", [K1]), undefined, "free text is not a machine token");
+  assert.equal(acceptProviderToken("x".repeat(65), []), undefined); assert.equal(acceptProviderToken("", []), undefined);
+  assert.equal(acceptProviderToken(42, []), undefined); assert.equal(acceptProviderToken({ code: "x" }, []), undefined);
+  assert.equal(acceptProviderToken(`CODE_${K1.slice(-4)}`, [K1]), undefined, "a token carrying four key characters is dropped");
+  assert.equal(acceptProviderToken(`code_${K1.slice(-4).toLowerCase()}`, [K1]), undefined, "also in another letter case");
+  assert.equal(acceptProviderToken(`CODE_${K1.slice(-3)}`, [K1]), `CODE_${K1.slice(-3)}`, "three shared characters are not a run of four");
+  // A secret shorter than the old eight-character threshold is still protected; one shorter than four is compared whole.
+  assert.equal(acceptProviderToken("ERR_zq5T", ["zq5T7"]), undefined); assert.equal(acceptProviderToken("ERR_q5T7", ["zq5T7"]), undefined);
+  assert.equal(acceptProviderToken("ERR_ab9", ["ab9"]), undefined); assert.equal(acceptProviderToken("ERR_ab", ["ab9"]), "ERR_ab");
 
   const f = fixture(policy(), {}, undefined, (config) => new DeepgramProvider(config.deepgramApiKey ?? "", "nova-3", true, undefined, 1000));
   try {
@@ -927,54 +942,162 @@ test("disclosure: a provider body and key characters never reach logs, run recor
     const b = f.store.create("deepgram", "Cuenta de respaldo", [K3]);
     f.store.select(a); f.store.setFailoverOrder([b]); f.store.setFailover(true);
     const answers = new Map<string, () => Response>([
-      [K1, () => new Response(echo(K1, REFUSAL_BODY), { status: 402 })],
-      [K2, () => new Response(echo(K2, REFUSAL_BODY), { status: 401 })],
-      [K3, () => new Response(echo(K3, OTHER_BODY), { status: 500 })],
+      [K1, () => new Response(echo(K1, "ASR_PAYMENT_REQUIRED"), { status: 402 })],
+      [K2, () => new Response(echo(K2, `LEAK_${K2.slice(-4)}`), { status: 401 })], // a "code" that carries key characters
+      [K3, () => new Response(echo(K3), { status: 500 })],
     ]);
     const deepgram = async (_url: string, init?: RequestInit) => {
       const key = String(new Headers(init?.headers).get("authorization")).replace("Token ", "");
       return answers.get(key)!();
     };
+    const logs: string[] = [];
+    const job = async () => { const run = await captureLogs(() => withFetch(deepgram, () => f.job())); logs.push(...run.lines); return run.result; };
+    const lastError = () => f.events.flatMap((event) => event.type === "video:error" ? [event.error] : []).at(-1);
 
-    // Two definitive refusals move the work twice; the third key fails with an unclassified server error.
-    const first = await captureLogs(() => withFetch(deepgram, () => f.job()));
-    assert.equal(first.result.stats?.failed, 1);
+    // Two definitive refusals move the work twice; the third key fails on an older path: a server error.
+    assert.equal((await job()).stats?.failed, 1);
     assert.equal(f.store.failoverEvents().filter((event) => event.kind === "moved").length, 2);
-    const serverError = f.events.flatMap((event) => event.type === "video:error" ? [event.error] : [])[0] ?? "";
-    assert.match(serverError, /^Deepgram API error \(500\): /, "an unclassified error keeps its previous form");
-    assert.ok(serverError.includes("[redacted]") && serverError.includes(OTHER_BODY), "its provider text stays, with every key fragment redacted");
-    assertClean("server error text", serverError, [REFUSAL_BODY]);
+    assert.equal(lastError(), "Deepgram error: server-error (HTTP 500)");
 
-    // Nothing is left for the next job once the third key is refused as well.
-    answers.set(K3, () => new Response(echo(K3, REFUSAL_BODY), { status: 402 }));
-    const second = await captureLogs(() => withFetch(deepgram, () => f.job()));
-    assert.equal(second.result.status, "error");
-    assert.equal(second.result.error, "Automatic account change stopped: deepgram refused the request (exhausted, HTTP 402) " +
+    // The other older paths, each as its own job on the third key: fixed parts only, whatever the provider or the network says.
+    const older: Array<[() => Response, string]> = [
+      [() => new Response(echo(K3, "TOO_MANY_REQUESTS"), { status: 429 }), "Deepgram error: rate-limit (HTTP 429) [TOO_MANY_REQUESTS]"],
+      [() => new Response(echo(K3, "Bad Request"), { status: 418 }), "Deepgram error: invalid-request (HTTP 418)"],
+      [() => new Response(echo(K3), { status: 302 }), "Deepgram error: unclassified (HTTP 302)"],
+      [() => new Response(`<html>${BODY} ${K3}</html>`, { status: 200 }), "Deepgram error: invalid-response (HTTP 200)"],
+      [() => { throw new TypeError(`fetch failed for ${K3} ${BODY}`); }, "Deepgram error: network"],
+      [() => { throw Object.assign(new Error(`${BODY} ${K3}`), { name: "AbortError" }); }, "Deepgram error: timeout"],
+    ];
+    for (const [answer, expected] of older) {
+      answers.set(K3, answer);
+      assert.equal((await job()).stats?.failed, 1);
+      assert.equal(lastError(), expected);
+    }
+
+    // Nothing is left once the third key is refused as well.
+    answers.set(K3, () => new Response(echo(K3, "ASR_PAYMENT_REQUIRED"), { status: 402 }));
+    const blocked = await job();
+    assert.equal(blocked.error, "Automatic account change stopped: deepgram refused the request (exhausted, HTTP 402) " +
       "and no other enabled, healthy key or account is left.");
 
-    // With the switch off nothing moves, so the refusal itself becomes the job
-    // error and reaches logs, events and run records: fixed codes only there too.
+    // With the switch off nothing moves, so the refusal itself becomes the job error.
     f.store.setFailover(false);
-    answers.set(K1, () => new Response(echo(K1, REFUSAL_BODY), { status: 401 }));
-    const off = await captureLogs(() => withFetch(deepgram, () => f.job()));
-    assert.equal(off.result.stats?.failed, 1);
-    assert.equal(f.events.flatMap((event) => event.type === "video:error" ? [event.error] : []).at(-1),
-      "Deepgram API error (401): key or permission rejected");
-    assert.ok(off.lines.some((line) => line.includes("Deepgram API error (401): key or permission rejected")));
+    answers.set(K1, () => new Response(echo(K1, "INVALID_AUTH"), { status: 401 }));
+    assert.equal((await job()).stats?.failed, 1);
+    assert.equal(lastError(), "Deepgram error: authentication (HTTP 401) [INVALID_AUTH]");
+    assert.ok(logs.some((line) => line.includes("Deepgram error: authentication (HTTP 401) [INVALID_AUTH]")));
+    assert.ok(logs.some((line) => line.includes("Automatic account change: deepgram refused the request (exhausted, HTTP 402)")));
 
-    for (const [label, value] of [
-      ["logs", [...first.lines, ...second.lines, ...off.lines].join("\n")], ["run records", f.manager.listRuns()], ["pipeline events", f.events],
-      ["audit trail, events and stored notices", f.storedTrail()], ["failover events", f.store.failoverEvents()],
-    ] as const) {
-      assertClean(label, value, label === "logs" || label === "pipeline events" || label === "run records" ? [REFUSAL_BODY] : [REFUSAL_BODY, OTHER_BODY]);
+    for (const [label, value] of [["logs", logs.join("\n")], ["run records", f.manager.listRuns()], ["pipeline events", f.events],
+      ["audit trail, events and stored notices", f.storedTrail()], ["failover events", f.store.failoverEvents()]] as const) {
+      assertClean(label, value);
     }
-    assert.ok([...first.lines, ...second.lines].some((line) => line.includes("Automatic account change: deepgram refused the request (exhausted, HTTP 402)")));
-
     // The one place a key hint is shown: the notice of the authenticated accounts screen, derived when it is rendered.
     const rendered = JSON.stringify(f.store.notices());
     assert.ok(rendered.includes(`••••${K1.slice(-4)}`) && rendered.includes(`••••${K3.slice(-4)}`));
     for (const key of [K1, K2, K3]) assert.equal(rendered.includes(key), false);
   } finally { f.cleanup(); }
+
+  // AssemblyAI after acceptance (polling), with a secret shorter than eight characters.
+  const short = "zq5T7";
+  const clip = fixture();
+  try {
+    const drive = async (poll: () => Response, jobId: string) => {
+      const run = await captureLogs(() => withFetch(async (url, init) => url.endsWith("/upload") ? Response.json({ upload_url: "https://cdn.assemblyai.test/u/1" })
+        : init?.method === "POST" ? Response.json({ id: jobId, status: "queued" }) : poll(),
+      async () => { try { await new AssemblyAiClient(short, 1000, 0).transcribe(clip.source, transcribeOptions); } catch (error) { return error as Error; } return undefined; }));
+      return { message: run.result?.message ?? "", logs: run.lines.join("\n") };
+    };
+    const outcomes = [
+      [await drive(() => new Response(`Authentication error ${BODY} token ${short} is invalid`, { status: 401 }), "job-41"), "AssemblyAI error: authentication (HTTP 401)"],
+      [await drive(() => new Response(JSON.stringify({ error: `${BODY} ${short}` }), { status: 503 }), "job-42"), "AssemblyAI error: server-error (HTTP 503)"],
+      [await drive(() => Response.json({ id: "job-43", status: "error", error: `${BODY}: download failed for ${short}` }), "job-43"),
+        "AssemblyAI error: transcription-failed [job-43]; the accepted job ended in error at the provider"],
+      // A job identifier that carries key characters is withheld, in the error and in the log line.
+      [await drive(() => Response.json({ id: `job-${short}`, status: "error", error: BODY }), `job-${short}`),
+        "AssemblyAI error: transcription-failed; the accepted job ended in error at the provider"],
+    ] as const;
+    for (const [result, expected] of outcomes) {
+      assert.equal(result.message, expected);
+      for (const text of [result.message, result.logs]) {
+        assert.equal(text.includes(BODY), false); assert.equal(text.includes(short), false); assert.equal(text.toLowerCase().includes("zq5t"), false);
+      }
+    }
+    assert.ok(outcomes[3]![0].logs.includes("Transcription started: (job identifier withheld)"));
+    assert.ok(outcomes[2]![0].logs.includes("Transcription started: job-43"));
+  } finally { clip.cleanup(); }
+});
+
+test("failover: a selected account that cannot take work is reported as unavailable, never as the existing configuration", () => {
+  const es = (spanish: string) => spanish;
+  const f = fixture();
+  try {
+    const a = f.store.create("deepgram", "Cuenta personal", [K1]); f.store.select(a);
+    const k1 = f.keyId(a, K1);
+    assert.deepEqual(f.store.failoverState("deepgram").selection, { state: "selected", accountId: a });
+    assert.deepEqual(f.store.noticesView("deepgram").routing,
+      { enabled: false, state: "account", reason: null, provider: "deepgram", accountLabel: "Cuenta personal" });
+
+    // The operator disables the selected account: new work is refused, and every view says so.
+    f.store.enable(a, false);
+    assert.throws(() => f.store.pinForNewWork("deepgram"), /selected_account_unavailable/);
+    const disabled = f.store.failoverState("deepgram");
+    assert.deepEqual(disabled.selection, { state: "unavailable", accountId: a, reason: "account_disabled" });
+    assert.equal(disabled.effective, null); assert.equal(disabled.blocked, false);
+    const routing = f.store.noticesView("deepgram").routing;
+    assert.deepEqual(routing, { enabled: false, state: "unavailable", reason: "account_disabled", provider: "deepgram", accountLabel: "Cuenta personal" });
+    assert.equal(routingRefusesNewWork(routing), true);
+    const text = failoverRoutingText(routing, es);
+    assert.match(text, /^Ahora mismo los trabajos nuevos se rechazan: la cuenta elegida, «Cuenta personal», está desactivada\./);
+    assert.equal(text.includes("configuración existente"), false);
+
+    // Its current key locally revoked: the same state with its own reason.
+    f.store.enable(a, true); f.store.revoke(a, k1);
+    assert.throws(() => f.store.pinForNewWork("deepgram"), /selected_account_unavailable/);
+    assert.deepEqual(f.store.failoverState("deepgram").selection, { state: "unavailable", accountId: a, reason: "key_revoked" });
+    assert.match(failoverRoutingText(f.store.noticesView("deepgram").routing, es), /la clave actual de la cuenta elegida, «Cuenta personal», está revocada localmente/);
+
+    // Only a deliberate return to the existing configuration is shown as such.
+    f.store.useLegacy("deepgram");
+    assert.deepEqual(f.store.failoverState("deepgram").selection, { state: "legacy" });
+    const legacy = f.store.noticesView("deepgram").routing;
+    assert.deepEqual(legacy, { enabled: false, state: "legacy", reason: null, provider: "deepgram", accountLabel: null });
+    assert.equal(routingRefusesNewWork(legacy), false);
+    assert.match(failoverRoutingText(legacy, es), /usan la configuración existente de Deepgram/);
+    assert.equal(f.store.pinForNewWork("deepgram"), undefined);
+  } finally { f.cleanup(); }
+});
+
+test("screen order: the banner is told once, after the whole selection, also when it fails part-way", async () => {
+  type Snapshot = { accounts: string[] };
+  const scenario = async (options: { post?: "refused" | "offline"; activate?: boolean | "offline"; select?: boolean }) => {
+    const calls: string[] = [];
+    const result = await runAccountAction<Snapshot>({
+      post: async () => {
+        calls.push("post");
+        if (options.post === "offline") throw new Error("offline");
+        return options.post === "refused" ? { ok: false, body: { accounts: [], error: "recent_auth_required" } } : { ok: true, body: { accounts: ["a"] } };
+      },
+      activateProvider: options.select === false ? undefined : async () => {
+        calls.push("activate");
+        if (options.activate === "offline") throw new Error("offline");
+        return options.activate !== false;
+      },
+      reload: async () => { calls.push("reload"); },
+      notifyChanged: () => { calls.push("notify"); },
+    });
+    return { calls, outcome: result.outcome };
+  };
+  // Selecting an account: both requests, the real state read back, and only then the banner.
+  assert.deepEqual(await scenario({}), { calls: ["post", "activate", "reload", "notify"], outcome: "done" });
+  // The account was selected but its provider could not be activated: say so, show the real state, then tell the banner.
+  assert.deepEqual(await scenario({ activate: false }), { calls: ["post", "activate", "reload", "notify"], outcome: "provider_not_activated" });
+  assert.deepEqual(await scenario({ activate: "offline" }), { calls: ["post", "activate", "reload", "notify"], outcome: "unreachable" });
+  // Nothing changed: the banner is not disturbed.
+  assert.deepEqual(await scenario({ post: "refused" }), { calls: ["post"], outcome: "refused" });
+  assert.deepEqual(await scenario({ post: "offline" }), { calls: ["post"], outcome: "unreachable" });
+  // Every other action is a single request.
+  assert.deepEqual(await scenario({ select: false }), { calls: ["post", "notify"], outcome: "done" });
 });
 
 test("screen order: a read that began before a change never replaces what the change returned", () => {
@@ -1027,11 +1150,22 @@ test("notice wording: past events in the past tense, current routing apart, and 
     for (const pattern of present) assert.equal(pattern.test(text), false, `a past event must not be told as the current state: ${pattern}`);
   }
   // Current routing is a separate sentence, in the present tense, without any key hint.
-  const routing = { enabled: true, blocked: false, provider: "assemblyai" as const, accountLabel: "Cuenta de respaldo" };
+  const routing: FailoverRouting = { enabled: true, state: "account", reason: null, provider: "assemblyai", accountLabel: "Cuenta de respaldo" };
   assert.equal(failoverRoutingText(routing, es), "Ahora mismo los trabajos nuevos van a la cuenta «Cuenta de respaldo» (AssemblyAI).");
-  assert.equal(failoverRoutingText({ ...routing, enabled: false, accountLabel: null, provider: "deepgram" }, es),
+  assert.equal(failoverRoutingText({ ...routing, enabled: false, state: "legacy", accountLabel: null, provider: "deepgram" }, es),
     "Ahora mismo los trabajos nuevos usan la configuración existente de Deepgram. El cambio automático está desactivado.");
-  assert.equal(failoverRoutingText({ ...routing, blocked: true }, es), "Ahora mismo no queda ninguna clave o cuenta disponible para los trabajos nuevos.");
+  assert.equal(failoverRoutingText({ ...routing, state: "blocked" }, es),
+    "Ahora mismo los trabajos nuevos se rechazan: no queda ninguna clave o cuenta disponible en tu lista.");
+  // A selected account that cannot take work is told as a refusal with its reason, never as the existing configuration.
+  const disabled = failoverRoutingText({ ...routing, state: "unavailable", reason: "account_disabled", provider: "deepgram", accountLabel: "Cuenta personal" }, es);
+  assert.equal(disabled, "Ahora mismo los trabajos nuevos se rechazan: la cuenta elegida, «Cuenta personal», está desactivada. " +
+    "Actívala, elige otra clave o elige otra cuenta en Ajustes.");
+  const revoked = failoverRoutingText({ ...routing, state: "unavailable", reason: "key_revoked", provider: "deepgram", accountLabel: "Cuenta personal" }, es);
+  assert.match(revoked, /se rechazan: la clave actual de la cuenta elegida, «Cuenta personal», está revocada localmente\./);
+  for (const text of [disabled, revoked]) assert.equal(text.includes("configuración existente"), false);
+  assert.equal(routingRefusesNewWork({ ...routing, state: "unavailable", reason: "key_revoked" }), true);
+  assert.equal(routingRefusesNewWork({ ...routing, state: "blocked" }), true);
+  assert.equal(routingRefusesNewWork(routing), false); assert.equal(routingRefusesNewWork(undefined), false);
   assert.match(new RecordingStoppedError({ provider: "deepgram", kind: "exhausted", status: 402 }, "assemblyai").message,
     /repeats the parts already done, and those parts can be charged again\.$/);
 });
@@ -1111,24 +1245,36 @@ test("typed errors: Deepgram refuses definitively only on documented 401, 402 an
 
     const exhausted = await attempt(402, JSON.stringify({ err_code: "ASR_PAYMENT_REQUIRED", err_msg: `Project does not have enough credits ${K1}` }));
     assert.deepEqual(definitiveRefusalOf(exhausted), { provider: "deepgram", kind: "exhausted", status: 402 });
-    assert.equal(exhausted.message, "Deepgram API error (402): no credit or quota left", "fixed codes only, no provider text");
-    assert.deepEqual(definitiveRefusalOf(await attempt(401, '{"err_code":"INVALID_AUTH","err_msg":"Invalid credentials."}')),
-      { provider: "deepgram", kind: "rejected", status: 401 });
+    assert.equal(exhausted.message, "Deepgram error: payment-or-quota (HTTP 402) [ASR_PAYMENT_REQUIRED]", "fixed parts and one machine code");
+    const rejected = await attempt(401, '{"err_code":"INVALID_AUTH","err_msg":"Invalid credentials."}');
+    assert.deepEqual(definitiveRefusalOf(rejected), { provider: "deepgram", kind: "rejected", status: 401 });
+    assert.equal(rejected.message, "Deepgram error: authentication (HTTP 401) [INVALID_AUTH]");
     assert.equal(definitiveRefusalOf(await attempt(403, '{"err_code":"INSUFFICIENT_PERMISSIONS"}'))?.kind, "rejected");
-    for (const status of [429, 500, 503]) {
-      const error = await attempt(status, "busy");
-      assert.equal(definitiveRefusalOf(error), undefined); assert.equal(error.constructor, Error);
+    // Every other answer is a typed error with a fixed category, and never a refusal.
+    for (const [status, category, text] of [[429, "rate-limit", "Deepgram error: rate-limit (HTTP 429) [TOO_MANY_REQUESTS]"],
+      [500, "server-error", "Deepgram error: server-error (HTTP 500)"], [503, "server-error", "Deepgram error: server-error (HTTP 503)"],
+      [404, "invalid-request", "Deepgram error: invalid-request (HTTP 404)"]] as const) {
+      const error = await attempt(status, status === 429 ? '{"err_code":"TOO_MANY_REQUESTS","err_msg":"Too many requests."}' : "busy, please retry");
+      assert.equal(definitiveRefusalOf(error), undefined);
+      assert.ok(error instanceof ProviderHttpError); assert.equal(error.status, status); assert.equal(error.category, category);
+      assert.equal(error.message, text);
     }
-    const network = await withFetch(async () => { throw new TypeError("fetch failed"); },
-      async () => { try { await provider.transcribe(f.source, transcribeOptions); } catch (error) { return error; } return undefined; });
-    assert.equal(definitiveRefusalOf(network), undefined);
+    const network = await withFetch(async () => { throw new TypeError("fetch failed: connect ECONNREFUSED 10.0.0.9:443"); },
+      async () => { try { await provider.transcribe(f.source, transcribeOptions); } catch (error) { return error as Error; } return undefined; });
+    assert.ok(network instanceof ProviderError); assert.equal(network.category, "network");
+    assert.equal(network.message, "Deepgram error: network"); assert.equal(definitiveRefusalOf(network), undefined);
     const timeout = await withFetch(async () => { throw Object.assign(new Error("aborted"), { name: "AbortError" }); },
       async () => { try { await provider.transcribe(f.source, transcribeOptions); } catch (error) { return error as Error; } return undefined; });
-    assert.equal(timeout?.message, "Deepgram request timed out"); assert.equal(definitiveRefusalOf(timeout), undefined);
-    // After a 2xx the work was accepted: a broken body is never a refusal.
+    assert.equal(timeout?.message, "Deepgram error: timeout"); assert.equal(definitiveRefusalOf(timeout), undefined);
+    // After a 2xx the work was accepted: a broken body is never a refusal, and none of it is quoted.
     const accepted = await withFetch(async () => new Response("<html>not json</html>", { status: 200 }),
-      async () => { try { await provider.transcribe(f.source, transcribeOptions); } catch (error) { return error; } return undefined; });
-    assert.ok(accepted instanceof Error); assert.equal(definitiveRefusalOf(accepted), undefined);
+      async () => { try { await provider.transcribe(f.source, transcribeOptions); } catch (error) { return error as Error; } return undefined; });
+    assert.equal(accepted?.message, "Deepgram error: invalid-response (HTTP 200)"); assert.equal(definitiveRefusalOf(accepted), undefined);
+    // A local cancellation and a revoked key are not provider failures.
+    const aborted = new AbortController(); aborted.abort();
+    await assert.rejects(provider.transcribe(f.source, { ...transcribeOptions, abortSignal: aborted.signal }), /^Error: Transcription cancelled locally$/);
+    await assert.rejects(provider.transcribe(f.source, { ...transcribeOptions, beforeRequest: () => { throw new CredentialError("credential_revoked_local"); } }),
+      (error: unknown) => error instanceof CredentialError && error.code === "credential_revoked_local");
   } finally { f.cleanup(); }
 });
 
@@ -1160,54 +1306,58 @@ test("typed errors: OpenAI is definitive only for its documented 401, region 403
     }, async () => { try { await provider.transcribe(f.source, transcribeOptions); } catch (error) { return error as Error; } throw new Error("expected a failure"); });
     const exhausted = await attempt(429, body({ type: "insufficient_quota", message: "You exceeded your current quota" }));
     assert.deepEqual(definitiveRefusalOf(exhausted), { provider: "openai_whisper", kind: "exhausted", status: 429 });
-    assert.equal(exhausted.message, "OpenAI Whisper API error (429): no credit or quota left");
-    assert.equal(definitiveRefusalOf(await attempt(401, body({ message: "Incorrect API key provided" })))?.kind, "rejected");
+    assert.equal(exhausted.message, "OpenAI Whisper error: payment-or-quota (HTTP 429) [insufficient_quota]");
+    const rejected = await attempt(401, body({ message: `Incorrect API key provided: ${K1.slice(0, 8)}****${K1.slice(-4)}`, code: "invalid_api_key" }));
+    assert.equal(definitiveRefusalOf(rejected)?.kind, "rejected");
+    assert.equal(rejected.message, "OpenAI Whisper error: authentication (HTTP 401) [invalid_api_key]");
     assert.equal(definitiveRefusalOf(await attempt(403, region))?.kind, "rejected");
-    assert.equal(definitiveRefusalOf(await attempt(429, body({ type: "rate_limit_error", code: "rate_limit_exceeded" }))), undefined);
-    assert.equal(definitiveRefusalOf(await attempt(500, "server error")), undefined);
+    const limited = await attempt(429, body({ type: "rate_limit_error", code: "rate_limit_exceeded" }));
+    assert.equal(definitiveRefusalOf(limited), undefined);
+    assert.equal(limited.message, "OpenAI Whisper error: rate-limit (HTTP 429) [rate_limit_exceeded]");
+    assert.equal((await attempt(500, "server error")).message, "OpenAI Whisper error: server-error (HTTP 500)");
 
-    // Unclassified refusals fail as before and are logged with the status code only.
-    const secretLooking = "private-detail-from-provider-body";
+    // Unclassified refusals fail with fixed parts and are logged with the status code only.
+    const privateDetail = "private-detail-from-provider-body";
     for (const status of [402, 403]) {
-      const { result, lines } = await captureLogs(() => attempt(status, body({ message: secretLooking })));
-      assert.equal(definitiveRefusalOf(result), undefined); assert.equal(result.constructor, Error);
-      assert.match(result.message, new RegExp(`^OpenAI Whisper API error \\(${status}\\): `), "the job error keeps its previous form");
+      const { result, lines } = await captureLogs(() => attempt(status, body({ message: privateDetail })));
+      assert.equal(definitiveRefusalOf(result), undefined); assert.ok(result instanceof ProviderHttpError);
+      assert.equal(result.message, `OpenAI Whisper error: ${status === 402 ? "payment-or-quota" : "authentication"} (HTTP ${status})`);
       const logged = lines.filter((line) => line.includes("not a documented definitive refusal"));
       assert.equal(logged.length, 1); assert.ok(logged[0]!.includes(`OpenAI answered HTTP ${status}`));
-      assert.equal(logged[0]!.includes(secretLooking), false, "the status-only log never carries the provider body");
+      assert.equal(lines.join("").includes(privateDetail), false, "no log line carries the provider body");
     }
 
-    // After a 2xx the work was accepted: a broken body is never a refusal.
+    // After a 2xx the work was accepted: a broken body is never a refusal, and none of it is quoted.
     const accepted = await withFetch(async () => new Response("<html>not json</html>", { status: 200 }),
-      async () => { try { await provider.transcribe(f.source, transcribeOptions); } catch (error) { return error; } return undefined; });
-    assert.ok(accepted instanceof Error); assert.equal(definitiveRefusalOf(accepted), undefined);
+      async () => { try { await provider.transcribe(f.source, transcribeOptions); } catch (error) { return error as Error; } return undefined; });
+    assert.equal(accepted?.message, "OpenAI Whisper error: invalid-response (HTTP 200)"); assert.equal(definitiveRefusalOf(accepted), undefined);
   } finally { f.cleanup(); }
 });
 
 test("typed errors: AssemblyAI is definitive only for documented shapes before the create call accepts the work", async () => {
   const balance = "Your current account balance is negative. Please top up to continue using the API.";
-  const auth = new ProviderHttpError("AssemblyAI", 401, "Authentication error, API token missing/invalid");
+  const documentedBalance = () => new ProviderHttpError("AssemblyAI", 400, { category: "payment-or-quota" });
   for (const phase of ["upload", "create"] as const) {
-    assert.deepEqual(classifyAssemblyAiSubmissionRefusal(auth, phase), { provider: "assemblyai", kind: "rejected", status: 401 });
-    assert.equal(classifyAssemblyAiSubmissionRefusal(new ProviderHttpError("AssemblyAI", 400, "Language code xx is not supported."), phase), undefined);
-    assert.equal(classifyAssemblyAiSubmissionRefusal(new ProviderHttpError("AssemblyAI", 403, "You don't have access to the requested resource."), phase), undefined,
+    assert.deepEqual(classifyAssemblyAiSubmissionRefusal(new ProviderHttpError("AssemblyAI", 401), phase), { provider: "assemblyai", kind: "rejected", status: 401 });
+    assert.equal(classifyAssemblyAiSubmissionRefusal(new ProviderHttpError("AssemblyAI", 400), phase), undefined, "an ordinary bad request");
+    assert.equal(classifyAssemblyAiSubmissionRefusal(new ProviderHttpError("AssemblyAI", 403), phase), undefined,
       "403 is ambiguous in AssemblyAI's own documentation, so it never moves work");
-    assert.equal(classifyAssemblyAiSubmissionRefusal(new ProviderHttpError("AssemblyAI", 402, balance), phase), undefined, "402 is not documented for this API");
-    assert.equal(classifyAssemblyAiSubmissionRefusal(new ProviderHttpError("AssemblyAI", 429, balance), phase), undefined);
-    assert.equal(classifyAssemblyAiSubmissionRefusal(new ProviderHttpError("AssemblyAI", 500, balance), phase), undefined);
+    assert.equal(classifyAssemblyAiSubmissionRefusal(new ProviderHttpError("AssemblyAI", 402), phase), undefined, "402 is not documented for this API");
+    assert.equal(classifyAssemblyAiSubmissionRefusal(new ProviderHttpError("AssemblyAI", 429), phase), undefined);
+    assert.equal(classifyAssemblyAiSubmissionRefusal(new ProviderHttpError("AssemblyAI", 500, { category: "payment-or-quota" }), phase), undefined);
     for (const status of [400, 402, 500, undefined]) {
-      assert.equal(classifyAssemblyAiSubmissionRefusal(new InsufficientCreditsError("AssemblyAI insufficient credits: out of credits", status), phase), undefined,
+      assert.equal(classifyAssemblyAiSubmissionRefusal(new InsufficientCreditsError("AssemblyAI", status), phase), undefined,
         "the adapter's older credit wordings are not documented shapes");
     }
+    assert.equal(classifyAssemblyAiSubmissionRefusal(new ProviderError({ provider: "AssemblyAI", category: "timeout" }), phase), undefined);
     assert.equal(classifyAssemblyAiSubmissionRefusal(new Error("AssemblyAI request timed out"), phase), undefined);
   }
-  assert.deepEqual(classifyAssemblyAiSubmissionRefusal(new ProviderHttpError("AssemblyAI", 400, balance), "create"),
-    { provider: "assemblyai", kind: "exhausted", status: 400 });
-  assert.equal(classifyAssemblyAiSubmissionRefusal(new ProviderHttpError("AssemblyAI upload", 400, balance), "upload"), undefined,
+  assert.deepEqual(classifyAssemblyAiSubmissionRefusal(documentedBalance(), "create"), { provider: "assemblyai", kind: "exhausted", status: 400 });
+  assert.equal(classifyAssemblyAiSubmissionRefusal(documentedBalance(), "upload"), undefined,
     "the negative-balance refusal is documented for the create call only");
 
   const outcome = async (stub: (client: AssemblyAiClient) => void) => {
-    const client = new AssemblyAiClient("test", 1000, 0);
+    const client = new AssemblyAiClient("test-assemblyai-key", 1000, 0);
     client.uploadAudio = async () => "https://upload.test/audio";
     client.createTranscript = async () => ({ id: "job-1", status: "queued" });
     client.getTranscript = async () => ({ id: "job-1", status: "completed", text: "done" });
@@ -1216,48 +1366,47 @@ test("typed errors: AssemblyAI is definitive only for documented shapes before t
     return undefined;
   };
   // Before acceptance.
-  const uploadRejected = await outcome((client) => { client.uploadAudio = async () => { throw new ProviderHttpError("AssemblyAI upload", 401, "Authentication error"); }; });
+  const uploadRejected = await outcome((client) => { client.uploadAudio = async () => { throw new ProviderHttpError("AssemblyAI upload", 401); }; });
   assert.deepEqual(definitiveRefusalOf(uploadRejected), { provider: "assemblyai", kind: "rejected", status: 401 });
-  assert.equal(uploadRejected?.message, "AssemblyAI upload error 401: key or permission rejected", "same prefix, fixed reason, no provider text");
-  const createExhausted = await outcome((client) => { client.createTranscript = async () => { throw new ProviderHttpError("AssemblyAI", 400, balance); }; });
+  assert.equal(uploadRejected?.message, "AssemblyAI upload error: authentication (HTTP 401)");
+  const createExhausted = await outcome((client) => { client.createTranscript = async () => { throw documentedBalance(); }; });
   assert.deepEqual(definitiveRefusalOf(createExhausted), { provider: "assemblyai", kind: "exhausted", status: 400 });
+  assert.equal(createExhausted?.message, "AssemblyAI error: payment-or-quota (HTTP 400)");
 
-  // Undocumented shapes fail exactly as before and are logged with the status code only.
-  const credits = await captureLogs(() => outcome((client) => {
-    client.createTranscript = async () => { throw new InsufficientCreditsError("AssemblyAI insufficient credits: private-body-detail", 402); }; }));
+  // Undocumented shapes fail as before and are logged with the status code only.
+  const credits = await captureLogs(() => outcome((client) => { client.createTranscript = async () => { throw new InsufficientCreditsError("AssemblyAI", 402); }; }));
   assert.ok(credits.result instanceof InsufficientCreditsError, "the existing stop-the-run class is preserved");
   assert.equal(definitiveRefusalOf(credits.result), undefined);
-  const forbidden = await captureLogs(() => outcome((client) => {
-    client.uploadAudio = async () => { throw new ProviderHttpError("AssemblyAI upload", 403, "private-body-detail"); }; }));
+  const forbidden = await captureLogs(() => outcome((client) => { client.uploadAudio = async () => { throw new ProviderHttpError("AssemblyAI upload", 403); }; }));
   assert.ok(forbidden.result instanceof ProviderHttpError); assert.equal(definitiveRefusalOf(forbidden.result), undefined);
   for (const [status, lines] of [[402, credits.lines], [403, forbidden.lines]] as const) {
     const logged = lines.filter((line) => line.includes("not a documented definitive refusal"));
     assert.equal(logged.length, 1); assert.ok(logged[0]!.includes(`AssemblyAI answered HTTP ${status}`));
-    assert.equal(logged[0]!.includes("private-body-detail"), false);
   }
-  const ordinary = await captureLogs(() => outcome((client) => {
-    client.createTranscript = async () => { throw new ProviderHttpError("AssemblyAI", 400, "Language code xx is not supported."); }; }));
+  const ordinary = await captureLogs(() => outcome((client) => { client.createTranscript = async () => { throw new ProviderHttpError("AssemblyAI", 400); }; }));
   assert.equal(ordinary.lines.some((line) => line.includes("not a documented definitive refusal")), false, "an ordinary bad request is not refusal-like");
 
   // After the upload, an unanswered or failed create call may still have created billable work.
-  for (const error of [new Error("AssemblyAI request timed out"), new TypeError("fetch failed"), new ProviderHttpError("AssemblyAI", 503, "unavailable")]) {
+  for (const error of [new ProviderError({ provider: "AssemblyAI", category: "timeout" }), new ProviderError({ provider: "AssemblyAI", category: "network" }),
+    new ProviderHttpError("AssemblyAI", 503)]) {
     assert.equal(definitiveRefusalOf(await outcome((client) => { client.createTranscript = async () => { throw error; }; })), undefined);
   }
   // After acceptance nothing is definitive, whatever the provider says.
-  for (const error of [new ProviderHttpError("AssemblyAI", 401, "Authentication error"), new ProviderHttpError("AssemblyAI", 400, balance),
-    new InsufficientCreditsError("AssemblyAI insufficient credits: x", 402)]) {
+  for (const error of [new ProviderHttpError("AssemblyAI", 401), documentedBalance(), new InsufficientCreditsError("AssemblyAI", 402)]) {
     assert.equal(definitiveRefusalOf(await outcome((client) => { client.getTranscript = async () => { throw error; }; })), undefined);
   }
+  // A job that ends in error after acceptance: the provider's explanation is not quoted; the job id is the one token.
   const jobError = await outcome((client) => { client.getTranscript = async () => ({ id: "job-1", status: "error", error: balance }); });
-  assert.match(jobError?.message ?? "", /Transcription error/); assert.equal(definitiveRefusalOf(jobError), undefined);
+  assert.equal(jobError?.message, "AssemblyAI error: transcription-failed [job-1]; the accepted job ended in error at the provider");
+  assert.equal(definitiveRefusalOf(jobError), undefined);
 
   // Through the real HTTP layer.
   const f = fixture();
   try {
-    const drive = async (handler: (url: string, init?: RequestInit) => Response | Promise<Response>) => {
+    const drive = async (handler: (url: string, init?: RequestInit) => Response | Promise<Response>, options = transcribeOptions) => {
       const seen: string[] = [];
       const error = await withFetch(async (url, init) => { seen.push(`${init?.method} ${url.replace("https://api.assemblyai.com/v2", "")}`); return handler(url, init); },
-        async () => { try { await new AssemblyAiClient(K1, 1000, 0).transcribe(f.source, transcribeOptions); } catch (caught) { return caught as Error; } return undefined; });
+        async () => { try { await new AssemblyAiClient(K1, 1000, 0).transcribe(f.source, options); } catch (caught) { return caught as Error; } return undefined; });
       return { seen, error };
     };
     const uploaded = () => Response.json({ upload_url: "https://cdn.assemblyai.test/upload/1" });
@@ -1265,18 +1414,28 @@ test("typed errors: AssemblyAI is definitive only for documented shapes before t
     const refused = await drive((url) => url.endsWith("/upload") ? uploaded() : new Response(JSON.stringify({ error: balance }), { status: 400 }));
     assert.deepEqual(refused.seen, ["POST /upload", "POST /transcript"]);
     assert.deepEqual(definitiveRefusalOf(refused.error), { provider: "assemblyai", kind: "exhausted", status: 400 });
-    assert.equal(refused.error?.message, "AssemblyAI error 400: no credit or quota left");
+    assert.equal(refused.error?.message, "AssemblyAI error: payment-or-quota (HTTP 400)");
+    // The same wording at upload, where it is not documented, never moves work.
+    const atUpload = await drive(() => new Response(JSON.stringify({ error: balance }), { status: 400 }));
+    assert.deepEqual(atUpload.seen, ["POST /upload"]); assert.equal(definitiveRefusalOf(atUpload.error), undefined);
     // After the upload, a create call with no answer.
     const unanswered = await drive((url) => { if (url.endsWith("/upload")) return uploaded(); throw new TypeError("fetch failed"); });
     assert.deepEqual(unanswered.seen, ["POST /upload", "POST /transcript"]);
-    assert.ok(unanswered.error instanceof TypeError); assert.equal(definitiveRefusalOf(unanswered.error), undefined);
+    assert.equal(unanswered.error?.message, "AssemblyAI error: network"); assert.equal(definitiveRefusalOf(unanswered.error), undefined);
     // After a 2xx create, the same documented answers while polling are post-acceptance.
-    for (const poll of [new Response(JSON.stringify({ error: balance }), { status: 400 }), new Response("Authentication error, API token missing/invalid", { status: 401 })]) {
+    for (const [poll, text] of [[new Response(JSON.stringify({ error: balance }), { status: 400 }), "AssemblyAI error: payment-or-quota (HTTP 400)"],
+      [new Response("Authentication error, API token missing/invalid", { status: 401 }), "AssemblyAI error: authentication (HTTP 401)"]] as const) {
       const polled = await drive((url, init) => url.endsWith("/upload") ? uploaded()
         : init?.method === "POST" ? Response.json({ id: "job-9", status: "queued" }) : poll.clone());
       assert.deepEqual(polled.seen, ["POST /upload", "POST /transcript", "GET /transcript/job-9"]);
       assert.ok(polled.error instanceof ProviderHttpError); assert.equal(definitiveRefusalOf(polled.error), undefined);
+      assert.equal(polled.error.message, text);
     }
+    // Polling that gives up keeps the job reference, as fixed text plus the one token.
+    const gaveUp = await drive((url, init) => url.endsWith("/upload") ? uploaded()
+      : init?.method === "POST" ? Response.json({ id: "job-7", status: "queued" }) : Response.json({ id: "job-7", status: "processing" }),
+      { ...transcribeOptions, maxPollMinutes: 0 });
+    assert.equal(gaveUp.error?.message, "AssemblyAI error: timeout [job-7]; polling gave up after 0 minutes; the upstream job was not recreated");
   } finally { f.cleanup(); }
 });
 
@@ -1293,22 +1452,44 @@ test("legacy key pool never logs key characters when it cools a key down", async
   for (const line of lines) for (const key of [K1, K2]) assert.equal(line.includes(key.slice(0, 4)), false, "no key prefix in logs");
 });
 
-test("web proxy: the banner's read needs the operator session and forwards only the exact notices view", async () => {
+test("web proxy: the banner's read needs the operator session, forwards only the exact notices view and refuses any other query", async () => {
   const previous = { ...process.env }; const fetchBefore = globalThis.fetch;
   Object.assign(process.env, { Y2T_WEB_AUTH_SECRET: "web-auth-secret-for-synthetic-tests-32", Y2T_WEB_AUTH_PASSPHRASE: "synthetic-passphrase",
     Y2T_API_KEY: "operator-key-synthetic-32-characters", Y2T_API_BASE_URL: "http://api.example.test" });
-  const forwarded: string[] = [];
+  const forwarded: Array<{ url: string; method: string; key: string | null }> = [];
   try {
-    globalThis.fetch = (async (url: unknown) => { forwarded.push(String(url)); return Response.json({ notices: [] }); }) as typeof fetch;
+    globalThis.fetch = (async (url: unknown, init?: RequestInit) => {
+      forwarded.push({ url: String(url), method: init?.method ?? "GET", key: new Headers(init?.headers).get("x-api-key") });
+      return Response.json({ notices: [] });
+    }) as typeof fetch;
     const session = await issueWebSessionToken();
-    const read = (query: string, cookie = `${WEB_SESSION_COOKIE}=${session}`) =>
-      proxyCredentials(new Request(`https://console.test/api/provider-accounts${query}`, { headers: { cookie } }));
-    assert.equal((await read("?view=notices", "")).status, 401);
+    const request = (query: string, init: RequestInit = {}, cookie = `${WEB_SESSION_COOKIE}=${session}`) =>
+      proxyCredentials(new Request(`https://console.test/api/provider-accounts${query}`, { ...init, headers: { cookie, ...(init.headers ?? {}) } }));
+
+    assert.equal((await request("?view=notices", {}, "")).status, 401, "no session, no notices");
+    assert.equal((await request("?view=notices", {}, `${WEB_SESSION_COOKIE}=forged`)).status, 401);
     assert.deepEqual(forwarded, []);
-    assert.equal((await read("?view=notices&debug=1")).status, 200);
-    await read("?view=everything"); await read("");
-    assert.deepEqual(forwarded, ["http://api.example.test/provider-accounts?view=notices",
-      "http://api.example.test/provider-accounts", "http://api.example.test/provider-accounts"]);
+
+    const ok = await request("?view=notices");
+    assert.equal(ok.status, 200); assert.equal(ok.headers.get("cache-control"), "no-store");
+    assert.deepEqual(forwarded, [{ url: "http://api.example.test/provider-accounts?view=notices", method: "GET", key: "operator-key-synthetic-32-characters" }]);
+
+    // Any other query on this route is refused: never forwarded, never answered with the account snapshot.
+    for (const query of ["?view=notices&debug=1", "?view=everything", "?view=notices&view=notices", "?debug=1", "?view="]) {
+      const refused = await request(query);
+      assert.equal(refused.status, 400, query); assert.deepEqual(await refused.json(), { error: "invalid_request" });
+    }
+    assert.equal((await request("?view=notices", { method: "POST", body: "{}", headers: { origin: "https://console.test" } })).status, 400);
+    assert.equal(forwarded.length, 1);
+
+    // Without a query the same path is the accounts screen's own read.
+    assert.equal((await request("")).status, 200);
+    assert.equal(forwarded[1]!.url, "http://api.example.test/provider-accounts");
+
+    assert.equal(isExactNoticesQuery(new URLSearchParams("view=notices")), true);
+    for (const query of ["", "view=Notices", "view=notices&x=1", "x=1&view=notices", "view=notices&view=notices"]) {
+      assert.equal(isExactNoticesQuery(new URLSearchParams(query)), false, query);
+    }
   } finally {
     globalThis.fetch = fetchBefore;
     for (const key of Object.keys(process.env)) if (!(key in previous)) delete process.env[key];
@@ -1402,7 +1583,12 @@ test("account API and public status: order, switch, notice, dismissal and the fi
       { notices: FailoverNotice[]; routing: Record<string, unknown> };
     assert.deepEqual(Object.keys(view).sort(), ["notices", "routing"], "no account listing and no legacy keys");
     assert.equal(view.notices.length, 2);
-    assert.deepEqual(view.routing, { enabled: true, blocked: false, provider: "assemblyai", accountLabel: "Cuenta de respaldo" });
+    assert.deepEqual(view.routing, { enabled: true, state: "account", reason: null, provider: "assemblyai", accountLabel: "Cuenta de respaldo" });
+    for (const query of ["?view=other", "?view=notices&debug=1", "?view=notices&view=notices", "?debug=1"]) {
+      const refusedQuery = await fetch(`${base}/provider-accounts${query}`, { headers });
+      assert.equal(refusedQuery.status, 400, `${query} must be refused, not answered with the account snapshot`);
+      assert.deepEqual(await refusedQuery.json(), { error: "invalid_request" });
+    }
     assert.equal(JSON.stringify(view.routing).includes("••••"), false, "current routing carries no key hint");
     assert.equal(JSON.stringify(view).includes(LEGACY_KEY.slice(-4)), false, "no suffix of the existing configuration leaves the accounts screen");
     assert.ok(JSON.stringify(read).includes(LEGACY_KEY.slice(-4)), "only the authenticated accounts screen lists the existing keys");

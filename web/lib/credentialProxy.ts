@@ -1,12 +1,19 @@
 import { createHash, createHmac, randomBytes } from "node:crypto";
 import { apiBaseUrlServer } from "./api";
 import { getWebAuthState, hasRecentOperatorAuth, isSameOriginRequest } from "./webAuth";
+import { proxyFailoverNotices } from "./failoverNoticesProxy";
 
 export async function proxyCredentials(request: Request): Promise<Response> {
   const headers = { "cache-control": "no-store" };
   const fail = (error: string, status: number) => Response.json({ error }, { status, headers });
+  // A read with a query belongs to the notices-only view, which accepts exactly
+  // `view=notices` and refuses everything else (failoverNoticesProxy.ts). The
+  // accounts snapshot and every change are served only without a query.
+  const hasQuery = Boolean(new URL(request.url).search);
+  if (hasQuery && request.method === "GET") return proxyFailoverNotices(request);
   if (await getWebAuthState(request) !== "authenticated") return fail("unauthorized", 401);
   if (!["GET", "POST"].includes(request.method)) return fail("method_not_allowed", 405);
+  if (hasQuery) return fail("invalid_request", 400);
   if (request.method === "POST" && !isSameOriginRequest(request)) return fail("invalid_origin", 403);
   if (request.method === "POST" && !(await hasRecentOperatorAuth(request))) return fail("recent_auth_required", 403);
   const key = process.env.Y2T_API_KEY?.trim();
@@ -35,10 +42,8 @@ export async function proxyCredentials(request: Request): Promise<Response> {
     const signature = createHmac("sha256", proofSecret).update(`m2t-credential-admin-v1\nPOST\n/provider-accounts\n${expires}\n${nonce}\n${digest}`).digest("hex");
     upstreamHeaders.set("x-m2t-admin-proof", `${expires}.${nonce}.${signature}`);
   }
-  // The only query forwarded is the exact notices-only view, on a read.
-  const noticesOnly = request.method === "GET" && new URL(request.url).searchParams.get("view") === "notices";
   try {
-    const response = await fetch(`${apiBaseUrlServer()}/provider-accounts${noticesOnly ? "?view=notices" : ""}`, { method: request.method, body: body ? new Uint8Array(body).buffer : undefined,
+    const response = await fetch(`${apiBaseUrlServer()}/provider-accounts`, { method: request.method, body: body ? new Uint8Array(body).buffer : undefined,
       headers: upstreamHeaders, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(15_000) });
     return new Response(response.body, { status: response.status, headers: { ...headers, "content-type": "application/json" } });
   } catch { return fail("api_unreachable", 502); }

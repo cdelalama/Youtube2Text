@@ -5,6 +5,61 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.43.4] - 2026-11-12
+
+Answers the third independent review (of 0.43.3: do not merge yet). Still source
+on task branch `work/stt-failover-20261112`; not deployed; review pending. See
+`docs/llm/REVIEWS.md`.
+
+### Behaviour changes that apply even with the automatic switch off
+
+Installing this release changes no routing until the switch is turned on, but
+it does change the following, whatever the switch says:
+
+- Every speech-to-text provider error now reads with fixed parts only, for
+  example `Deepgram error: server-error (HTTP 503)` or `OpenAI Whisper error:
+  rate-limit (HTTP 429) [rate_limit_exceeded]`. The provider's own response
+  text is no longer included anywhere: not in job errors, logs, run records,
+  events or API responses. This covers timeouts and network failures
+  (`Deepgram error: timeout`, `AssemblyAI error: network`), an AssemblyAI job
+  that ends in error (`AssemblyAI error: transcription-failed [<job id>]`) and
+  its polling time-out. Anything that matched on the old texts must be updated.
+- A key that a provider definitively refuses, or that fails an access check, is
+  marked "rejected" or "out of credit" on the accounts screen and stays marked
+  until the operator clears it. With the switch off the mark is information
+  only: the key is still used.
+- The console re-reads account state and notices every 20 seconds while it is
+  visible, and shows a band on every screen when a notice is pending or when
+  new jobs are being refused because the selected account is disabled or its
+  current key is revoked. The "New jobs" line states that reason.
+- `GET /provider-accounts` refuses any query other than exactly `view=notices`
+  with 400.
+- The legacy key pool no longer logs the first characters of a key.
+- The private credentials database gains the tables `failover_order`,
+  `key_order`, `key_marks`, `failover_events` and `failover_notices`. 0.42.2
+  ignores them, so rolling back is safe.
+
+### Added
+
+- "Selected account unavailable" is its own state, distinct from the existing
+  configuration, with its reason shown in Spanish on the settings line and in
+  the band.
+
+### Changed
+
+- Provider errors are typed (`ProviderError`: provider, HTTP status, category,
+  at most one validated machine token). `sanitizeProviderErrorText` is removed;
+  no provider text is forwarded.
+- Selecting an account tells the band only after the whole operation, including
+  when the provider could not be activated.
+- The web side of the notices-only read is one unit,
+  `web/lib/failoverNoticesProxy.ts`.
+
+### Fixed
+
+- A selected account that could not take work was shown as "existing
+  configuration" in the band while new jobs were actually refused.
+
 ## [0.43.3] - 2026-11-12
 
 Test-only follow-up to 0.43.2; no product code changed. Still source on task

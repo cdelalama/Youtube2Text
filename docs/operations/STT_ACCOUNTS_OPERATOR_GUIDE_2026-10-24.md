@@ -35,10 +35,35 @@ ficticias. Conserva la evidencia de instalación y no debe usarse para transcrib
 
 ## Cambio automático de clave o cuenta
 
-**Todavía no está instalado.** Llega con la versión 0.43.3, que está preparada
+**Todavía no está instalado.** Llega con la versión 0.43.4, que está preparada
 en el código y pendiente de una nueva revisión independiente y de
 instalación. El NAS sigue con la 0.42.2, donde esta sección no aparece. Cuando
-se instale, nada cambia hasta que actives el interruptor: viene desactivado.
+se instale, los trabajos siguen yendo a la misma cuenta hasta que actives el
+interruptor: viene desactivado.
+
+Qué cambia aunque no actives el interruptor. Al instalar esa versión notarás
+estas diferencias, con el interruptor apagado o encendido:
+
+- **Los mensajes de error de los servicios de transcripción cambian de forma.**
+  Ya no copian el texto que devuelve el servicio. Ahora son siempre así:
+  «Deepgram error: server-error (HTTP 503)», «OpenAI Whisper error: rate-limit
+  (HTTP 429) [rate_limit_exceeded]», «AssemblyAI error: timeout». Dicen el
+  servicio, el tipo de fallo, el código de respuesta y, como mucho, un código
+  corto del propio servicio. El motivo es que un servicio puede devolver trozos
+  de tu clave en su respuesta, y así nunca llegan a los registros. Si necesitas
+  más detalle de un fallo raro, míralo en la web del servicio.
+- **Las claves quedan marcadas.** Si un servicio rechaza una clave o dice que no
+  queda saldo, o si **Comprobar acceso** sale rechazado, la clave aparece
+  marcada en esta pantalla hasta que tú quites la marca. Con el interruptor
+  apagado la clave se sigue usando; la marca solo informa.
+- **La pantalla se actualiza sola** cada 20 segundos, y una banda en la parte
+  superior de todas las pantallas te avisa si hay un aviso pendiente o si los
+  trabajos nuevos se están rechazando.
+- **Cuenta elegida que no puede trabajar.** Si desactivas la cuenta elegida o
+  revocas su clave actual, los trabajos nuevos se rechazan. La línea **Nuevos
+  trabajos** y la banda lo dicen con el motivo («la cuenta elegida está
+  desactivada» o «la clave actual está revocada localmente»). Se arregla
+  activando la cuenta, eligiendo otra clave o eligiendo otra cuenta.
 
 Qué hace: si el servicio de transcripción rechaza una clave o responde que no
 queda saldo o cuota, Media2Text prueba la siguiente clave de la misma cuenta y,

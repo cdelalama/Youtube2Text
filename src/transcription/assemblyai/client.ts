@@ -3,8 +3,10 @@ import { setTimeout as delay } from "node:timers/promises";
 import { logStep } from "../../utils/logger.js";
 import { TranscriptJson, TranscriptionOptions } from "../types.js";
 import {
+  acceptProviderToken,
   InsufficientCreditsError,
   logUnclassifiedRefusal,
+  ProviderError,
   ProviderHttpError,
   ProviderRefusalError,
   type DefinitiveRefusal,
@@ -110,7 +112,10 @@ export class AssemblyAiClient {
     }
     const deadline = Date.now() + opts.maxPollMinutes * 60 * 1000;
 
-    logStep("transcribe", `Transcription started: ${created.id}`);
+    // The job identifier comes from the provider: it is the one machine token
+    // this adapter lets out, and only when it carries no key characters.
+    const job = acceptProviderToken(created.id, [this.apiKey]);
+    logStep("transcribe", `Transcription started: ${job ?? "(job identifier withheld)"}`);
 
     while (Date.now() < deadline) {
       const current = await retry(
@@ -119,26 +124,27 @@ export class AssemblyAiClient {
       );
       if (current.status === "completed") return current;
       if (current.status === "error") {
-        throw new Error(`Transcription error: ${JSON.stringify(current)}`);
+        // The provider's own explanation is free text and is not kept.
+        throw new ProviderError({ provider: "AssemblyAI", category: "transcription-failed", token: job,
+          note: "the accepted job ended in error at the provider" });
       }
       await delay(opts.pollIntervalMs, undefined, { signal: opts.abortSignal });
     }
 
-    throw new Error(
-      `Transcription timed out after ${opts.maxPollMinutes} minutes; upstream job ${created.id} was not recreated`
-    );
+    throw new ProviderError({ provider: "AssemblyAI", category: "timeout", token: job,
+      note: `polling gave up after ${opts.maxPollMinutes} minutes; the upstream job was not recreated` });
   }
 }
 
 /**
- * Classifies a failed upload or create call. Only shapes AssemblyAI documents
- * are definitive (assemblyai.com/docs/errors and the pre-recorded
- * common-errors guide): HTTP 401 "Authentication error, API token
- * missing/invalid" in either phase, and HTTP 400 "Your current account balance
- * is negative..." on POST /v2/transcript. Unclassified on purpose: 402 and this
- * adapter's older credit wordings (not documented for this API); 403, which is
- * ambiguous (documented both as no access to the resource and as a request
- * volume limit); 429, 5xx, timeouts and network failures.
+ * Classifies a failed upload or create call from its typed fields. Only shapes
+ * AssemblyAI documents are definitive (assemblyai.com/docs/errors and the
+ * pre-recorded common-errors guide): HTTP 401 in either phase, and the HTTP 400
+ * negative-balance answer of POST /v2/transcript, which the HTTP layer marks as
+ * payment-or-quota. Unclassified on purpose: 402 and this adapter's older
+ * credit wordings (not documented for this API); 403, which is ambiguous
+ * (documented both as no access to the resource and as a request volume
+ * limit); 429, 5xx, timeouts and network failures.
  */
 export function classifyAssemblyAiSubmissionRefusal(
   error: unknown,
@@ -146,7 +152,7 @@ export function classifyAssemblyAiSubmissionRefusal(
 ): DefinitiveRefusal | undefined {
   if (!(error instanceof ProviderHttpError)) return undefined;
   if (error.status === 401) return { provider: "assemblyai", kind: "rejected", status: 401 };
-  if (phase === "create" && error.status === 400 && /account balance is negative/i.test(error.message)) {
+  if (phase === "create" && error.status === 400 && error.category === "payment-or-quota") {
     return { provider: "assemblyai", kind: "exhausted", status: 400 };
   }
   return undefined;
@@ -154,23 +160,23 @@ export function classifyAssemblyAiSubmissionRefusal(
 
 function asSubmissionRefusal(error: unknown, phase: "upload" | "create"): unknown {
   const refusal = classifyAssemblyAiSubmissionRefusal(error, phase);
-  if (refusal) {
-    // Same prefix as the error it replaces, without the provider's text.
-    const source = error as ProviderHttpError;
-    return new ProviderRefusalError(refusal, `${source.provider} error ${source.status}`);
+  if (refusal) return new ProviderRefusalError(refusal, (error as ProviderHttpError).provider);
+  if (error instanceof ProviderError && !(error instanceof ProviderRefusalError)) {
+    const refusalLike = error.status === 402 || error.status === 403
+      || (error.status === 400 && error.category === "payment-or-quota");
+    if (refusalLike) logUnclassifiedRefusal("AssemblyAI", error.status!);
   }
-  const status = error instanceof ProviderHttpError || error instanceof InsufficientCreditsError
-    ? error.status : undefined;
-  if (status === 400 && !(error instanceof InsufficientCreditsError)) return error;
-  if (status === 400 || status === 402 || status === 403) logUnclassifiedRefusal("AssemblyAI", status);
   return error;
 }
 
 export function shouldRetryAssemblyAiRequest(error: unknown): boolean {
   if (error instanceof InsufficientCreditsError) return false;
-  if (error instanceof ProviderHttpError) {
-    return error.status === 408 || error.status === 425 || error.status === 429 || error.status >= 500;
+  if (error instanceof ProviderError) {
+    if (error.category === "timeout" || error.category === "network") return true;
+    const status = error.status;
+    return status === 408 || status === 425 || status === 429 || (status !== undefined && status >= 500);
   }
+  // Errors that did not come from the HTTP layer (for example a stand-in used in tests).
   const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
   return message.includes("timed out") || message.includes("network") || message.includes("fetch failed");
 }

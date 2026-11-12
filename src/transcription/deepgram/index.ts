@@ -3,11 +3,19 @@ import { extname, basename } from "node:path";
 import { randomUUID } from "node:crypto";
 import { TranscriptionProvider, type ProviderCapabilities } from "../provider.js";
 import { TranscriptJson, TranscriptionOptions } from "../types.js";
-import { ProviderRefusalError, sanitizeProviderErrorText, type ProviderRefusalKind } from "../errors.js";
+import {
+  acceptProviderToken,
+  jsonField,
+  ProviderError,
+  ProviderHttpError,
+  ProviderRefusalError,
+  type ProviderRefusalKind,
+} from "../errors.js";
 import { fetchWithTimeout, isAbortError } from "../../utils/fetch.js";
 
 const DEFAULT_MAX_AUDIO_BYTES = 2 * 1024 * 1024 * 1024;
 const DEFAULT_MODEL = "nova-3";
+const PROVIDER = "Deepgram";
 
 export function getDeepgramCapabilities(
   maxAudioBytesOverride?: number
@@ -139,10 +147,12 @@ export class DeepgramProvider implements TranscriptionProvider {
 
     const url = `https://api.deepgram.com/v1/listen?${params.toString()}`;
 
+    // Checked outside the request block so that a local cancellation or a
+    // revoked key is never reported as a provider failure.
+    if (opts.abortSignal?.aborted) throw new Error("Transcription cancelled locally");
+    opts.beforeRequest?.();
     let res: Response;
     try {
-      opts.abortSignal?.throwIfAborted();
-      opts.beforeRequest?.();
       res = await fetchWithTimeout(
         url,
         {
@@ -158,24 +168,24 @@ export class DeepgramProvider implements TranscriptionProvider {
       );
     } catch (error) {
       if (opts.abortSignal?.aborted) throw new Error("Transcription cancelled locally");
-      if (isAbortError(error)) {
-        throw new Error("Deepgram request timed out");
-      }
-      throw error;
+      throw new ProviderError({ provider: PROVIDER, category: isAbortError(error) ? "timeout" : "network" });
     }
 
     if (!res.ok) {
-      const text = await res.text();
-      const safe = sanitizeProviderErrorText(text, [this.apiKey]);
-      const message = `Deepgram API error (${res.status}): ${safe || res.statusText}`;
+      // The body is read only to pick one machine code; none of its text is kept.
+      const token = acceptProviderToken(jsonField(await res.text().catch(() => ""), ["err_code"]), [this.apiKey]);
       const kind = classifyDeepgramRefusal(res.status);
-      if (kind) {
-        throw new ProviderRefusalError({ provider: "deepgram", kind, status: res.status }, `Deepgram API error (${res.status})`);
-      }
-      throw new Error(message);
+      if (kind) throw new ProviderRefusalError({ provider: "deepgram", kind, status: res.status }, PROVIDER, token);
+      throw new ProviderHttpError(PROVIDER, res.status, { token });
     }
 
-    const data = (await res.json()) as DeepgramResponse;
+    let data: DeepgramResponse;
+    try {
+      data = (await res.json()) as DeepgramResponse;
+    } catch {
+      // The request was accepted; an unreadable answer is never a refusal.
+      throw new ProviderError({ provider: PROVIDER, category: "invalid-response", status: res.status });
+    }
     const results = data.results ?? {};
     const utterances = utterancesToTranscript(results.utterances);
     const transcript =

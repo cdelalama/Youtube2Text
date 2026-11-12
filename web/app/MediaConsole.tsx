@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { components } from "../lib/apiTypes.gen";
 import ProviderAccounts, { REFRESH_MS } from "./settings/ProviderAccounts";
-import { failoverNoticeText, failoverNoticeTitle, failoverRoutingText, type FailoverNotice, type FailoverRouting } from "../lib/failoverNotices";
+import { failoverNoticeText, failoverNoticeTitle, failoverRoutingText, routingRefusesNewWork, type FailoverNotice, type FailoverRouting } from "../lib/failoverNotices";
 import { createSnapshotGate } from "../lib/snapshotGate";
 
 type RunRecord = components["schemas"]["RunRecord"];
@@ -691,16 +691,21 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
           </div>
         </header>
         <main className="m2t-content">
-          {failoverNotices.length > 0 ? (
+          {failoverNotices.length > 0 || routingRefusesNewWork(failoverRouting) ? (
             <div role="alert">
               <button className="m2t-failover-banner" onClick={() => go("settings")}>
-                <strong>{failoverNoticeTitle(failoverNotices[0]!, (es, en) => t(lang, es, en))}.</strong>{" "}
-                {failoverNoticeText(failoverNotices[0]!, (es, en) => t(lang, es, en))}
-                {failoverNotices.length > 1 ? t(lang, ` Hay ${failoverNotices.length - 1} aviso(s) más.`, ` There are ${failoverNotices.length - 1} more notice(s).`) : ""}{" "}
+                {failoverNotices.length > 0 ? (
+                  <>
+                    <strong>{failoverNoticeTitle(failoverNotices[0]!, (es, en) => t(lang, es, en))}.</strong>{" "}
+                    {failoverNoticeText(failoverNotices[0]!, (es, en) => t(lang, es, en))}
+                    {failoverNotices.length > 1 ? t(lang, ` Hay ${failoverNotices.length - 1} aviso(s) más.`, ` There are ${failoverNotices.length - 1} more notice(s).`) : ""}{" "}
+                  </>
+                ) : <><strong>{t(lang, "Los trabajos nuevos se rechazan.", "New jobs are refused.")}</strong>{" "}</>}
                 {failoverRouting ? `${failoverRoutingText(failoverRouting, (es, en) => t(lang, es, en))} ` : ""}
-                {screen === "settings"
-                  ? t(lang, "Descártalo más abajo, en Cuentas de transcripción.", "Dismiss it below, under Transcription accounts.")
-                  : t(lang, "Abre Ajustes para revisarlo y descartarlo.", "Open Settings to review and dismiss it.")}
+                {failoverNotices.length === 0 ? t(lang, "Abre Ajustes para resolverlo.", "Open Settings to fix it.")
+                  : screen === "settings"
+                    ? t(lang, "Descártalo más abajo, en Cuentas de transcripción.", "Dismiss it below, under Transcription accounts.")
+                    : t(lang, "Abre Ajustes para revisarlo y descartarlo.", "Open Settings to review and dismiss it.")}
               </button>
             </div>
           ) : null}

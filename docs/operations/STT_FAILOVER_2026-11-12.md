@@ -1,12 +1,12 @@
 # Automatic key and account failover with operator notice - 2026-11-12
 
 State: source prepared on task branch `work/stt-failover-20261112`, candidate
-0.43.3. NOT deployed: the NAS still runs 0.42.2. Two independent reviews by
-Codex (of 0.43.0 and of 0.43.1) said do not merge or deploy yet; 0.43.2 answers
-the second one, 0.43.3 adds one test and no product change, and the candidate
-waits for a third review (see `docs/llm/REVIEWS.md`). The switch is
+0.43.4. NOT deployed: the NAS still runs 0.42.2. Three independent reviews by
+Codex (of 0.43.0, 0.43.1 and 0.43.3) said do not merge or deploy yet; 0.43.4
+answers the third and waits for the next one (see `docs/llm/REVIEWS.md`). The switch is
 off by default, so installing this release changes no routing until Carlos
-turns it on.
+turns it on. What does change with the switch off is listed below under
+"Changes that apply with the switch off".
 Decision: `docs/llm/DECISIONS.md` D-029. Operator guide (Spanish):
 `STT_ACCOUNTS_OPERATOR_GUIDE_2026-10-24.md`, section "Cambio automático".
 
@@ -86,7 +86,7 @@ retry and poll) and local revocation act on that exact key: revoking a key
 cancels a run while any of its recordings still owns that key, between pieces
 too, whatever the run's current key is.
 
-## Where key characters may appear
+## Where key characters and provider text may appear
 
 D-028 accepted showing the last four characters of a saved key on the accounts
 screen. The rule for this feature: those characters appear ONLY on the
@@ -100,29 +100,50 @@ or any response that another screen needs.
 - The banner on the other screens reads `GET /provider-accounts?view=notices`:
   pending notices and current routing. It carries no account listing and no key
   suffix of the existing configuration; the full snapshot is read only by the
-  accounts screen.
-- Errors of this feature (`ProviderRefusalError`, `FailoverExhaustedError`,
-  `RecordingStoppedError`) are built from fixed provider, status and reason
-  codes. They never copy the provider's response text or the message of the
-  error that caused them. This also applies with the switch off: a refusal that
-  used to read "Deepgram API error (401): <provider text>" now reads "Deepgram
-  API error (401): key or permission rejected".
-- What `sanitizeProviderErrorText` lets through. It is used for every other
-  provider error (5xx, rate limits, unclassified statuses, AssemblyAI polling).
-  Before this change it redacted only an exact copy of the whole key, so a
-  masked echo such as "sk-ab12...wxyz" (some providers answer an invalid key
-  this way) passed with the key's first and last characters. It now also
-  redacts every run of four or more consecutive characters of the key. The rest
-  of the provider body, cut to 200 characters, still passes into those older
-  error messages, and from there into logs, run records and events, as before.
-  Unrelated text that happens to share four characters with the key is redacted
-  too; that is accepted.
+  accounts screen. Any other query on that route is refused with 400.
+
+Provider text is closed off for every provider error, not only for refusals.
+A provider can echo part of a key in its answer, and a filter over free text
+cannot be made complete (short or separated fragments survive it). So no free
+provider text is kept anywhere. `src/transcription/errors.ts` builds every
+outward text from fixed parts only:
+
+- the provider name chosen by the adapter;
+- the HTTP status;
+- a category chosen by the code: `authentication`, `payment-or-quota`,
+  `rate-limit`, `server-error`, `invalid-request`, `invalid-response`,
+  `timeout`, `network`, `transcription-failed` or `unclassified`;
+- at most one machine token supplied by the provider, accepted only if it
+  matches `^[A-Za-z0-9_.-]{1,64}$` and shares no run of four or more consecutive
+  characters with the key in use (a key shorter than four characters is
+  compared whole);
+- for two AssemblyAI cases, a fixed note written in the code.
+
+Examples: `Deepgram error: payment-or-quota (HTTP 402) [ASR_PAYMENT_REQUIRED]`,
+`OpenAI Whisper error: rate-limit (HTTP 429) [rate_limit_exceeded]`,
+`AssemblyAI error: server-error (HTTP 503)`, `Deepgram error: timeout`,
+`AssemblyAI error: network`.
+
+The token is the provider's error code or type (Deepgram `err_code`; OpenAI
+`error.code`, else `error.type`). AssemblyAI answers errors with free text, so
+its HTTP errors carry no token. Two AssemblyAI errors after acceptance carry
+the job identifier as their one token, under the same checks, because it is the
+only reference for looking the job up: a job that ends in error
+(`AssemblyAI error: transcription-failed [<job id>]; the accepted job ended in
+error at the provider`) and polling that gives up. The provider's own
+explanation of a failed job is not quoted.
+
+What the pipeline needs to decide is in typed fields of `ProviderError`
+(`status`, `category`, `token`), not in the message. `sanitizeProviderErrorText`
+no longer exists. The failover errors (`FailoverExhaustedError`,
+`RecordingStoppedError`) are fixed text with provider, reason and status.
 
 ## Provider error shapes
 
 Only shapes supported by the provider's own documentation move work. Everything
-else is unclassified: the job fails exactly as before, and the adapter logs the
-HTTP status code only (never the body) so the reason is visible. Documentation
+else is unclassified: the job fails as before, with a fixed-part error, and for
+refusal-looking statuses the adapter also logs the HTTP status code so the
+reason is visible. Documentation
 was read on 2026-11-12 through a fetch tool that summarises each page; no live
 provider was called and no real refusal was observed.
 
@@ -151,6 +172,25 @@ Notes:
 - A 403 is a permission answer, not always a bad key: Deepgram uses it when the
   project lacks access to the model, OpenAI for an unsupported region. Moving is
   still safe for billing, and the notice shows the HTTP status.
+
+## Changes that apply with the switch off
+
+Routing does not change until the switch is on. These things do:
+
+1. The wording of every provider error (see above). Old texts such as
+   "Deepgram API error (503): <provider text>", "Deepgram request timed out" or
+   "Transcription error: {...}" no longer occur.
+2. Key marks. A definitive refusal, or a rejected access check, marks the key
+   on the accounts screen until he clears it. With the switch off the key is
+   still used.
+3. The console re-reads accounts and notices every 20 seconds and shows a band
+   on every screen when a notice is pending or new jobs are being refused.
+4. A selected account that he disabled, or whose current key he revoked, is
+   shown as what it is: new jobs are refused, with the reason. It is no longer
+   described as the existing configuration.
+5. `GET /provider-accounts` refuses any query other than exactly `view=notices`.
+6. The legacy key pool log line shows a key's position, not its first characters.
+7. The private database gains five tables; 0.42.2 ignores them.
 
 ## Order of attempts
 
@@ -184,6 +224,12 @@ available again, new work returns to it.
 What does not start a move: a provider on the existing environment keys (legacy
 mode has no account to move from), an account he disabled, a key he revoked
 locally, and the optional AssemblyAI low-balance check at the start of a run.
+
+A selected account that cannot take work (disabled, or its current key revoked)
+is its own state, "unavailable", distinct from the deliberate use of the
+existing configuration. New work is refused, and both the "Nuevos trabajos"
+line and the band say so with the reason, in Spanish. The band appears for this
+even when no notice is pending.
 
 ## Accepted work is not re-pinned silently
 
@@ -337,9 +383,11 @@ Nothing below was done. The NAS runs 0.42.2.
 - An access check cannot prove credit, so it never clears "out of credit"; only
   "Marcar como disponible" does. Marks never clear by themselves, so a key he
   topped up stays skipped until he marks it available.
-- Provider text still reaches the older, unclassified error messages (with key
-  fragments redacted). Removing it there would change errors this feature does
-  not own.
+- Provider errors no longer say what the provider wrote, only its status, a
+  category and at most one code. Diagnosing an unusual failure may need the
+  provider's own console.
+- A provider code is dropped when it shares four consecutive characters with the
+  key in use, even by coincidence.
 - Key health is recorded even with the switch off, as information only; the
   screen says so and warns before the switch is turned on with marked keys.
 - A provider refusal in an undocumented shape (for example an OpenAI or
@@ -349,12 +397,11 @@ Nothing below was done. The NAS runs 0.42.2.
   audit rows.
 - The CLI and legacy environment key pools are unchanged, including the pool's
   own round-robin; only its log line no longer shows key characters.
-- The UI was type-checked and built (production build of the 0.43.2 web source,
-  unchanged since), not exercised in a browser.
+- The UI was type-checked and built, not exercised in a browser.
 
 ## Validation
 
-`tests/sttFailover.test.ts`, 29 tests, all with local fakes: same-account next
+`tests/sttFailover.test.ts`, 31 tests, all with local fakes: same-account next
 key; next account after every key; cross-service move and transcript provider;
 no move on timeout, network error, 5xx, rate limit and post-acceptance failures;
 no move after a 2xx or after the upload; switch off identical to an unpinned
@@ -365,9 +412,14 @@ access refusal and an accepted check; a sibling's destination re-validated and
 its follow audited and announced; a re-enabled key not handed back to the
 recording it refused; a partly transcribed recording refused on its second
 piece; every refusal recorded with no attempt counter; caps enforced; no key
-character and no provider body in logs, run records, events, stored audit rows,
-the status route or error texts; the notices-only read and its proxy; an older
-screen read never replacing a newer change; notice wording; documented-only
-provider shapes; fixed default status shape and the opt-in check;
+character and no provider text in logs, run records, events, stored audit rows,
+the status route or error texts, on refusals and on the older paths (5xx, rate
+limit, unclassified status, unreadable answer, network, timeout, AssemblyAI
+polling and job failure), with ordinary and with short secrets; the machine
+token filter; a selected account that cannot take work shown as unavailable;
+the band told once after a whole selection; the notices-only read and its
+proxy, refusing any other query; an older screen read never replacing a newer
+change; notice wording; documented-only provider shapes; fixed default status
+shape and the opt-in check;
 account API actions. Exact results for this candidate are in
 `docs/llm/HISTORY.md`.

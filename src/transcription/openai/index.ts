@@ -3,14 +3,18 @@ import { basename } from "node:path";
 import { TranscriptionProvider, type ProviderCapabilities } from "../provider.js";
 import { TranscriptJson, TranscriptionOptions } from "../types.js";
 import {
+  acceptProviderToken,
+  jsonField,
   logUnclassifiedRefusal,
+  ProviderError,
+  ProviderHttpError,
   ProviderRefusalError,
-  sanitizeProviderErrorText,
   type ProviderRefusalKind,
 } from "../errors.js";
 import { fetchWithTimeout, isAbortError } from "../../utils/fetch.js";
 
 const DEFAULT_MAX_AUDIO_BYTES = 25 * 1024 * 1024;
+const PROVIDER = "OpenAI Whisper";
 
 export function getOpenAiWhisperCapabilities(
   maxAudioBytesOverride?: number
@@ -120,10 +124,12 @@ export class OpenAiWhisperProvider implements TranscriptionProvider {
       }
     }
 
+    // Checked outside the request block so that a local cancellation or a
+    // revoked key is never reported as a provider failure.
+    if (opts.abortSignal?.aborted) throw new Error("Transcription cancelled locally");
+    opts.beforeRequest?.();
     let res: Response;
     try {
-      opts.abortSignal?.throwIfAborted();
-      opts.beforeRequest?.();
       res = await fetchWithTimeout("https://api.openai.com/v1/audio/transcriptions", {
         method: "POST",
         signal: opts.abortSignal,
@@ -134,28 +140,29 @@ export class OpenAiWhisperProvider implements TranscriptionProvider {
       }, timeoutMs);
     } catch (error) {
       if (opts.abortSignal?.aborted) throw new Error("Transcription cancelled locally");
-      if (isAbortError(error)) {
-        throw new Error("OpenAI Whisper request timed out");
-      }
-      throw error;
+      throw new ProviderError({ provider: PROVIDER, category: isAbortError(error) ? "timeout" : "network" });
     }
 
     if (!res.ok) {
-      const text = await res.text();
-      const safe = sanitizeProviderErrorText(text, [this.apiKey]);
-      const message = `OpenAI Whisper API error (${res.status}): ${safe || res.statusText}`;
+      // The body is read only to classify and to pick one machine code; none of its text is kept.
+      const text = await res.text().catch(() => "");
+      const token = acceptProviderToken(jsonField(text, ["error", "code"]), [this.apiKey])
+        ?? acceptProviderToken(jsonField(text, ["error", "type"]), [this.apiKey]);
       const kind = classifyOpenAiRefusal(res.status, text);
       if (kind) {
-        throw new ProviderRefusalError(
-          { provider: "openai_whisper", kind, status: res.status },
-          `OpenAI Whisper API error (${res.status})`
-        );
+        throw new ProviderRefusalError({ provider: "openai_whisper", kind, status: res.status }, PROVIDER, token);
       }
       if (res.status === 402 || res.status === 403) logUnclassifiedRefusal("OpenAI", res.status);
-      throw new Error(message);
+      throw new ProviderHttpError(PROVIDER, res.status, { token });
     }
 
-    const data = (await res.json()) as OpenAiWhisperResponse;
+    let data: OpenAiWhisperResponse;
+    try {
+      data = (await res.json()) as OpenAiWhisperResponse;
+    } catch {
+      // The request was accepted; an unreadable answer is never a refusal.
+      throw new ProviderError({ provider: PROVIDER, category: "invalid-response", status: res.status });
+    }
     const utterances = segmentsToUtterances(data.segments);
     const text =
       data.text?.trim() ||

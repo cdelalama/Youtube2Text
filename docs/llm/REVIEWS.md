@@ -1,3 +1,65 @@
+## 2026-11-12 - Automatic account failover: third independent review (0.43.3) and fixes in 0.43.4
+
+Review, as relayed by the requesting Cortex session: Codex gpt-6-astra,
+reasoning effort max, read-only, inline diff, session
+01a1d069-c3ac-7602-9a01-a3992659e321, candidate commit `67dbcb2` (0.43.3).
+Provenance limit as before: the executor (Claude, claude-fable-5-2) received the
+findings through the requesting session and did not see the review session or
+verify its model metadata.
+
+Marked RESOLVED by the reviewer: all seven first-pass points and, from the
+second pass, exhaustion latching, sibling validation and repeated candidates.
+No automatic second paid submission is demonstrated. The reviewer accepts that
+behaviour changes with the switch off, provided the release notes say so.
+Verdict: still do not merge or deploy, also with the switch off, for four
+points. 0.43.4 below is the executor's answer and has NOT been reviewed.
+
+1. Disclosure boundary on the older provider error paths (the reason for
+   holding the release). sanitizeProviderErrorText still forwarded up to 200
+   characters of provider body; fragments shorter than four characters or
+   separated ones survived; the fragment filter was skipped for secrets shorter
+   than eight characters. Fixed for every provider error: the function is
+   removed and no free provider text is kept anywhere. src/transcription/errors.ts
+   builds outward text from fixed parts only (provider name, HTTP status, a
+   category chosen by the code, at most one provider machine token matching
+   ^[A-Za-z0-9_.-]{1,64}$ with no run of four or more key characters; a key
+   shorter than four is compared whole). Status, category and token are typed
+   fields of ProviderError. Covered: HTTP errors of the three adapters,
+   timeouts, network failures, unreadable 2xx answers, AssemblyAI polling
+   failures, an AssemblyAI job ending in error and its polling time-out.
+   Judgement for the reviewer: those last two AssemblyAI errors carry the
+   provider's job identifier as their one token (same checks), not an error
+   code, because it is the only reference to look the job up; the log line
+   "Transcription started" applies the same filter. One existing test outside
+   the feature expected the old job-error wording and was updated.
+2. Unavailable selection shown as legacy routing. Fixed: the store reports the
+   operator's selection as legacy, selected or unavailable with a reason
+   (account_disabled, key_revoked); the notices view exposes routing state
+   legacy, account, blocked or unavailable. The settings line and the band say
+   in Spanish that new jobs are refused and why. The band also appears for this
+   state when no notice is pending.
+3. Banner refresh before the selection is complete. Fixed: one operator action
+   is orchestrated by web/lib/accountAction.ts, which tells the band once, after
+   the accounts request, the settings request and the read-back, also when the
+   provider could not be activated (the message says so and the screen shows
+   the real resulting state).
+4. Web proxy of the notices view. Gathered in one unit, web/lib/failoverNoticesProxy.ts:
+   session check, exact-query validation and fixed forwarding. Any other query
+   on that route is now refused with 400 at the web proxy and at the API,
+   instead of being ignored. Supporting files: web/lib/webAuth.ts
+   (getWebAuthState), web/lib/credentialProxy.ts (dispatch),
+   web/app/api/provider-accounts/route.ts (binding), web/middleware.ts (first
+   session gate); API side src/credentials/routes.ts and noticesView in
+   src/credentials/store.ts.
+
+Behaviour changes with the switch off are now listed in CHANGELOG 0.43.4, in
+the operator guide and in docs/operations/STT_FAILOVER_2026-11-12.md.
+
+tests/sttFailover.test.ts now has 31 tests; exact totals are in the HISTORY
+entry for 0.43.4.
+
+Not done: review of 0.43.4; any browser exercise of the screen; deployment.
+
 ## 2026-11-12 - Automatic account failover: second independent review (0.43.1) and fixes in 0.43.2
 
 Review, as relayed by the requesting Cortex session: Codex gpt-6-astra,

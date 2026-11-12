@@ -40,6 +40,16 @@ export type FailoverEvent = {
   workId: string | null; reason: KeyRefusalKind;
   status: number | null; from: CredentialPin; to: CredentialPin | null; serviceChanged: boolean;
 };
+/**
+ * What the operator selected for a provider. "legacy" is the deliberate use of
+ * the existing configuration. "unavailable" is a saved account he selected that
+ * can no longer take new work (he disabled it, or its current key is revoked):
+ * new work is refused, which must never be shown as the existing configuration.
+ */
+export type SelectionState =
+  | { state: "legacy" }
+  | { state: "selected"; accountId: string }
+  | { state: "unavailable"; accountId: string; reason: "account_disabled" | "key_revoked" | "provider_mismatch" };
 export type RefusalOutcome =
   | { moved: true; pin: CredentialPin; serviceChanged: boolean }
   | { moved: false; reason: "off" | "no_candidate" | "record_only" }
@@ -238,12 +248,21 @@ export class CredentialStore {
       this.db.prepare("UPDATE credentials SET revoked=1 WHERE id=?").run(credentialId); this.audit("revoke_local", accountId, credentialId);
     });
   }
-  pin(provider: SttProviderId): CredentialPin | undefined {
+  /** Same judgement as pin(), reported instead of thrown. */
+  selection(provider: SttProviderId): SelectionState {
     const row = this.db.prepare("SELECT account_id FROM defaults WHERE provider=?").get(provider) as { account_id: string } | undefined;
-    if (!row) return undefined;
+    if (!row) return { state: "legacy" };
     const account = this.account(row.account_id);
-    if (account.provider !== provider || !account.enabled || this.credential(account.current_key).revoked) throw new CredentialError("selected_account_unavailable");
-    return { provider, accountId: account.id, credentialId: account.current_key };
+    const reason = account.provider !== provider ? "provider_mismatch" as const
+      : !account.enabled ? "account_disabled" as const
+        : this.credential(account.current_key).revoked ? "key_revoked" as const : undefined;
+    return reason ? { state: "unavailable", accountId: account.id, reason } : { state: "selected", accountId: account.id };
+  }
+  pin(provider: SttProviderId): CredentialPin | undefined {
+    const selection = this.selection(provider);
+    if (selection.state === "legacy") return undefined;
+    if (selection.state === "unavailable") throw new CredentialError("selected_account_unavailable");
+    return { provider, accountId: selection.accountId, credentialId: this.account(selection.accountId).current_key };
   }
   resolve(pin: CredentialPin): string {
     const account = this.account(pin.accountId);
@@ -520,37 +539,43 @@ export class CredentialStore {
       serviceChanged: Boolean(row.service_changed) }));
   }
   /**
-   * Read-only view for the settings screen and the status route. `effective` is
-   * where new work for `provider` would go right now; `blocked` means the switch
-   * is on, the selected key is marked unhealthy and nothing listed can take over.
+   * Read-only view for the settings screen and the status route. `selection`
+   * says what the operator chose, including a chosen account that can no longer
+   * take work. `effective` is where new work for `provider` would go right now.
+   * `blocked` means the switch is on, the selected key is marked unhealthy and
+   * nothing listed can take over.
    */
   failoverState(provider: SttProviderId) {
     const enabled = this.failoverEnabled();
     const notices = this.notices();
+    const selection = this.selection(provider);
     let effective: CredentialPin | null = null;
     let blocked = false;
-    try {
-      const primary = this.pin(provider);
-      if (primary) {
-        effective = !enabled || this.healthy(primary.credentialId) ? primary : this.nextCandidate(primary.accountId) ?? null;
-        blocked = enabled && !effective;
-      }
-    } catch (error) {
-      if (!(error instanceof CredentialError)) throw error;
+    if (selection.state === "selected") {
+      const primary = this.pin(provider)!;
+      effective = !enabled || this.healthy(primary.credentialId) ? primary : this.nextCandidate(primary.accountId) ?? null;
+      blocked = enabled && !effective;
     }
     const unhealthy = this.db.prepare(`SELECT COUNT(DISTINCT m.credential_id) AS n FROM key_marks m
       JOIN credentials c ON c.id=m.credential_id WHERE c.revoked=0`).get() as { n: number };
-    return { enabled, order: this.failoverOrder(), effective, blocked, unhealthyKeys: unhealthy.n, notices };
+    return { enabled, order: this.failoverOrder(), selection, effective, blocked, unhealthyKeys: unhealthy.n, notices };
   }
   /**
    * Notices plus where new work goes right now, for the banner shown on every
    * screen. No account listing, no legacy key suffix; a key hint appears only
-   * inside a notice.
+   * inside a notice. `state` tells apart the existing configuration, a working
+   * account, a selected account that refuses new work, and nothing left.
    */
   noticesView(provider: SttProviderId) {
-    const state = this.failoverState(provider);
-    const account = state.effective ? this.account(state.effective.accountId) : undefined;
-    return { notices: state.notices, routing: { enabled: state.enabled, blocked: state.blocked,
+    const view = this.failoverState(provider);
+    const { selection } = view;
+    const state = selection.state === "legacy" ? "legacy" as const
+      : selection.state === "unavailable" ? "unavailable" as const
+        : view.blocked ? "blocked" as const : "account" as const;
+    const accountId = view.effective?.accountId ?? (selection.state === "legacy" ? undefined : selection.accountId);
+    const account = accountId ? this.account(accountId) : undefined;
+    return { notices: view.notices, routing: { enabled: view.enabled, state,
+      reason: selection.state === "unavailable" ? selection.reason : null,
       provider: account?.provider ?? provider, accountLabel: account?.label ?? null } };
   }
 }

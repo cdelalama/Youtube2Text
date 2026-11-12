@@ -42,7 +42,7 @@ export function credentialRoutes(store: CredentialStore | undefined, baseConfig:
     const activeProvider = effectiveConfig().sttProvider;
     const selected = accounts.find((account) => account.selected && account.provider === activeProvider);
     const failover = store?.failoverState(activeProvider)
-      ?? { enabled: false, order: [], effective: null, blocked: false, unhealthyKeys: 0, notices: [] };
+      ?? { enabled: false, order: [], selection: { state: "legacy" as const }, effective: null, blocked: false, unhealthyKeys: 0, notices: [] };
     return { configured: Boolean(store), activeProvider, selectedAccountId: selected?.id ?? null, accounts, failover,
       legacy: PROVIDERS.map((provider) => ({ provider, keys: legacyKeys(baseConfig, provider).map((key) => `••••${key.slice(-4)}`),
         selected: !accounts.some((account) => account.provider === provider && account.selected) })),
@@ -59,16 +59,19 @@ export function credentialRoutes(store: CredentialStore | undefined, baseConfig:
       if (!process.env.Y2T_API_KEY?.trim()) { json(res, 503, { error: "api_auth_not_configured" }); return; }
       if (req.method === "GET") {
         // The banner shown on every screen reads notices only: no account
-        // listing and no legacy key suffix leaves this route for it.
-        if (parseUrl(req.url ?? "", true).query?.view === "notices") {
-          const provider = effectiveConfig().sttProvider;
-          json(res, 200, store?.noticesView(provider)
-            ?? { notices: [], routing: { enabled: false, blocked: false, provider, accountLabel: null } });
-          return;
-        }
-        json(res, 200, snapshot()); return;
+        // listing and no legacy key suffix leaves this route for it. The only
+        // query accepted on this route is exactly view=notices.
+        const query = parseUrl(req.url ?? "", true).query ?? {};
+        const names = Object.keys(query);
+        if (names.length === 0) { json(res, 200, snapshot()); return; }
+        if (names.length !== 1 || query.view !== "notices") { json(res, 400, { error: "invalid_request" }); return; }
+        const provider = effectiveConfig().sttProvider;
+        json(res, 200, store?.noticesView(provider)
+          ?? { notices: [], routing: { enabled: false, state: "legacy", reason: null, provider, accountLabel: null } });
+        return;
       }
       if (req.method !== "POST") { json(res, 405, { error: "method_not_allowed" }); return; }
+      if ((req.url ?? "").includes("?")) { json(res, 400, { error: "invalid_request" }); return; }
       if (!store) { json(res, 503, { error: "credential_store_not_configured" }); return; }
       const chunks: Buffer[] = [];
       let bytes = 0;

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Media2Text API
-  version: 0.43.3
+  version: 0.43.4
   description: |
     Minimal local HTTP API for Media2Text, backed by the youtube2text engine.
     Notes:
@@ -23,7 +23,8 @@ paths:
         loopback socket peer. No full saved key is returned. Cache-Control:
         no-store. With view=notices it returns only pending failover notices and
         current routing, for the banner shown on every screen: no account
-        listing and no key suffix of the existing configuration."
+        listing and no key suffix of the existing configuration. Any other
+        query on this route is refused with 400."
       parameters:
         - name: view
           in: query
@@ -42,6 +43,12 @@ paths:
                 oneOf:
                   - $ref: "#/components/schemas/ProviderAccountsSnapshot"
                   - $ref: "#/components/schemas/FailoverNoticesView"
+        "400":
+          description: A query other than exactly view=notices
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "401": &a2
           description: Operator API key required
           content:
@@ -2869,14 +2876,32 @@ components:
           additionalProperties: false
           required:
             - enabled
-            - blocked
+            - state
+            - reason
             - provider
             - accountLabel
           properties:
             enabled:
               type: boolean
-            blocked:
-              type: boolean
+            state:
+              description: legacy = existing configuration chosen on purpose;
+                account = a saved account takes new work; blocked = switch on
+                and nothing healthy is left; unavailable = the selected account
+                cannot take work, so new work is refused.
+              type: string
+              enum:
+                - legacy
+                - account
+                - blocked
+                - unavailable
+            reason:
+              anyOf:
+                - type: string
+                  enum:
+                    - account_disabled
+                    - key_revoked
+                    - provider_mismatch
+                - type: "null"
             provider: *a2
             accountLabel:
               anyOf:
@@ -2888,6 +2913,7 @@ components:
       required:
         - enabled
         - order
+        - selection
         - effective
         - blocked
         - unhealthyKeys
@@ -2895,6 +2921,28 @@ components:
       properties:
         enabled:
           type: boolean
+        selection:
+          description: What the operator selected for the active provider. A
+            selected account that can no longer take work is "unavailable", never
+            "legacy".
+          type: object
+          additionalProperties: false
+          required:
+            - state
+          properties:
+            state:
+              type: string
+              enum:
+                - legacy
+                - selected
+                - unavailable
+            accountId: *a1
+            reason:
+              type: string
+              enum:
+                - account_disabled
+                - key_revoked
+                - provider_mismatch
         order:
           description: Operator-ordered accounts allowed to take over work.
           type: array

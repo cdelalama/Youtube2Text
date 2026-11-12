@@ -1,12 +1,17 @@
 import { readFile } from "node:fs/promises";
 import {
   InsufficientCreditsError,
+  ProviderError,
   ProviderHttpError,
-  sanitizeProviderErrorText,
 } from "../errors.js";
 import { fetchWithTimeout, isAbortError } from "../../utils/fetch.js";
 
 const API_BASE = "https://api.assemblyai.com/v2";
+const PROVIDER = "AssemblyAI";
+const PROVIDER_UPLOAD = "AssemblyAI upload";
+
+// The response body is read only to choose a category. None of its text is
+// kept: AssemblyAI answers errors with free text, not with a machine code.
 
 function isInsufficientCredits(status: number, body: string): boolean {
   if (status === 402) return true;
@@ -18,6 +23,30 @@ function isInsufficientCredits(status: number, body: string): boolean {
     text.includes("insufficient") && text.includes("credit") ||
     text.includes("quota exceeded")
   );
+}
+
+/** The documented refusal of POST /v2/transcript when the balance is negative. */
+function isNegativeBalance(status: number, body: string): boolean {
+  return status === 400 && /account balance is negative/i.test(body);
+}
+
+function httpError(provider: string, status: number, body: string): ProviderError {
+  if (isInsufficientCredits(status, body)) return new InsufficientCreditsError(provider, status);
+  return new ProviderHttpError(provider, status,
+    isNegativeBalance(status, body) ? { category: "payment-or-quota" } : {});
+}
+
+function requestFailure(provider: string, error: unknown): Error {
+  return new ProviderError({ provider, category: isAbortError(error) ? "timeout" : "network" });
+}
+
+async function readJson<T>(provider: string, response: Response): Promise<T> {
+  try {
+    return (await response.json()) as T;
+  } catch {
+    // The request was answered with a 2xx; an unreadable body is not a refusal.
+    throw new ProviderError({ provider, category: "invalid-response", status: response.status });
+  }
 }
 
 export async function requestJson<T>(
@@ -38,23 +67,12 @@ export async function requestJson<T>(
     }, timeoutMs);
   } catch (error) {
     if (init.signal?.aborted) throw new Error("Transcription cancelled locally");
-    if (isAbortError(error)) {
-      throw new Error("AssemblyAI request timed out");
-    }
-    throw error;
+    throw requestFailure(PROVIDER, error);
   }
   if (!response.ok) {
-    const text = await response.text();
-    if (isInsufficientCredits(response.status, text)) {
-      throw new InsufficientCreditsError(
-        `AssemblyAI insufficient credits: ${sanitizeProviderErrorText(text, [apiKey])}`,
-        response.status
-      );
-    }
-    const safe = sanitizeProviderErrorText(text, [apiKey]);
-    throw new ProviderHttpError("AssemblyAI", response.status, safe);
+    throw httpError(PROVIDER, response.status, await response.text().catch(() => ""));
   }
-  return (await response.json()) as T;
+  return await readJson<T>(PROVIDER, response);
 }
 
 export async function uploadFile(
@@ -65,10 +83,12 @@ export async function uploadFile(
   beforeRequest?: () => void
 ): Promise<{ upload_url: string }> {
   const buffer = await readFile(audioPath);
+  // Checked outside the request block so that a local cancellation or a
+  // revoked key is never reported as a provider failure.
+  if (signal?.aborted) throw new Error("Transcription cancelled locally");
+  beforeRequest?.();
   let response: Response;
   try {
-    signal?.throwIfAborted();
-    beforeRequest?.();
     response = await fetchWithTimeout(`${API_BASE}/upload`, {
       method: "POST",
       signal,
@@ -77,21 +97,10 @@ export async function uploadFile(
     }, timeoutMs);
   } catch (error) {
     if (signal?.aborted) throw new Error("Transcription cancelled locally");
-    if (isAbortError(error)) {
-      throw new Error("AssemblyAI upload timed out");
-    }
-    throw error;
+    throw requestFailure(PROVIDER_UPLOAD, error);
   }
   if (!response.ok) {
-    const text = await response.text();
-    if (isInsufficientCredits(response.status, text)) {
-      throw new InsufficientCreditsError(
-        `AssemblyAI insufficient credits: ${sanitizeProviderErrorText(text, [apiKey])}`,
-        response.status
-      );
-    }
-    const safe = sanitizeProviderErrorText(text, [apiKey]);
-    throw new ProviderHttpError("AssemblyAI upload", response.status, safe);
+    throw httpError(PROVIDER_UPLOAD, response.status, await response.text().catch(() => ""));
   }
-  return (await response.json()) as { upload_url: string };
+  return await readJson<{ upload_url: string }>(PROVIDER_UPLOAD, response);
 }

@@ -13,7 +13,7 @@ export interface paths {
         };
         /**
          * Read masked provider account metadata from loopback
-         * @description Internal web-to-API route. Requires the operator API key and a loopback socket peer. No full saved key is returned. Cache-Control: no-store. With view=notices it returns only pending failover notices and current routing, for the banner shown on every screen: no account listing and no key suffix of the existing configuration.
+         * @description Internal web-to-API route. Requires the operator API key and a loopback socket peer. No full saved key is returned. Cache-Control: no-store. With view=notices it returns only pending failover notices and current routing, for the banner shown on every screen: no account listing and no key suffix of the existing configuration. Any other query on this route is refused with 400.
          */
         get: operations["getProviderAccounts"];
         put?: never;
@@ -1643,7 +1643,12 @@ export interface components {
             notices: components["schemas"]["FailoverNotice"][];
             routing: {
                 enabled: boolean;
-                blocked: boolean;
+                /**
+                 * @description legacy = existing configuration chosen on purpose; account = a saved account takes new work; blocked = switch on and nothing healthy is left; unavailable = the selected account cannot take work, so new work is refused.
+                 * @enum {string}
+                 */
+                state: "legacy" | "account" | "blocked" | "unavailable";
+                reason: ("account_disabled" | "key_revoked" | "provider_mismatch") | null;
                 /** @enum {string} */
                 provider: "assemblyai" | "deepgram" | "openai_whisper";
                 accountLabel: string | null;
@@ -1651,6 +1656,15 @@ export interface components {
         };
         FailoverState: {
             enabled: boolean;
+            /** @description What the operator selected for the active provider. A selected account that can no longer take work is "unavailable", never "legacy". */
+            selection: {
+                /** @enum {string} */
+                state: "legacy" | "selected" | "unavailable";
+                /** Format: uuid */
+                accountId?: string;
+                /** @enum {string} */
+                reason?: "account_disabled" | "key_revoked" | "provider_mismatch";
+            };
             /** @description Operator-ordered accounts allowed to take over work. */
             order: string[];
             /** @description Where new work for the active provider would go now. */
@@ -1825,6 +1839,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProviderAccountsSnapshot"] | components["schemas"]["FailoverNoticesView"];
+                };
+            };
+            /** @description A query other than exactly view=notices */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Operator API key required */

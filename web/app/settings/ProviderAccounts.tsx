@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { failoverNoticeText, failoverNoticeTitle, providerNames, type FailoverNotice, type Provider, type Translate } from "../../lib/failoverNotices";
 import { createSnapshotGate } from "../../lib/snapshotGate";
+import { runAccountAction } from "../../lib/accountAction";
+import { unavailableReasonText } from "../../lib/failoverNotices";
 
 type Check = { state: "accepted" | "rejected" | "permission_unknown" | "unavailable"; checkedAt: string };
 type Mark = { since: string; status: number | null };
@@ -11,7 +13,9 @@ type Health = { exhausted: Mark | null; rejected: Mark | null };
 type Account = { id: string; provider: Provider; label: string; enabled: boolean; selected: boolean;
   currentCredentialId: string; keyOrder: string[];
   keys: { id: string; hint: string; revoked: boolean; createdAt: string; access: Check | null; health: Health }[] };
-type Failover = { enabled: boolean; order: string[]; effective: { provider: Provider; accountId: string; credentialId: string } | null;
+type Selection = { state: "legacy" } | { state: "selected"; accountId: string }
+  | { state: "unavailable"; accountId: string; reason: "account_disabled" | "key_revoked" | "provider_mismatch" };
+type Failover = { enabled: boolean; order: string[]; selection: Selection; effective: { provider: Provider; accountId: string; credentialId: string } | null;
   blocked: boolean; unhealthyKeys: number; notices: FailoverNotice[] };
 type Snapshot = { configured: boolean; activeProvider: Provider; selectedAccountId: string | null; selectionReady: boolean;
   accounts: Account[]; failover: Failover; legacy: { provider: Provider; keys: string[]; selected: boolean }[]; check?: Check };
@@ -20,10 +24,11 @@ const names = providerNames;
 /** How often an open console re-reads accounts and notices. */
 export const REFRESH_MS = 20_000;
 
+const NO_FAILOVER: Failover = { enabled: false, order: [], selection: { state: "legacy" }, effective: null, blocked: false, unhealthyKeys: 0, notices: [] };
 /** Tolerates an API that predates automatic failover, so a mixed rollout cannot break the screen. */
 function normalize(raw: Snapshot): Snapshot {
   return { ...raw,
-    failover: raw.failover ?? { enabled: false, order: [], effective: null, blocked: false, unhealthyKeys: 0, notices: [] },
+    failover: { ...NO_FAILOVER, ...(raw.failover as Partial<Failover> | undefined) },
     accounts: (raw.accounts ?? []).map((account) => ({ ...account,
       keyOrder: account.keyOrder ?? account.keys.filter((key) => !key.revoked).map((key) => key.id),
       keys: account.keys.map((key) => ({ ...key, health: key.health ?? { exhausted: null, rejected: null } })) })) };
@@ -120,32 +125,43 @@ export default function ProviderAccounts({ lang, settingsRevision, onProviderSel
   async function perform(action: Action, success?: string): Promise<boolean> {
     setBusy(true); setError(""); setMessage("");
     gate.changed(); // reads already in flight predate this change
+    let check: Check | undefined;
+    let account: Account | undefined;
     try {
-      const response = await fetch("/api/provider-accounts", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(action) });
-      const result = await response.json();
-      gate.changed(); // and so does any read that began while it ran
-      if (!response.ok) { setError(failure(result.error)); return false; }
-      setData(normalize(result));
-      onChanged?.();
-      if (result.check) setMessage(checkText(result.check, t));
-      else setMessage(success ?? t("Cambio guardado.", "Change saved."));
-      if (action.action === "probe_unsaved") setCheck(result.check);
-      if (action.action === "select") {
-        const account = (result as Snapshot).accounts.find((item) => item.id === action.accountId)!;
-        const settingsResponse = await fetch("/api/settings", { method: "PATCH", headers: { "content-type": "application/json" },
-          body: JSON.stringify({ settings: { sttProvider: account.provider } }) });
-        gate.changed();
-        if (!settingsResponse.ok) {
-          setError(t("La cuenta quedó elegida para su proveedor, pero no se pudo activar ese proveedor. Revisa Proveedor y guarda los cambios.",
-            "The account was selected for its provider, but that provider could not be activated. Check Provider and save changes."));
-          await load(); return false;
-        }
-        onProviderSelected(account.provider);
-        await load();
+      const result = await runAccountAction<Snapshot>({
+        post: async () => {
+          const response = await fetch("/api/provider-accounts", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(action) });
+          const body = await response.json();
+          gate.changed(); // and so does any read that began while it ran
+          if (response.ok) { setData(normalize(body)); check = body.check; }
+          return { ok: response.ok, body };
+        },
+        // Selecting an account also makes its provider the active one.
+        activateProvider: action.action !== "select" ? undefined : async (snapshot) => {
+          account = snapshot.accounts.find((item) => item.id === action.accountId);
+          if (!account) return false;
+          const response = await fetch("/api/settings", { method: "PATCH", headers: { "content-type": "application/json" },
+            body: JSON.stringify({ settings: { sttProvider: account.provider } }) });
+          gate.changed();
+          return response.ok;
+        },
+        reload: load,
+        // After the whole operation, so the banner never reads a half-made selection.
+        notifyChanged: () => onChanged?.(),
+      });
+      if (result.outcome === "refused") { setError(failure(result.error)); return false; }
+      if (result.outcome === "unreachable") { gate.changed(); setError(failure("api_unreachable")); return false; }
+      if (result.outcome === "provider_not_activated") {
+        setError(t("La cuenta quedó elegida para su proveedor, pero no se pudo activar ese proveedor: los trabajos nuevos siguen yendo al proveedor anterior. La línea «Nuevos trabajos» muestra el estado real. Revisa Proveedor y guarda los cambios.",
+          "The account was selected for its provider, but that provider could not be activated: new jobs still go to the previous provider. The New jobs line shows the real state. Check Provider and save changes."));
+        return false;
       }
+      if (check) setMessage(checkText(check, t));
+      else setMessage(success ?? t("Cambio guardado.", "Change saved."));
+      if (action.action === "probe_unsaved") setCheck(check);
+      if (account) onProviderSelected(account.provider);
       return true;
-    } catch { gate.changed(); setError(failure("api_unreachable")); return false; }
-    finally { setBusy(false); }
+    } finally { setBusy(false); }
   }
   async function save(event: FormEvent) {
     event.preventDefault();
@@ -186,7 +202,13 @@ export default function ProviderAccounts({ lang, settingsRevision, onProviderSel
         </div>)}
         <p className={data.selectionReady && !data.failover.blocked ? "" : "m2t-account-error"}>
           {t("Nuevos trabajos", "New jobs")}: <strong>{names[data.activeProvider]} · {data.accounts.find((account) => account.id === data.selectedAccountId)?.label ?? t("configuración existente", "existing configuration")}</strong>
-          {!data.selectionReady && <> — {t("elige una cuenta disponible antes de transcribir", "choose an available account before transcribing")}</>}
+          {!data.selectionReady && (() => {
+            // A selected account that cannot take work refuses new jobs; say why, never "existing configuration".
+            const selection = data.failover.selection;
+            if (selection.state !== "unavailable") return <> — {t("elige una cuenta disponible antes de transcribir", "choose an available account before transcribing")}</>;
+            const label = data.accounts.find((item) => item.id === selection.accountId)?.label ?? "";
+            return <> — {t("los trabajos nuevos se rechazan", "new jobs are refused")}: {unavailableReasonText({ reason: selection.reason, accountLabel: label }, t)}. {t("Actívala, elige otra clave o elige otra cuenta.", "Enable it, choose another key or select another account.")}</>;
+          })()}
           {data.failover.blocked && <> — {t("su clave está marcada como no disponible y no queda otra en tu lista", "its key is marked unavailable and nothing else in your list can take over")}</>}
           {(() => {
             const selected = data.accounts.find((account) => account.id === data.selectedAccountId);

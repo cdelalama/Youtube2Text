@@ -59,7 +59,7 @@ test("AssemblyAI terminal job errors are not retried from upload", async () => {
 
   await assert.rejects(
     client.transcribe("audio.mp3", transcriptionOptions),
-    /Transcription error/
+    /AssemblyAI error: transcription-failed \[job-2\]/
   );
   assert.equal(uploads, 1);
   assert.equal(creates, 1);

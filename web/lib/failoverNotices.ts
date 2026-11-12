@@ -23,8 +23,38 @@ export type FailoverNotice = {
   firstAt: string;
   lastAt: string;
 };
-/** Where new work goes at this moment. Carries no key hint. */
-export type FailoverRouting = { enabled: boolean; blocked: boolean; provider: Provider; accountLabel: string | null };
+/**
+ * Where new work goes at this moment. Carries no key hint.
+ * - legacy: the existing configuration, chosen on purpose.
+ * - account: a saved account takes the work.
+ * - blocked: the switch is on and no healthy key or account is left.
+ * - unavailable: the selected account cannot take work, so new work is refused.
+ */
+export type FailoverRouting = {
+  enabled: boolean;
+  state: "legacy" | "account" | "blocked" | "unavailable";
+  reason: "account_disabled" | "key_revoked" | "provider_mismatch" | null;
+  provider: Provider;
+  accountLabel: string | null;
+};
+
+/** New work is being refused right now, whatever notices exist. */
+export function routingRefusesNewWork(routing: FailoverRouting | undefined): boolean {
+  return routing?.state === "blocked" || routing?.state === "unavailable";
+}
+
+/** Why the selected account cannot take new work, in the operator's language. */
+export function unavailableReasonText(routing: Pick<FailoverRouting, "reason" | "accountLabel">, t: Translate): string {
+  const account = routing.accountLabel ?? "";
+  if (routing.reason === "account_disabled") {
+    return t(`la cuenta elegida, «${account}», está desactivada`, `the selected account, "${account}", is disabled`);
+  }
+  if (routing.reason === "key_revoked") {
+    return t(`la clave actual de la cuenta elegida, «${account}», está revocada localmente`,
+      `the current key of the selected account, "${account}", is locally revoked`);
+  }
+  return t(`la cuenta elegida, «${account}», no corresponde a este servicio`, `the selected account, "${account}", does not belong to this service`);
+}
 
 export function failoverNoticeTitle(notice: FailoverNotice, t: Translate): string {
   return notice.kind === "stopped" ? t("Grabación detenida", "Recording stopped")
@@ -79,13 +109,17 @@ export function failoverNoticeText(notice: FailoverNotice, t: Translate): string
 /** Where new work goes right now, in the present tense. */
 export function failoverRoutingText(routing: FailoverRouting, t: Translate): string {
   const service = providerNames[routing.provider];
-  if (routing.blocked) {
-    return t("Ahora mismo no queda ninguna clave o cuenta disponible para los trabajos nuevos.",
-      "Right now no key or account is available for new jobs.");
+  if (routing.state === "unavailable") {
+    return t(`Ahora mismo los trabajos nuevos se rechazan: ${unavailableReasonText(routing, t)}. Actívala, elige otra clave o elige otra cuenta en Ajustes.`,
+      `Right now new jobs are refused: ${unavailableReasonText(routing, t)}. Enable it, choose another key or select another account in Settings.`);
   }
-  const where = routing.accountLabel
-    ? t(`Ahora mismo los trabajos nuevos van a la cuenta «${routing.accountLabel}» (${service}).`,
-      `Right now new jobs go to account "${routing.accountLabel}" (${service}).`)
+  if (routing.state === "blocked") {
+    return t("Ahora mismo los trabajos nuevos se rechazan: no queda ninguna clave o cuenta disponible en tu lista.",
+      "Right now new jobs are refused: no key or account in your list is available.");
+  }
+  const where = routing.state === "account"
+    ? t(`Ahora mismo los trabajos nuevos van a la cuenta «${routing.accountLabel ?? ""}» (${service}).`,
+      `Right now new jobs go to account "${routing.accountLabel ?? ""}" (${service}).`)
     : t(`Ahora mismo los trabajos nuevos usan la configuración existente de ${service}.`,
       `Right now new jobs use the existing ${service} configuration.`);
   return routing.enabled ? where
