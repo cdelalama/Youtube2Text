@@ -1,9 +1,16 @@
 import { apiBaseUrlServer } from "./api";
 
-export async function proxyPublicMediaStatus(): Promise<Response> {
+// Only this exact opt-in is forwarded; every other query is dropped so the
+// default response keeps its fixed public shape.
+const FAILOVER_CHECK = "stt_account_failover";
+
+export async function proxyPublicMediaStatus(request?: Request): Promise<Response> {
+  const includeFailover = request
+    ? new URL(request.url).searchParams.getAll("include").includes(FAILOVER_CHECK)
+    : false;
   let response: Response;
   try {
-    response = await fetch(`${apiBaseUrlServer()}/status/media-pipeline`, {
+    response = await fetch(`${apiBaseUrlServer()}/status/media-pipeline${includeFailover ? `?include=${FAILOVER_CHECK}` : ""}`, {
       method: "GET",
       cache: "no-store",
     });

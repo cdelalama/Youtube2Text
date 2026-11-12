@@ -104,15 +104,11 @@ export class MultiKeyProvider implements TranscriptionProvider {
     if (state.failures < this.options.failureThreshold) return;
     state.failures = 0;
     state.disabledUntil = Date.now() + this.options.cooldownMs;
+    // Identify the key by pool position only; never log key characters.
     logWarn(
-      `${this.providerLabel} key ${maskKey(state.key)} disabled for ${Math.round(
+      `${this.providerLabel} key #${this.states.indexOf(state) + 1} of ${this.states.length} disabled for ${Math.round(
         this.options.cooldownMs / 1000
       )}s after consecutive failures.`
     );
   }
-}
-
-function maskKey(key: string): string {
-  if (key.length <= 4) return "***";
-  return `${key.slice(0, 4)}...`;
 }

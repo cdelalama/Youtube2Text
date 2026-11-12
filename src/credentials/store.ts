@@ -7,8 +7,35 @@ import type { AppConfig, SttProviderId } from "../config/schema.js";
 export const PROVIDERS = ["assemblyai", "deepgram", "openai_whisper"] as const;
 export type CredentialPin = { provider: SttProviderId; accountId: string; credentialId: string };
 export type AccessCheck = { state: "accepted" | "rejected" | "permission_unknown" | "unavailable"; checkedAt: string };
+export type KeyHealthState = "ok" | "rejected" | "exhausted";
+export type KeyRefusalKind = Exclude<KeyHealthState, "ok">;
+/** Health comes only from a definitive provider answer; `since` and `status` are null while ok. */
+export type KeyHealth = { state: KeyHealthState; since: string | null; status: number | null };
+export type FailoverParty = { accountId: string; label: string; provider: SttProviderId; keyHint: string };
+/** Operator-facing record of automatic moves. Never contains a key value. */
+export type FailoverNotice = {
+  id: string; kind: "moved" | "blocked"; reason: KeyRefusalKind; status: number | null;
+  from: FailoverParty; to: FailoverParty | null; serviceChanged: boolean;
+  count: number; firstAt: string; lastAt: string;
+};
+/**
+ * Audit trail of automatic routing. "moved"/"blocked" follow a provider refusal
+ * of running work; "admitted"/"admission_blocked" record new work that skipped a
+ * key already marked unhealthy (or found nothing left).
+ */
+export type FailoverEvent = {
+  id: number; at: string; kind: "moved" | "blocked" | "admitted" | "admission_blocked"; workId: string | null; reason: KeyRefusalKind;
+  status: number | null; from: CredentialPin; to: CredentialPin | null; serviceChanged: boolean;
+};
+export type RefusalOutcome =
+  | { moved: true; pin: CredentialPin; serviceChanged: boolean }
+  | { moved: false; reason: "off" | "no_candidate" };
 type AccountRow = { id: string; provider: SttProviderId; label: string; enabled: number; current_key: string; created_at: string };
 type KeyRow = { id: string; account_id: string; hint: string; sealed: string; revoked: number; created_at: string; check_json: string | null };
+type HealthRow = { credential_id: string; state: KeyRefusalKind; since: string; status: number | null };
+type NoticeRow = { id: string; kind: "moved" | "blocked"; reason: KeyRefusalKind; status: number | null;
+  from_account_id: string; from_credential_id: string; to_account_id: string | null; to_credential_id: string | null;
+  service_changed: number; count: number; first_at: string; last_at: string };
 export class CredentialError extends Error {
   constructor(public code: string) { super(code); this.name = "CredentialError"; }
 }
@@ -67,7 +94,19 @@ export class CredentialStore {
         created_at TEXT NOT NULL, check_json TEXT);
       CREATE TABLE IF NOT EXISTS defaults (provider TEXT PRIMARY KEY, account_id TEXT NOT NULL REFERENCES accounts(id));
       CREATE TABLE IF NOT EXISTS audit (id INTEGER PRIMARY KEY, at TEXT NOT NULL, action TEXT NOT NULL, account_id TEXT, credential_id TEXT);
-      CREATE TABLE IF NOT EXISTS work_selections (work_id TEXT PRIMARY KEY, provider TEXT NOT NULL, account_id TEXT, credential_id TEXT, at TEXT NOT NULL);`);
+      CREATE TABLE IF NOT EXISTS work_selections (work_id TEXT PRIMARY KEY, provider TEXT NOT NULL, account_id TEXT, credential_id TEXT, at TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS failover_order (account_id TEXT PRIMARY KEY REFERENCES accounts(id), position INTEGER NOT NULL);
+      CREATE TABLE IF NOT EXISTS key_order (credential_id TEXT PRIMARY KEY REFERENCES credentials(id), position INTEGER NOT NULL);
+      CREATE TABLE IF NOT EXISTS key_health (credential_id TEXT PRIMARY KEY REFERENCES credentials(id), state TEXT NOT NULL,
+        since TEXT NOT NULL, status INTEGER);
+      CREATE TABLE IF NOT EXISTS failover_events (id INTEGER PRIMARY KEY, at TEXT NOT NULL, kind TEXT NOT NULL, work_id TEXT,
+        reason TEXT NOT NULL, status INTEGER, from_provider TEXT NOT NULL, from_account_id TEXT NOT NULL,
+        from_credential_id TEXT NOT NULL, to_provider TEXT, to_account_id TEXT, to_credential_id TEXT,
+        service_changed INTEGER NOT NULL DEFAULT 0);
+      CREATE TABLE IF NOT EXISTS failover_notices (id TEXT PRIMARY KEY, kind TEXT NOT NULL, reason TEXT NOT NULL, status INTEGER,
+        from_account_id TEXT NOT NULL, from_credential_id TEXT NOT NULL, to_account_id TEXT, to_credential_id TEXT,
+        service_changed INTEGER NOT NULL DEFAULT 0, count INTEGER NOT NULL, first_at TEXT NOT NULL, last_at TEXT NOT NULL,
+        dismissed_at TEXT);`);
     const check = this.db.prepare("SELECT value FROM metadata WHERE name='key_check'").get() as { value: string } | undefined;
     try {
       if (check) {
@@ -122,9 +161,12 @@ export class CredentialStore {
       id: account.id, provider: account.provider, label: account.label, enabled: Boolean(account.enabled),
       selected: defaults.some((row) => row.account_id === account.id), currentCredentialId: account.current_key,
       createdAt: account.created_at, balance: { state: "unknown" as const, scope: "account" as const },
+      // Attempt order used by automatic failover: current key first, then the operator's order.
+      keyOrder: this.orderedKeys(account).filter((key) => !key.revoked).map((key) => key.id),
       keys: (this.db.prepare("SELECT id,hint,revoked,created_at,check_json FROM credentials WHERE account_id=? ORDER BY created_at,id")
         .all(account.id) as KeyRow[]).map((key) => ({ id: key.id, hint: `••••${key.hint}`, revoked: Boolean(key.revoked),
-          createdAt: key.created_at, access: key.check_json ? JSON.parse(key.check_json) as AccessCheck : null })),
+          createdAt: key.created_at, access: key.check_json ? JSON.parse(key.check_json) as AccessCheck : null,
+          health: this.health(key.id) })),
     }));
   }
   private insertKey(accountId: string, token: string): string {
@@ -225,7 +267,230 @@ export class CredentialStore {
       if (this.credential(pin.credentialId).account_id !== pin.accountId) throw new CredentialError("credential_unavailable");
       this.db.prepare("UPDATE credentials SET check_json=? WHERE id=?").run(JSON.stringify(check), pin.credentialId);
       this.audit("probe", pin.accountId, pin.credentialId);
+      // The authentication probe is a definitive provider answer about access only.
+      // It can set or clear "rejected"; it never proves credit, so "exhausted" stays.
+      if (check.state === "rejected") this.setHealth(pin, "rejected", 401);
+      else if (check.state === "accepted" && this.health(pin.credentialId).state === "rejected") this.setHealth(pin, "ok", null);
     });
+  }
+
+  // ---- Automatic key/account failover (D-029) ----------------------------
+
+  private health(credentialId: string): KeyHealth {
+    const row = this.db.prepare("SELECT * FROM key_health WHERE credential_id=?").get(credentialId) as HealthRow | undefined;
+    return row ? { state: row.state, since: row.since, status: row.status } : { state: "ok", since: null, status: null };
+  }
+  /** Caller must be inside atomic(). Audits only real state changes. */
+  private setHealth(pin: CredentialPin, state: KeyHealthState, status: number | null): void {
+    const previous = this.health(pin.credentialId);
+    if (previous.state === state) return;
+    if (state === "ok") this.db.prepare("DELETE FROM key_health WHERE credential_id=?").run(pin.credentialId);
+    else this.db.prepare("INSERT OR REPLACE INTO key_health VALUES(?,?,?,?)").run(pin.credentialId, state, new Date().toISOString(), status);
+    this.audit(`health_${state}`, pin.accountId, pin.credentialId);
+  }
+  /** Current key first, then the operator's explicit order, then newest first. */
+  private orderedKeys(account: AccountRow): KeyRow[] {
+    const keys = this.db.prepare(`SELECT c.*, o.position AS position FROM credentials c
+      LEFT JOIN key_order o ON o.credential_id=c.id WHERE c.account_id=?
+      ORDER BY (o.position IS NULL), o.position, c.created_at DESC, c.id`).all(account.id) as KeyRow[];
+    return [...keys.filter((key) => key.id === account.current_key), ...keys.filter((key) => key.id !== account.current_key)];
+  }
+  failoverOrder(): string[] {
+    return (this.db.prepare("SELECT account_id FROM failover_order ORDER BY position, account_id").all() as { account_id: string }[])
+      .map((row) => row.account_id);
+  }
+  failoverEnabled(): boolean {
+    const row = this.db.prepare("SELECT value FROM metadata WHERE name='failover_enabled'").get() as { value: string } | undefined;
+    return row?.value === "1";
+  }
+  setFailover(enabled: boolean): void {
+    this.atomic(() => {
+      this.db.prepare("INSERT OR REPLACE INTO metadata VALUES('failover_enabled', ?)").run(enabled ? "1" : "0");
+      this.audit(enabled ? "failover_on" : "failover_off");
+    });
+  }
+  /** Replaces the operator's ordered list. Only listed accounts can ever take over work. */
+  setFailoverOrder(accountIds: string[]): void {
+    this.atomic(() => {
+      if (new Set(accountIds).size !== accountIds.length) throw new CredentialError("invalid_failover_order");
+      for (const id of accountIds) this.account(id);
+      this.db.prepare("DELETE FROM failover_order").run();
+      accountIds.forEach((id, position) => this.db.prepare("INSERT INTO failover_order VALUES(?,?)").run(id, position));
+      this.audit("failover_order");
+    });
+  }
+  setKeyOrder(accountId: string, credentialIds: string[]): void {
+    this.atomic(() => {
+      this.account(accountId);
+      if (new Set(credentialIds).size !== credentialIds.length) throw new CredentialError("invalid_key_order");
+      for (const id of credentialIds) if (this.credential(id).account_id !== accountId) throw new CredentialError("credential_unavailable");
+      this.db.prepare("DELETE FROM key_order WHERE credential_id IN (SELECT id FROM credentials WHERE account_id=?)").run(accountId);
+      credentialIds.forEach((id, position) => this.db.prepare("INSERT INTO key_order VALUES(?,?)").run(id, position));
+      this.audit("key_order", accountId);
+    });
+  }
+  /** Operator "use this key again": the only way back for an exhausted key besides a successful request. */
+  resetKeyHealth(accountId: string, credentialId: string): void {
+    this.atomic(() => {
+      if (this.credential(credentialId).account_id !== accountId) throw new CredentialError("credential_unavailable");
+      this.setHealth({ provider: this.account(accountId).provider, accountId, credentialId }, "ok", null);
+    });
+  }
+  /** A completed request is a definitive answer too: the key works. */
+  recordSuccess(pin: CredentialPin): void {
+    if (this.health(pin.credentialId).state === "ok") return;
+    this.atomic(() => this.setHealth(pin, "ok", null));
+  }
+  /**
+   * Next enabled, healthy, non-revoked key: the rest of the same account in key
+   * order, then the operator's listed accounts from the top. Disabled accounts,
+   * revoked keys and keys marked rejected/exhausted are never candidates.
+   */
+  private nextCandidate(startAccountId: string): CredentialPin | undefined {
+    for (const accountId of [...new Set([startAccountId, ...this.failoverOrder()])]) {
+      const account = this.db.prepare("SELECT * FROM accounts WHERE id=?").get(accountId) as AccountRow | undefined;
+      if (!account?.enabled) continue;
+      const key = this.orderedKeys(account).find((item) => !item.revoked && this.health(item.id).state === "ok");
+      if (key) return { provider: account.provider, accountId: account.id, credentialId: key.id };
+    }
+    return undefined;
+  }
+  /**
+   * Caller must be inside atomic(). Every call writes an audit event. A refusal
+   * of running work always raises (or extends) a pending notice. New work that
+   * merely follows a change the operator was already told about, for the same
+   * key since it became unhealthy, does not raise the same notice again.
+   */
+  private recordFailover(kind: FailoverEvent["kind"], workId: string | null, from: CredentialPin, to: CredentialPin | undefined,
+    reason: KeyRefusalKind, status: number | null): void {
+    const now = new Date().toISOString();
+    const serviceChanged = to && to.provider !== from.provider ? 1 : 0;
+    this.db.prepare(`INSERT INTO failover_events(at,kind,work_id,reason,status,from_provider,from_account_id,from_credential_id,
+      to_provider,to_account_id,to_credential_id,service_changed) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .run(now, kind, workId, reason, status, from.provider, from.accountId, from.credentialId,
+        to?.provider ?? null, to?.accountId ?? null, to?.credentialId ?? null, serviceChanged);
+    const fromRefusal = kind === "moved" || kind === "blocked";
+    if (fromRefusal) this.audit(`failover_${kind}`, from.accountId, from.credentialId);
+    const noticeKind = to ? "moved" : "blocked";
+    const same = "kind=? AND reason=? AND from_credential_id=? AND to_credential_id IS ?";
+    const identity = [noticeKind, reason, from.credentialId, to?.credentialId ?? null];
+    const pending = this.db.prepare(`SELECT id FROM failover_notices WHERE dismissed_at IS NULL AND ${same}`)
+      .get(...identity) as { id: string } | undefined;
+    if (pending) {
+      this.db.prepare("UPDATE failover_notices SET count=count+1, last_at=?, status=? WHERE id=?").run(now, status, pending.id);
+      return;
+    }
+    if (!fromRefusal) {
+      const since = this.health(from.credentialId).since ?? now;
+      if (this.db.prepare(`SELECT 1 FROM failover_notices WHERE ${same} AND first_at >= ?`).get(...identity, since)) return;
+    }
+    this.db.prepare("INSERT INTO failover_notices VALUES(?,?,?,?,?,?,?,?,?,1,?,?,NULL)")
+      .run(randomUUID(), noticeKind, reason, status, from.accountId, from.credentialId, to?.accountId ?? null,
+        to?.credentialId ?? null, serviceChanged, now, now);
+  }
+  /**
+   * The provider definitively refused `pin` before accepting work. Always records
+   * the key's health. Moves the named work only while the operator's switch is on
+   * and a listed, enabled, healthy candidate exists; every move is audited and
+   * noticed. Other work pinned to the same key is left untouched.
+   */
+  recordRefusal(input: { pin: CredentialPin; kind: KeyRefusalKind; status: number; workIds: string[] }): RefusalOutcome {
+    return this.atomic(() => {
+      const { pin, kind, status } = input;
+      const account = this.account(pin.accountId);
+      if (account.provider !== pin.provider || this.credential(pin.credentialId).account_id !== account.id) {
+        throw new CredentialError("credential_unavailable");
+      }
+      this.setHealth(pin, kind, status);
+      if (!this.failoverEnabled()) return { moved: false as const, reason: "off" as const };
+      const next = this.nextCandidate(account.id);
+      const workId = input.workIds[0] ?? null;
+      if (!next) {
+        this.recordFailover("blocked", workId, pin, undefined, kind, status);
+        return { moved: false as const, reason: "no_candidate" as const };
+      }
+      this.recordFailover("moved", workId, pin, next, kind, status);
+      for (const id of input.workIds) {
+        this.db.prepare("UPDATE work_selections SET provider=?, account_id=?, credential_id=?, at=? WHERE work_id=?")
+          .run(next.provider, next.accountId, next.credentialId, new Date().toISOString(), id);
+      }
+      return { moved: true as const, pin: next, serviceChanged: next.provider !== pin.provider };
+    });
+  }
+  /**
+   * Pin for newly admitted work. With the switch off this is exactly pin(). With
+   * it on, a selected key already marked rejected/exhausted is skipped for the
+   * next candidate, and that admission is audited and noticed. A selected account
+   * the operator disabled or revoked still fails closed, as before.
+   */
+  pinForNewWork(provider: SttProviderId, workId?: string): CredentialPin | undefined {
+    const primary = this.pin(provider);
+    if (!primary || !this.failoverEnabled()) return primary;
+    const state = this.health(primary.credentialId);
+    if (state.state === "ok") return primary;
+    const reason = state.state;
+    const next = this.atomic(() => {
+      const candidate = this.nextCandidate(primary.accountId);
+      this.recordFailover(candidate ? "admitted" : "admission_blocked", workId ?? null, primary, candidate, reason, state.status);
+      return candidate;
+    });
+    if (!next) throw new CredentialError("no_healthy_account_available");
+    return next;
+  }
+  private party(accountId: string, credentialId: string): FailoverParty {
+    const account = this.account(accountId);
+    return { accountId, label: account.label, provider: account.provider, keyHint: `••••${this.credential(credentialId).hint}` };
+  }
+  notices(): FailoverNotice[] {
+    const rows = this.db.prepare("SELECT * FROM failover_notices WHERE dismissed_at IS NULL ORDER BY last_at DESC, id").all() as NoticeRow[];
+    return rows.map((row) => ({ id: row.id, kind: row.kind, reason: row.reason, status: row.status,
+      from: this.party(row.from_account_id, row.from_credential_id),
+      to: row.to_account_id && row.to_credential_id ? this.party(row.to_account_id, row.to_credential_id) : null,
+      serviceChanged: Boolean(row.service_changed), count: row.count, firstAt: row.first_at, lastAt: row.last_at }));
+  }
+  dismissNotice(noticeId: string): void {
+    this.atomic(() => {
+      const row = this.db.prepare("SELECT from_account_id, from_credential_id FROM failover_notices WHERE id=? AND dismissed_at IS NULL")
+        .get(noticeId) as { from_account_id: string; from_credential_id: string } | undefined;
+      if (!row) throw new CredentialError("notice_not_found");
+      this.db.prepare("UPDATE failover_notices SET dismissed_at=? WHERE id=?").run(new Date().toISOString(), noticeId);
+      this.audit("failover_notice_dismissed", row.from_account_id, row.from_credential_id);
+    });
+  }
+  failoverEvents(limit = 100): FailoverEvent[] {
+    const rows = this.db.prepare("SELECT * FROM failover_events ORDER BY id DESC LIMIT ?").all(Math.max(1, Math.min(1000, limit))) as Array<{
+      id: number; at: string; kind: FailoverEvent["kind"]; work_id: string | null; reason: KeyRefusalKind; status: number | null;
+      from_provider: SttProviderId; from_account_id: string; from_credential_id: string;
+      to_provider: SttProviderId | null; to_account_id: string | null; to_credential_id: string | null; service_changed: number }>;
+    return rows.map((row) => ({ id: row.id, at: row.at, kind: row.kind, workId: row.work_id, reason: row.reason, status: row.status,
+      from: { provider: row.from_provider, accountId: row.from_account_id, credentialId: row.from_credential_id },
+      to: row.to_provider && row.to_account_id && row.to_credential_id
+        ? { provider: row.to_provider, accountId: row.to_account_id, credentialId: row.to_credential_id } : null,
+      serviceChanged: Boolean(row.service_changed) }));
+  }
+  /**
+   * Read-only view for the settings screen and the status route. `effective` is
+   * where new work for `provider` would go right now; `blocked` means the switch
+   * is on, the selected key is marked unhealthy and nothing listed can take over.
+   */
+  failoverState(provider: SttProviderId) {
+    const enabled = this.failoverEnabled();
+    const notices = this.notices();
+    let effective: CredentialPin | null = null;
+    let blocked = false;
+    try {
+      const primary = this.pin(provider);
+      if (primary) {
+        const healthy = this.health(primary.credentialId).state === "ok";
+        effective = !enabled || healthy ? primary : this.nextCandidate(primary.accountId) ?? null;
+        blocked = enabled && !effective;
+      }
+    } catch (error) {
+      if (!(error instanceof CredentialError)) throw error;
+    }
+    const unhealthy = this.db.prepare(`SELECT COUNT(*) AS n FROM key_health h JOIN credentials c ON c.id=h.credential_id
+      WHERE c.revoked=0`).get() as { n: number };
+    return { enabled, order: this.failoverOrder(), effective, blocked, unhealthyKeys: unhealthy.n, notices };
   }
 }
 

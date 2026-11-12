@@ -106,6 +106,25 @@
       "coverage_claim": "declared_corpus_only",
       "remaining_backfill": "Earlier historical queues remain unchanged.",
       "cursor": "Resume accepted account implementation and actual owner delivery; preserve separate audio preparation and budget gates."
+    },
+    {
+      "id": "B006-stt-failover-20261112",
+      "date": "2026-11-12",
+      "sources": [
+        {
+          "path": "docs/operations/STT_FAILOVER_2026-11-12.md"
+        }
+      ],
+      "excluded": [
+        "Private account identities, credentials, recordings and the originating Cortex session conversation, which is not held in this repository."
+      ],
+      "unknown": [
+        "The operator words were relayed by the requesting Cortex session; the rest of that conversation is not covered.",
+        "Historical coverage outside earlier declared batches."
+      ],
+      "coverage_claim": "declared_corpus_only",
+      "remaining_backfill": "Earlier historical queues remain unchanged.",
+      "cursor": "Recall before changing account routing, provider error classification, the public status route or operator notification."
     }
   ],
   "entries": [
@@ -419,6 +438,83 @@
         "path": "docs/llm/DECISIONS.md",
         "contains": "D-028"
       }
+    },
+    {
+      "id": "IDEA-0009",
+      "record": "native",
+      "kind": "operator_request",
+      "title": "Move automatically to the next key or account when one is rejected or out of credit, and tell the operator, above all when the service changes",
+      "origin": {
+        "date": "2026-11-12",
+        "attribution": "Carlos, about 00:45 Europe/Madrid, in a Claude Code session on his Cortex project; words relayed verbatim by that session",
+        "sources": [
+          {
+            "path": "docs/operations/STT_FAILOVER_2026-11-12.md"
+          }
+        ]
+      },
+      "batch": "B006-stt-failover-20261112",
+      "owner": "youtube2text",
+      "state": "in_progress",
+      "recall_trigger": "Before changing account routing, key health, provider error classification or failover notices; the safety rule in D-029 must not be weakened.",
+      "documentation_refs": [
+        {
+          "path": "docs/operations/STT_FAILOVER_2026-11-12.md"
+        },
+        {
+          "path": "docs/llm/DECISIONS.md",
+          "contains": "## D-029"
+        }
+      ],
+      "authority": "Carlos answered the direct question on 2026-11-12; D-029 records his words and supersedes only the D-028 exclusion of automatic account failover.",
+      "rationale": "Source is prepared on task branch work/stt-failover-20261112 as candidate 0.43.0 with the switch off by default. It is not deployed and independent review by a different model family is pending, so the request is not yet delivered."
+    },
+    {
+      "id": "IDEA-0010",
+      "record": "native",
+      "kind": "agent_suggestion",
+      "title": "Send the immediate phone message for automatic account changes through Sentinel, using the opt-in stt_account_failover status check",
+      "origin": {
+        "date": "2026-11-12",
+        "attribution": "Claude (Fable 5.2) proposal after reading Home Infra and Sentinel origin/main; not accepted and not implemented outside this repository",
+        "sources": [
+          {
+            "path": "docs/operations/STT_FAILOVER_2026-11-12.md"
+          }
+        ]
+      },
+      "batch": "B006-stt-failover-20261112",
+      "owner": "youtube2text",
+      "state": "proposed",
+      "recall_trigger": "Before wiring any push notification for Media2Text or changing the fixed default shape of the public status route; Home Infra and Sentinel own that work and Carlos must choose to receive the messages.",
+      "documentation_refs": [
+        {
+          "path": "docs/operations/STT_FAILOVER_2026-11-12.md"
+        }
+      ]
+    },
+    {
+      "id": "REF-D-029",
+      "record": "reference",
+      "kind": "accepted_decision",
+      "title": "Automatic key and account failover with operator notice",
+      "origin": {
+        "date": "2026-11-12",
+        "attribution": "Carlos answered the direct question in a Cortex project session; relayed verbatim.",
+        "sources": [
+          {
+            "path": "docs/llm/DECISIONS.md",
+            "contains": "## D-029"
+          }
+        ]
+      },
+      "batch": "B006-stt-failover-20261112",
+      "owner": "youtube2text",
+      "recall_trigger": "Before changing failover behaviour or claiming it delivered; source preparation is not deployment.",
+      "ref": {
+        "path": "docs/llm/DECISIONS.md",
+        "contains": "## D-029"
+      }
     }
   ],
   "task_reconciliations": [
@@ -462,6 +558,15 @@
         "IDEA-0005",
         "IDEA-0008",
         "REF-D-028"
+      ],
+      "no_ideas_reason": null
+    },
+    {
+      "task": "docs/llm/work/stt-failover-20261112.json",
+      "ideas": [
+        "IDEA-0009",
+        "IDEA-0010",
+        "REF-D-029"
       ],
       "no_ideas_reason": null
     }

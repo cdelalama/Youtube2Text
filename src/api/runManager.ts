@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import type { AppConfig } from "../config/schema.js";
-import { runPipeline } from "../pipeline/run.js";
+import { runPipeline, type PipelineFailover } from "../pipeline/run.js";
 import type { PipelineEvent, PipelineEventEmitter } from "../pipeline/events.js";
 import { EventBuffer } from "./eventBuffer.js";
 import { FileSystemStorageAdapter } from "../storage/index.js";
@@ -175,8 +175,9 @@ export class RunManager {
       throw new Error("Run must include url or audioId");
     }
     const config = { ...(this.options.effectiveConfig?.() ?? this.baseConfig), ...sanitizeConfigOverrides(req.config) };
+    // With automatic failover off this is the selected account's current key, as before.
     const credentialSelection = cacheOnly || req.credentialSelection === null ? undefined
-      : req.credentialSelection ?? this.options.credentialStore?.pin(config.sttProvider);
+      : req.credentialSelection ?? this.options.credentialStore?.pinForNewWork(config.sttProvider, `run:${runId}`);
     if (credentialSelection) {
       if (!this.options.credentialStore) throw new Error("credential_store_unavailable");
       this.options.credentialStore.resolve(credentialSelection);
@@ -361,7 +362,13 @@ export class RunManager {
 
     // New defaults and rotations cannot change work that has already been accepted.
     let config = this.acceptedConfigs.get(runId) ?? { ...this.baseConfig, ...sanitizeConfigOverrides(req.config) };
+    const acceptedConfig = config;
     const credentialSelection = this.credentialSelections.get(runId);
+    // The pin moves only through an audited, noticed failover (D-029), never silently.
+    let activeSelection = credentialSelection;
+    const failover: PipelineFailover | undefined = credentialSelection && this.options.credentialStore
+      ? this.createFailover(runId, req, acceptedConfig, () => activeSelection!, (next) => { activeSelection = next; })
+      : undefined;
     const emitter: PipelineEventEmitter = {
       emit: (event) => this.onEvent(runId, event),
     };
@@ -407,8 +414,9 @@ export class RunManager {
       abortSignal: controller.signal,
       runId,
       assertCredentialAvailable: credentialSelection ? () => {
-        this.options.credentialStore!.resolve(credentialSelection);
+        this.options.credentialStore!.resolve(activeSelection!);
       } : undefined,
+      failover,
       });
     })
       .then(() => {
@@ -462,6 +470,47 @@ export class RunManager {
         this.runTimeouts.delete(runId);
       });
     this.activeRunPromises.set(runId, p);
+  }
+
+  /**
+   * Bridges the pipeline to the credential store for one pinned run. The store
+   * decides (switch, order, health) and writes the audit row and notice; this
+   * only keeps the run's in-memory pin in step so local revocation still applies.
+   */
+  private createFailover(
+    runId: string,
+    req: RunCreateRequest,
+    acceptedConfig: AppConfig,
+    current: () => CredentialPin,
+    move: (next: CredentialPin) => void
+  ): PipelineFailover {
+    const store = this.options.credentialStore!;
+    const workIds = [`run:${runId}`, ...(req.intakeId ? [`intake:${req.intakeId}`] : [])];
+    return {
+      credentialId: () => current().credentialId,
+      onSuccess: (credentialId) => {
+        const pin = current();
+        if (pin.credentialId !== credentialId) return;
+        try { store.recordSuccess(pin); } catch { /* health bookkeeping never fails a finished transcript */ }
+      },
+      onDefinitiveRefusal: ({ credentialId, refusal }) => {
+        try {
+          let pin = current();
+          if (pin.credentialId === credentialId) {
+            const outcome = store.recordRefusal({ pin, kind: refusal.kind, status: refusal.status, workIds });
+            if (!outcome.moved) return outcome;
+            pin = outcome.pin;
+            move(pin);
+            this.credentialSelections.set(runId, pin);
+          }
+          // Otherwise a sibling item of this run already moved; follow it without a second record.
+          return { moved: true, config: applyCredential(acceptedConfig, pin, store), credentialId: pin.credentialId };
+        } catch {
+          // Without a recorded decision the work must fail exactly as before.
+          return { moved: false, reason: "error" };
+        }
+      },
+    };
   }
 
   private onRunTimeout(runId: string) {

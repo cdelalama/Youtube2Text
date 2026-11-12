@@ -13,7 +13,7 @@ import type { YoutubeListing } from "../youtube/index.js";
 import { getListingWithCatalogCache } from "../youtube/catalogCache.js";
 import { createTranscriptionProvider } from "../transcription/index.js";
 import type { TranscriptionProvider } from "../transcription/index.js";
-import type { TranscriptJson } from "../transcription/types.js";
+import type { TranscriptJson, TranscriptionOptions } from "../transcription/types.js";
 import { formatTxt, formatCsv, formatMd, formatJsonl } from "../formatters/index.js";
 import {
   getOutputPaths,
@@ -31,7 +31,11 @@ import { logErrorRecord } from "../storage/errors.js";
 import { logInfo, logWarn, logStep } from "../utils/logger.js";
 import { AppConfig } from "../config/schema.js";
 import { validateYtDlpInstalled } from "../utils/deps.js";
-import { InsufficientCreditsError } from "../transcription/errors.js";
+import {
+  InsufficientCreditsError,
+  definitiveRefusalOf,
+  type DefinitiveRefusal,
+} from "../transcription/errors.js";
 import { PipelineEventEmitter, PipelineStage } from "./events.js";
 import { YtDlpError } from "../youtube/ytDlpErrors.js";
 import { getAudioDurationSeconds, splitAudioByLimit } from "../utils/audio.js";
@@ -76,6 +80,41 @@ export type AudioRunInput = {
 };
 
 export type RunInput = string | AudioRunInput;
+
+/**
+ * Optional bridge to the account registry for a pinned API run (D-029). The
+ * pipeline calls it only after a definitive pre-acceptance refusal; the owner
+ * decides whether another key or account may take over and records the move.
+ * Absent (CLI, legacy keys), the pipeline behaves exactly as it always did.
+ */
+export type PipelineFailover = {
+  credentialId(): string;
+  onSuccess(credentialId: string): void;
+  onDefinitiveRefusal(input: { credentialId: string; refusal: DefinitiveRefusal }):
+    | { moved: true; config: AppConfig; credentialId: string }
+    | { moved: false; reason: "off" | "no_candidate" | "error" };
+};
+
+/** Every listed key and account has been definitively refused; the job fails closed. */
+export class FailoverExhaustedError extends Error {
+  name = "FailoverExhaustedError";
+  constructor(refusal: DefinitiveRefusal, cause: unknown) {
+    super(
+      `Automatic account change stopped: ${refusal.provider} refused the request ` +
+        `(${refusal.kind}, HTTP ${refusal.status}) and no other enabled, healthy key or account is left. ` +
+        `Original error: ${cause instanceof Error ? cause.message : String(cause)}`
+    );
+  }
+}
+
+/** Internal signal: the run moved to another service before this piece was accepted. */
+class ServiceChangedSignal extends Error {
+  constructor(public from: string, public to: string) {
+    super(`Transcription service changed from ${from} to ${to}`);
+  }
+}
+
+const MAX_FAILOVER_MOVES_PER_PIECE = 25;
 
 async function isAudioTooLarge(path: string, maxBytes: number): Promise<boolean> {
   const stats = await fs.stat(path);
@@ -200,9 +239,11 @@ export async function runPipeline(
     abortSignal?: AbortSignal;
     runId?: string;
     assertCredentialAvailable?: () => void;
+    failover?: PipelineFailover;
     deps?: {
       createTranscriptionProvider?: (config: AppConfig) => TranscriptionProvider;
       getAudioDurationSeconds?: (audioPath: string) => Promise<number>;
+      splitAudioByLimit?: typeof splitAudioByLimit;
       usageLedger?: UsageLedger;
       mediaJobStore?: MediaJobStore;
     };
@@ -246,6 +287,7 @@ export async function runPipeline(
   );
   const providerFactory = options.deps?.createTranscriptionProvider ?? createTranscriptionProvider;
   const getAudioDuration = options.deps?.getAudioDurationSeconds ?? getAudioDurationSeconds;
+  const splitAudio = options.deps?.splitAudioByLimit ?? splitAudioByLimit;
   abortSignal?.throwIfAborted();
   await checkAssemblyAiCredits(config, providerFactory, options.assertCredentialAvailable);
 
@@ -390,7 +432,29 @@ export async function runPipeline(
     }
   }
 
-  const provider = providerFactory(config);
+  const userMaxBytes =
+    typeof config.maxAudioMB === "number" ? config.maxAudioMB * 1024 * 1024 : undefined;
+  // One engine = one service + one key. It is replaced only by an audited failover move.
+  type SttEngine = {
+    config: AppConfig;
+    provider: TranscriptionProvider;
+    credentialId?: string;
+    maxBytes?: number;
+  };
+  const makeEngine = (engineConfig: AppConfig, credentialId?: string): SttEngine => {
+    const engineProvider = providerFactory(engineConfig);
+    const providerMaxBytes = engineProvider.getCapabilities().maxAudioBytes;
+    return {
+      config: engineConfig,
+      provider: engineProvider,
+      credentialId,
+      maxBytes:
+        userMaxBytes !== undefined && providerMaxBytes !== undefined
+          ? Math.min(userMaxBytes, providerMaxBytes)
+          : userMaxBytes ?? providerMaxBytes,
+    };
+  };
+  let engine = makeEngine(config, options.failover?.credentialId());
   const usageLedger = options.deps?.usageLedger ?? new UsageLedger(config.outputDir);
   const usageRunId = options.runId ?? randomUUID();
   const transcriptStore = new TranscriptStore(config.outputDir);
@@ -410,18 +474,60 @@ export async function runPipeline(
     }
   };
   const limit = pLimit(config.concurrency);
-  const providerCaps = provider.getCapabilities();
-  const providerMaxBytes = providerCaps.maxAudioBytes;
-  const userMaxBytes =
-    typeof config.maxAudioMB === "number" ? config.maxAudioMB * 1024 * 1024 : undefined;
-  const effectiveMaxBytes =
-    userMaxBytes !== undefined && providerMaxBytes !== undefined
-      ? Math.min(userMaxBytes, providerMaxBytes)
-      : userMaxBytes ?? providerMaxBytes;
   const splitOverlapSeconds =
     typeof config.splitOverlapSeconds === "number"
       ? config.splitOverlapSeconds
       : 2;
+
+  /**
+   * Sends one piece of audio to `service`. Another key or account is used ONLY
+   * when the provider definitively refused the request before accepting it and
+   * the registry authorised and recorded the move. A timeout, network failure,
+   * 5xx or any post-acceptance failure is rethrown untouched: the first provider
+   * may still bill, so the piece is never sent elsewhere.
+   */
+  const transcribePiece = async (
+    piecePath: string,
+    service: AppConfig["sttProvider"],
+    pieceOptions: Omit<TranscriptionOptions, "abortSignal" | "beforeRequest">
+  ): Promise<{ transcript: TranscriptJson; engine: SttEngine }> => {
+    for (let moves = 0; ; moves += 1) {
+      const attempt = engine;
+      if (attempt.config.sttProvider !== service) {
+        throw new ServiceChangedSignal(service, attempt.config.sttProvider);
+      }
+      try {
+        options.assertCredentialAvailable?.();
+        const result = await attempt.provider.transcribe(piecePath, {
+          ...pieceOptions,
+          abortSignal,
+          beforeRequest: options.assertCredentialAvailable,
+        });
+        if (attempt.credentialId) options.failover?.onSuccess(attempt.credentialId);
+        return { transcript: result, engine: attempt };
+      } catch (error) {
+        const refusal = definitiveRefusalOf(error);
+        if (!refusal || !options.failover || !attempt.credentialId) throw error;
+        if (isCancelled() || moves >= MAX_FAILOVER_MOVES_PER_PIECE) throw error;
+        const outcome = options.failover.onDefinitiveRefusal({
+          credentialId: attempt.credentialId,
+          refusal,
+        });
+        if (!outcome.moved) {
+          if (outcome.reason === "no_candidate") throw new FailoverExhaustedError(refusal, error);
+          throw error;
+        }
+        if (engine.credentialId !== outcome.credentialId) {
+          engine = makeEngine(outcome.config, outcome.credentialId);
+        }
+        logWarn(
+          `Automatic account change: ${refusal.provider} refused the request (${refusal.kind}, HTTP ${refusal.status}); ` +
+            `continuing with ${engine.config.sttProvider}` +
+            (engine.config.sttProvider === service ? "" : " (transcription service changed)")
+        );
+      }
+    }
+  };
 
   try {
     await Promise.all(
@@ -566,95 +672,120 @@ export async function runPipeline(
 
             stageForError = "transcribe";
             emitStage("transcribe", video.id, index, totalVideos);
-            let transcript;
-            if (effectiveMaxBytes && (await isAudioTooLarge(audioPath, effectiveMaxBytes))) {
-              stageForError = "split";
-              emitStage("split", video.id, index, totalVideos);
-              logStep(
-                "split",
-                `Audio exceeds ${Math.round(effectiveMaxBytes / (1024 * 1024))}MB; splitting`
-              );
-              const { chunks, cleanup } = await splitAudioByLimit(
-                audioPath,
-                effectiveMaxBytes,
-                splitOverlapSeconds
-              );
+            const pieceOptions = {
+              languageCode: useProviderAutoLanguageDetection ? undefined : language.languageCode,
+              languageDetection: useProviderAutoLanguageDetection ? true : undefined,
+              pollIntervalMs: config.pollIntervalMs,
+              maxPollMinutes: config.maxPollMinutes,
+              retries: config.transcriptionRetries,
+              providerTimeoutMs: config.providerTimeoutMs,
+            };
+            let transcript: TranscriptJson | undefined;
+            // Service that actually produced this transcript (differs from the
+            // accepted one only after an audited cross-service failover).
+            let usedConfig = config;
+            // A new plan is made only when the service changed before any audio
+            // of this item was accepted: limits, cost rate and caps are per service.
+            for (let plans = 0; transcript === undefined; plans += 1) {
+              const planEngine = engine;
+              const service = planEngine.config.sttProvider;
               try {
-                const chunkResults = [];
-                const chunkDurations = await Promise.all(
-                  chunks.map((chunk) => getAudioDuration(chunk.path))
-                );
-                const reservations = await usageLedger.reserveBatch(
-                  chunks.map((_chunk, chunkIndex) => ({
+                if (planEngine.maxBytes && (await isAudioTooLarge(audioPath, planEngine.maxBytes))) {
+                  stageForError = "split";
+                  emitStage("split", video.id, index, totalVideos);
+                  logStep(
+                    "split",
+                    `Audio exceeds ${Math.round(planEngine.maxBytes / (1024 * 1024))}MB; splitting`
+                  );
+                  const { chunks, cleanup } = await splitAudio(
+                    audioPath,
+                    planEngine.maxBytes,
+                    splitOverlapSeconds
+                  );
+                  try {
+                    const chunkResults = [];
+                    const chunkDurations = await Promise.all(
+                      chunks.map((chunk) => getAudioDuration(chunk.path))
+                    );
+                    const reservations = await usageLedger.reserveBatch(
+                      chunks.map((_chunk, chunkIndex) => ({
+                        runId: usageRunId,
+                        sourceId: listing.channelId,
+                        itemId: video.id,
+                        provider: service,
+                        audioSeconds: chunkDurations[chunkIndex]!,
+                        itemSeconds: itemAudioSeconds,
+                      }))
+                    );
+                    for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex += 1) {
+                      const chunk = chunks[chunkIndex]!;
+                      const reservation = reservations[chunkIndex]!;
+                      stageForError = "transcribe";
+                      let chunkTranscript;
+                      try {
+                        const piece = await transcribePiece(chunk.path, service, pieceOptions);
+                        chunkTranscript = piece.transcript;
+                        usedConfig = piece.engine.config;
+                        await finishUsage(reservation, "completed");
+                      } catch (error) {
+                        // A piece refused before acceptance was never work for that service.
+                        await finishUsage(
+                          reservation,
+                          error instanceof ServiceChangedSignal ? "released" : "failed"
+                        );
+                        await Promise.all(
+                          reservations
+                            .slice(chunkIndex + 1)
+                            .map((unused) => finishUsage(unused, "released"))
+                        );
+                        if (error instanceof ServiceChangedSignal && chunkIndex > 0) {
+                          throw new Error(
+                            `${error.message} after part of this recording was already accepted by ${error.from}; ` +
+                              "it was not re-sent automatically, to avoid paying twice and mixing services in one transcript. " +
+                              `Run it again to transcribe it with ${error.to}.`
+                          );
+                        }
+                        throw error;
+                      }
+                      chunkResults.push({
+                        transcript: chunkTranscript,
+                        startSeconds: chunk.startSeconds,
+                        overlapSeconds: chunk.overlapSeconds,
+                      });
+                    }
+                    transcript = mergeChunkTranscripts(chunkResults);
+                  } finally {
+                    await cleanup();
+                  }
+                } else {
+                  const reservation = await usageLedger.reserve({
                     runId: usageRunId,
                     sourceId: listing.channelId,
                     itemId: video.id,
-                    provider: config.sttProvider,
-                    audioSeconds: chunkDurations[chunkIndex]!,
+                    provider: service,
+                    audioSeconds: itemAudioSeconds,
                     itemSeconds: itemAudioSeconds,
-                  }))
-                );
-                for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex += 1) {
-                  const chunk = chunks[chunkIndex]!;
-                  const reservation = reservations[chunkIndex]!;
-                  stageForError = "transcribe";
-                  let chunkTranscript;
+                  });
                   try {
-                    options.assertCredentialAvailable?.();
-                    chunkTranscript = await provider.transcribe(chunk.path, {
-                      abortSignal,
-                      beforeRequest: options.assertCredentialAvailable,
-                      languageCode: useProviderAutoLanguageDetection ? undefined : language.languageCode,
-                      languageDetection: useProviderAutoLanguageDetection ? true : undefined,
-                      pollIntervalMs: config.pollIntervalMs,
-                      maxPollMinutes: config.maxPollMinutes,
-                      retries: config.transcriptionRetries,
-                      providerTimeoutMs: config.providerTimeoutMs,
-                    });
+                    const piece = await transcribePiece(audioPath, service, pieceOptions);
+                    transcript = piece.transcript;
+                    usedConfig = piece.engine.config;
                     await finishUsage(reservation, "completed");
                   } catch (error) {
-                    await finishUsage(reservation, "failed");
-                    await Promise.all(
-                      reservations
-                        .slice(chunkIndex + 1)
-                        .map((unused) => finishUsage(unused, "released"))
+                    await finishUsage(
+                      reservation,
+                      error instanceof ServiceChangedSignal ? "released" : "failed"
                     );
                     throw error;
                   }
-                  chunkResults.push({
-                    transcript: chunkTranscript,
-                    startSeconds: chunk.startSeconds,
-                    overlapSeconds: chunk.overlapSeconds,
-                  });
                 }
-                transcript = mergeChunkTranscripts(chunkResults);
-              } finally {
-                await cleanup();
-              }
-            } else {
-              const reservation = await usageLedger.reserve({
-                runId: usageRunId,
-                sourceId: listing.channelId,
-                itemId: video.id,
-                provider: config.sttProvider,
-                audioSeconds: itemAudioSeconds,
-                itemSeconds: itemAudioSeconds,
-              });
-              try {
-                options.assertCredentialAvailable?.();
-                transcript = await provider.transcribe(audioPath, {
-                  abortSignal,
-                  beforeRequest: options.assertCredentialAvailable,
-                  languageCode: useProviderAutoLanguageDetection ? undefined : language.languageCode,
-                  languageDetection: useProviderAutoLanguageDetection ? true : undefined,
-                  pollIntervalMs: config.pollIntervalMs,
-                  maxPollMinutes: config.maxPollMinutes,
-                  retries: config.transcriptionRetries,
-                  providerTimeoutMs: config.providerTimeoutMs,
-                });
-                await finishUsage(reservation, "completed");
               } catch (error) {
-                await finishUsage(reservation, "failed");
+                // Nothing of this item was accepted by the previous service, so it
+                // can be planned again for the service that took over.
+                if (error instanceof ServiceChangedSignal && plans < MAX_FAILOVER_MOVES_PER_PIECE) {
+                  stageForError = "transcribe";
+                  continue;
+                }
                 throw error;
               }
             }
@@ -774,8 +905,8 @@ export async function runPipeline(
               sourceArtifact: audioInput?.sourceArtifact,
               durationSeconds: itemAudioSeconds,
               contentType: audioContentType(audioPath),
-              provider: config.sttProvider,
-              model: providerModel(config, transcript),
+              provider: usedConfig.sttProvider,
+              model: providerModel(usedConfig, transcript),
               transcript,
               languageCode: finalLanguageCode,
               languageConfidence: finalLanguageConfidence,
@@ -838,6 +969,13 @@ export async function runPipeline(
               stopAll = true;
               logWarn(
                 `Stopping run: AssemblyAI credits exhausted while processing Video ${index}/${totalVideos} (${video.id})`
+              );
+              throw error;
+            }
+            if (error instanceof FailoverExhaustedError) {
+              stopAll = true;
+              logWarn(
+                `Stopping run: no healthy transcription key or account is left while processing Video ${index}/${totalVideos} (${video.id})`
               );
               throw error;
             }

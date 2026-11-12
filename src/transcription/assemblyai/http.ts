@@ -47,7 +47,8 @@ export async function requestJson<T>(
     const text = await response.text();
     if (isInsufficientCredits(response.status, text)) {
       throw new InsufficientCreditsError(
-        `AssemblyAI insufficient credits: ${sanitizeProviderErrorText(text, [apiKey])}`
+        `AssemblyAI insufficient credits: ${sanitizeProviderErrorText(text, [apiKey])}`,
+        response.status
       );
     }
     const safe = sanitizeProviderErrorText(text, [apiKey]);
@@ -85,7 +86,8 @@ export async function uploadFile(
     const text = await response.text();
     if (isInsufficientCredits(response.status, text)) {
       throw new InsufficientCreditsError(
-        `AssemblyAI insufficient credits: ${sanitizeProviderErrorText(text, [apiKey])}`
+        `AssemblyAI insufficient credits: ${sanitizeProviderErrorText(text, [apiKey])}`,
+        response.status
       );
     }
     const safe = sanitizeProviderErrorText(text, [apiKey]);

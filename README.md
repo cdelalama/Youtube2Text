@@ -1,4 +1,4 @@
-<!-- doc-version: 0.42.2 -->
+<!-- doc-version: 0.43.0 -->
 # Media2Text
 
 Media2Text is the visible product name for the `youtube2text` engine: a
@@ -453,7 +453,9 @@ Endpoints:
 - `GET /providers` (provider capabilities: max upload size, diarization support)
 - `GET /metrics` (Prometheus text format)
 - `GET /metrics/cost` (usage ledger and estimated provider cost)
-- `GET /status/media-pipeline` (public sanitized Home Infra status snapshot)
+- `GET /status/media-pipeline` (public sanitized Home Infra status snapshot; the
+  default response has exactly three checks, and `?include=stt_account_failover`
+  adds the automatic account change check)
 - `GET /api/status/media-pipeline` on the web origin (public proxy of the same
   sanitized snapshot for Home Infra/Infra Portal)
 - `POST /v1/intakes` (durably accept a remote media reference; `202` precedes asynchronous fetch)
@@ -753,3 +755,15 @@ approved secret manager; never in source or shell arguments. After deployment,
 manage provider tokens in the UI without container recreation. Legacy keys remain
 read-only until explicit individual import. The CLI retains environment/YAML
 credentials. See [implementation and recovery](docs/operations/STT_ACCOUNT_UI_IMPLEMENTATION_2026-10-23.md).
+
+### Automatic key and account failover
+
+The 0.43.0 candidate (source only, not deployed) adds one switch, off by default,
+and an operator-ordered list of accounts. When a provider definitively refuses a
+request before accepting the audio (key rejected, or no credit or quota), work
+moves to the next key of the same account and then to the next listed account,
+which may be another service. It never moves on a timeout, network error, 5xx,
+rate limit or any failure after acceptance. Every move is audited and shown as a
+notice until dismissed; usage caps still apply. Legacy environment keys and the
+CLI are unchanged. No new environment variable or secret is needed. See
+[decision and design](docs/operations/STT_FAILOVER_2026-11-12.md) and D-029.

@@ -1,4 +1,67 @@
 # Decisions (Rationale)
+## D-029 - Move automatically to the next key or account, and tell the operator
+
+Accepted 2026-11-12 (about 00:45 Europe/Madrid): Carlos, asked in a Claude Code
+session on his Cortex project whether Media2Text should move by itself to the
+next account when one is rejected or out of credit, answered (accents removed
+here because this file is ASCII-only; the exact words are quoted in
+../operations/STT_FAILOVER_2026-11-12.md):
+"Y si, tendrias que mandar, si una cuenta se queda sin saldo, deberia intentar
+con la misma cuenta conseguir un token nuevo y si no, cambiar de cuenta. Y
+decidmelo, sobre todo porque puede cambiar la calidad."
+Reading: (1) when a key runs out of credit or is rejected, try the next enabled
+key of the same account; (2) if none works, switch to the next account, which
+may belong to another speech-to-text service; (3) tell him every time, saying
+clearly when the service changed, because transcription quality can change.
+
+Supersedes: only the words "automatic account failover" in the D-028 sentence
+"No paid transcription, increased budget, automatic account failover or adaptive
+splitting is selected". Everything else in D-028 stands: encrypted private store, write-only
+keys, recent authentication, explicit selection, pinning of accepted work, local
+revocation, unknown balances. No budget increase, paid test, login change or
+adaptive splitting is selected.
+
+Safety rule (do not weaken): work moves to another key or account ONLY when the
+provider definitively refused the request before accepting the audio as work
+(authentication or permission refused; payment or quota refused, as an HTTP
+answer to the submission). It NEVER moves on a timeout, a network error, a 5xx,
+a rate limit or anything after acceptance, because the first provider may still
+bill; those cases fail the job exactly as before. Adapters classify, because
+only they know the phase; nothing else may infer a refusal from an error text.
+
+Decision details:
+- One switch, off by default, so installing a release changes nothing by itself.
+- Only accounts in the operator's ordered list, enabled, with a key that is not
+  revoked and not marked rejected or exhausted, can take over. Order: remaining
+  keys of the same account, then the list from the top.
+- Key health (ok, rejected, exhausted) is set only from a definitive provider
+  answer and is cleared only by the operator, a successful access check (for
+  rejected only; an access check never proves credit) or a completed request.
+- Accepted work keeps its pin. It moves only on a refusal of its own request,
+  with an audit event naming it. Nothing is re-pinned silently.
+- Existing usage caps apply to the service that ends up doing the work. Nothing
+  raises a cap. If nothing is left, the job fails closed with a clear reason.
+- Every move is audited without secret values and shown as a notice until
+  dismissed; a service change is stated in plain words. The transcript record
+  names the service that actually did the work.
+- Transcript Ready v1 is frozen and has no provider field; it is unchanged.
+- The public status route keeps its fixed default shape, which a deployed
+  monitor pins exactly. The named check is added only on request.
+- No recording changes service part-way: that would pay twice or mix services.
+
+Rejected options: generic failover on any error (duplicate billing after an
+ambiguous submission, see STT_PROVIDER_AUDIT_2026-10-23.md); reusing the legacy
+environment key pool (it rotates on any error and has no account boundary);
+silently re-pinning queued work; adding a provider field to Transcript Ready v1;
+adding a fourth check to the default status response (it would break the fixed
+monitor contract); sending Telegram from Media2Text (the homelab sender is
+Sentinel; no bot token belongs here).
+
+State: source prepared on a task branch as candidate 0.43.0; not deployed;
+independent review by a different model family pending. An immediate push
+message needs separate Home Infra and Sentinel work and an operator choice.
+See ../operations/STT_FAILOVER_2026-11-12.md.
+
 ## D-028 - Manage multiple STT accounts in the existing interface
 
 Accepted 2026-10-23: Carlos approved STT_ACCOUNT_UI_PROPOSAL_2026-10-23.md with

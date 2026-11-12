@@ -80,3 +80,4 @@ import "./markdownVault.test.mjs";
 
 import "./providerAccounts.test.js";
 import "./configOverrideDefaults.test.js";
+import "./sttFailover.test.js";

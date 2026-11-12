@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { components } from "../lib/apiTypes.gen";
-import ProviderAccounts from "./settings/ProviderAccounts";
+import ProviderAccounts, { failoverNoticeText, type FailoverNotice } from "./settings/ProviderAccounts";
 
 type RunRecord = components["schemas"]["RunRecord"];
 type ChannelInfo = components["schemas"]["ChannelInfo"];
@@ -338,6 +338,7 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
   const [captureTab, setCaptureTab] = useState<"link" | "audio">("link");
   const [uploadFile, setUploadFile] = useState<File | undefined>();
   const [toast, setToast] = useState<string | undefined>();
+  const [failoverNotices, setFailoverNotices] = useState<FailoverNotice[]>([]);
   const [busy, setBusy] = useState<string | undefined>();
   const [settingsDraft, setSettingsDraft] = useState<Record<string, string>>({});
   const [watchDraftUrl, setWatchDraftUrl] = useState("");
@@ -367,7 +368,14 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
     window.setTimeout(() => setToast(undefined), 2600);
   }
 
+  // Automatic account changes stay visible on every screen until dismissed in Settings.
+  async function refreshFailoverNotices() {
+    const accounts = await maybeJson<{ failover?: { notices?: FailoverNotice[] } }>("/api/provider-accounts");
+    if (accounts) setFailoverNotices(accounts.failover?.notices ?? []);
+  }
+
   async function refreshAll() {
+    void refreshFailoverNotices();
     const [runsRes, channelsRes, watchlistRes, schedulerRes, settingsRes, providersRes, healthRes, usageRes] = await Promise.all([
       maybeJson<{ runs: RunRecord[] }>("/api/runs"),
       maybeJson<{ channels: ChannelInfo[] }>("/api/library/channels"),
@@ -425,6 +433,7 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
       try {
         const parsed = JSON.parse(event.data) as { run?: RunRecord };
         if (!parsed.run?.runId) return;
+        if (parsed.run.status === "done" || parsed.run.status === "error") void refreshFailoverNotices();
         setRuns((prev) => {
           const idx = prev.findIndex((r) => r.runId === parsed.run?.runId);
           const next = idx >= 0 ? [...prev.slice(0, idx), parsed.run!, ...prev.slice(idx + 1)] : [parsed.run!, ...prev];
@@ -661,6 +670,16 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
           </div>
         </header>
         <main className="m2t-content">
+          {failoverNotices.length > 0 && screen !== "settings" ? (
+            <div role="alert">
+              <button className="m2t-failover-banner" onClick={() => go("settings")}>
+                <strong>{t(lang, "Aviso: cambio automático de cuenta de transcripción.", "Notice: automatic transcription account change.")}</strong>{" "}
+                {failoverNoticeText(failoverNotices[0]!, (es, en) => t(lang, es, en))}
+                {failoverNotices.length > 1 ? t(lang, ` Hay ${failoverNotices.length - 1} aviso(s) más.`, ` There are ${failoverNotices.length - 1} more notice(s).`) : ""}{" "}
+                {t(lang, "Abre Ajustes para revisarlo y descartarlo.", "Open Settings to review and dismiss it.")}
+              </button>
+            </div>
+          ) : null}
           {screen === "status" ? renderStatus() : null}
           {screen === "capture" ? renderCapture() : null}
           {screen === "library" ? renderLibrary() : null}
@@ -1092,7 +1111,7 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
     return (
       <section className="m2t-page">
         <PageIntro title={t(lang, "Ajustes", "Settings")} text={t(lang, "Elige cómo transcribir y gestiona las cuentas de tus proveedores.", "Choose how to transcribe and manage your provider accounts.")} />
-        <ProviderAccounts lang={lang} settingsRevision={settings?.updatedAt} onProviderSelected={(provider) => {
+        <ProviderAccounts lang={lang} settingsRevision={settings?.updatedAt} onNoticesChanged={setFailoverNotices} onProviderSelected={(provider) => {
           setSettingsDraft((previous) => ({ ...previous, sttProvider: provider }));
           void maybeJson<SettingsGetResponse>("/api/settings").then((next) => { if (next) setSettings(next); });
         }} />

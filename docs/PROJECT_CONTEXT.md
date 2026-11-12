@@ -1,4 +1,4 @@
-<!-- doc-version: 0.42.2 -->
+<!-- doc-version: 0.43.0 -->
 # Project Context - Media2Text
 
 ## Vision
@@ -52,7 +52,13 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Storage | Persist outputs + idempotency | TBD | Layout: `output/<channel_title_slug>__<channel_id>/<basename>.*`. |
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
-## Current Status (2026-10-24)
+## Current Status (2026-11-12)
+v0.43.0 candidate in source on task branch `work/stt-failover-20261112` adds
+automatic key and account failover with operator notice (D-029), off by default.
+It is not deployed and its independent review is pending; see
+`docs/operations/STT_FAILOVER_2026-11-12.md`. The installed runtime is below.
+
+## Installed runtime (2026-10-24)
 v0.42.2 stable runtime includes the reviewed account interface. Actual mobile/
 desktop administration, login/reauth/logout, private custody and same-NAS
 isolated recovery pass. Formal credential-event metadata and reviewed documentary

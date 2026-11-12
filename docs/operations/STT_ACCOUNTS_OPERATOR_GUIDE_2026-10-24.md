@@ -33,6 +33,77 @@ de Media2Text siguen vigentes.
 La cuenta **Prueba de instalación** queda desactivada, sin seleccionar y con claves
 ficticias. Conserva la evidencia de instalación y no debe usarse para transcribir.
 
+## Cambio automático de clave o cuenta
+
+**Todavía no está instalado.** Llega con la versión 0.43.0, que está preparada
+en el código y pendiente de revisión independiente y de instalación. El NAS
+sigue con la 0.42.2, donde esta sección no aparece. Cuando se instale, nada
+cambia hasta que actives el interruptor: viene desactivado.
+
+Qué hace: si el servicio de transcripción rechaza una clave o responde que no
+queda saldo o cuota, Media2Text prueba la siguiente clave de la misma cuenta y,
+si ninguna sirve, pasa a la siguiente cuenta de tu lista. Esa cuenta puede ser
+de otro servicio (por ejemplo, de Deepgram a AssemblyAI). Cada vez que ocurre,
+te lo dice.
+
+Cómo activarlo, en **Ajustes > Cuentas de transcripción > Cambio automático de
+clave o cuenta**:
+
+1. Pulsa **Añadir a la lista** en cada cuenta que quieras permitir como
+   respaldo. Solo las cuentas de esa lista, y que estén activas, pueden recibir
+   trabajos. Una cuenta que no esté en la lista nunca los recibe de forma
+   automática.
+2. Ordénalas con **Subir** y **Bajar**. La cuenta que tengas elegida con
+   **Usar para nuevas transcripciones** se usa primero; si falla, se sigue por
+   la lista de arriba abajo.
+3. Si una cuenta tiene varias claves, en **Gestionar cuenta y claves** verás su
+   **Orden de uso automático** y podrás cambiarlo. La clave actual va primero.
+4. Marca **Usar automáticamente la siguiente clave o cuenta**. La aplicación
+   pide confirmar la contraseña si han pasado más de cinco minutos.
+
+Cuándo cambia y cuándo no:
+
+- Cambia solo si el servicio rechaza la petición **antes de aceptar el audio**:
+  clave rechazada o sin permiso, o sin saldo o cuota.
+- **No** cambia si hay un corte de red, una espera agotada, un error del
+  servicio o cualquier fallo después de que el audio se haya aceptado. En esos
+  casos el trabajo falla como hasta ahora, porque el primer servicio aún podría
+  cobrarlo y reenviarlo a otro sería pagar dos veces.
+- Los límites de gasto de Media2Text siguen aplicándose al servicio que acabe
+  haciendo el trabajo. Nada los sube.
+- Con las **claves de la configuración existente** (las de Doppler) no hay
+  cambio automático. Para que funcione, elige una cuenta guardada en esta pantalla.
+
+Qué significa el aviso. Aparece en la parte superior de todas las pantallas y
+en Ajustes, y se queda hasta que pulses **Descartar aviso**. Dice:
+
+- qué cuenta y qué clave (sus cuatro últimos caracteres) han dejado de usarse;
+- por qué: **sin saldo o cuota** o **clave rechazada**, con el código de respuesta;
+- qué cuenta y clave se usan ahora;
+- si ha cambiado el servicio, una frase clara: «Ha cambiado el servicio de
+  transcripción: de X a Y. La calidad de las transcripciones puede ser distinta.»
+
+Si el aviso dice que no queda ninguna clave o cuenta disponible, los trabajos
+fallan hasta que hagas una de estas tres cosas: recargar saldo, añadir una
+clave nueva o marcar una clave como disponible.
+
+Estado de cada clave. Junto a cada clave verás **Sin saldo o cuota desde…** o
+**Rechazada por el servicio desde…** cuando el servicio lo haya dicho. Con el
+interruptor activado, esa clave no se usa para trabajos nuevos. Para volver a
+usarla:
+
+- Sin saldo: recarga en la web del servicio y pulsa **Marcar como disponible**.
+  **Comprobar acceso** no sirve para esto, porque no puede confirmar el saldo.
+- Rechazada: corrige o renueva la clave y pulsa **Comprobar acceso** o
+  **Marcar como disponible**.
+
+La línea **Nuevos trabajos** indica qué cuenta se está usando de verdad en cada
+momento. Cada transcripción guarda además el servicio que la hizo.
+
+Lo que aún no hace: no envía mensajes al teléfono. El aviso está en la
+aplicación y en el estado que puede leer la monitorización de casa; el mensaje
+de Telegram necesita un trabajo aparte en Sentinel y tu decisión de recibirlo.
+
 ## Dónde se guardan
 
 Las cuentas nuevas y sus claves se guardan cifradas en el NAS, en

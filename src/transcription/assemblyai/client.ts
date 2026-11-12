@@ -2,7 +2,12 @@ import { retry } from "../../utils/retry.js";
 import { setTimeout as delay } from "node:timers/promises";
 import { logStep } from "../../utils/logger.js";
 import { TranscriptJson, TranscriptionOptions } from "../types.js";
-import { InsufficientCreditsError, ProviderHttpError } from "../errors.js";
+import {
+  InsufficientCreditsError,
+  ProviderHttpError,
+  ProviderRefusalError,
+  type DefinitiveRefusal,
+} from "../errors.js";
 import { requestJson, uploadFile } from "./http.js";
 import { buildCreateTranscriptRequestBody } from "./request.js";
 
@@ -78,18 +83,25 @@ export class AssemblyAiClient {
     };
 
     logStep("upload", `Uploading to AssemblyAI: ${audioPath}`);
-    const uploadUrl = await retry(
-      () => { guard(); return this.uploadAudio(audioPath, timeoutMs, opts.abortSignal, guard); },
-      retryOptions
-    );
+    let created: CreateResponse;
+    try {
+      const uploadUrl = await retry(
+        () => { guard(); return this.uploadAudio(audioPath, timeoutMs, opts.abortSignal, guard); },
+        retryOptions
+      );
 
-    // A timed-out create response may still have created billable work.
-    guard();
-    const created = await this.createTranscript(uploadUrl, {
-      languageCode: opts.languageCode,
-      languageDetection: opts.languageDetection,
-      languageConfidenceThreshold: opts.languageConfidenceThreshold,
-    }, timeoutMs, opts.abortSignal);
+      // A timed-out create response may still have created billable work.
+      guard();
+      created = await this.createTranscript(uploadUrl, {
+        languageCode: opts.languageCode,
+        languageDetection: opts.languageDetection,
+        languageConfidenceThreshold: opts.languageConfidenceThreshold,
+      }, timeoutMs, opts.abortSignal);
+    } catch (error) {
+      // Work is accepted only when the create call answers 2xx. Everything
+      // after this block is post-acceptance and is never classified.
+      throw asSubmissionRefusal(error);
+    }
     const deadline = Date.now() + opts.maxPollMinutes * 60 * 1000;
 
     logStep("transcribe", `Transcription started: ${created.id}`);
@@ -110,6 +122,40 @@ export class AssemblyAiClient {
       `Transcription timed out after ${opts.maxPollMinutes} minutes; upstream job ${created.id} was not recreated`
     );
   }
+}
+
+/**
+ * Classifies a failed upload or create call. Documented shapes
+ * (assemblyai.com/docs/errors and the pre-recorded common-errors guide): HTTP 401
+ * "Authentication error, API token missing/invalid" and HTTP 400 "Your current
+ * account balance is negative..." on POST /v2/transcript. HTTP 402 and the older
+ * credit wordings already recognised by this adapter are undocumented for this
+ * API and are accepted only with a 400/402 status. AssemblyAI documents 403 as a
+ * request-rate limit, so it is deliberately not a refusal. Timeouts, network
+ * failures, 429 and 5xx stay unclassified.
+ */
+export function classifyAssemblyAiSubmissionRefusal(error: unknown): DefinitiveRefusal | undefined {
+  if (error instanceof ProviderHttpError) {
+    if (error.status === 401) return { provider: "assemblyai", kind: "rejected", status: 401 };
+    if (error.status === 400 && /account balance is negative/i.test(error.message)) {
+      return { provider: "assemblyai", kind: "exhausted", status: 400 };
+    }
+    return undefined;
+  }
+  if (error instanceof InsufficientCreditsError && (error.status === 400 || error.status === 402)) {
+    return { provider: "assemblyai", kind: "exhausted", status: error.status };
+  }
+  return undefined;
+}
+
+function asSubmissionRefusal(error: unknown): unknown {
+  const refusal = classifyAssemblyAiSubmissionRefusal(error);
+  if (!refusal) return error;
+  if (error instanceof InsufficientCreditsError) {
+    error.refusal = refusal;
+    return error;
+  }
+  return new ProviderRefusalError(refusal, (error as Error).message);
 }
 
 export function shouldRetryAssemblyAiRequest(error: unknown): boolean {

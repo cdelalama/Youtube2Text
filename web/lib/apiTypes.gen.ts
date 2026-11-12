@@ -19,7 +19,7 @@ export interface paths {
         put?: never;
         /**
          * Administer provider accounts after recent operator authentication
-         * @description Internal loopback route. The web BFF checks same-origin and a signed session issued within five minutes, then creates a dedicated-secret HMAC over exact body bytes, fixed method/path, expiry and nonce. API key alone is insufficient. Proofs expire within thirty seconds and are single-use. Save/import never selects. Revocation is local; a provider may finish already accepted work. No automatic account failover.
+         * @description Internal loopback route. The web BFF checks same-origin and a signed session issued within five minutes, then creates a dedicated-secret HMAC over exact body bytes, fixed method/path, expiry and nonce. API key alone is insufficient. Proofs expire within thirty seconds and are single-use. Save/import never selects. Revocation is local; a provider may finish already accepted work. Automatic key/account failover (D-029) is off until set_failover enables it; it moves work only after a definitive provider refusal before acceptance, within the operator's ordered list.
          */
         post: operations["manageProviderAccounts"];
         delete?: never;
@@ -35,7 +35,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get sanitized Home Infra media-pipeline status */
+        /**
+         * Get sanitized Home Infra media-pipeline status
+         * @description The default response keeps exactly three checks. An automatic transcription account change awaiting operator review degrades the aggregate condition and summary. The named, machine-readable stt_account_failover check (pending_notices, service_changed, blocked) is added only with include=stt_account_failover, so consumers that pin the default shape are unaffected. No account alias or key hint is exposed.
+         */
         get: operations["getMediaPipelineStatus"];
         put?: never;
         post?: never;
@@ -1572,6 +1575,14 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             access: components["schemas"]["CredentialAccessCheck"] | null;
+            health?: components["schemas"]["CredentialHealth"];
+        };
+        /** @description Set only from a definitive provider answer. Rejected and exhausted keys are skipped for new work while automatic failover is on. */
+        CredentialHealth: {
+            /** @enum {string} */
+            state: "ok" | "rejected" | "exhausted";
+            since: string | null;
+            status: number | null;
         };
         ProviderAccount: {
             /** Format: uuid */
@@ -1591,7 +1602,52 @@ export interface components {
                 /** @constant */
                 scope: "account";
             };
+            /** @description Non-revoked keys in automatic attempt order, current key first. */
+            keyOrder: string[];
             keys: components["schemas"]["ProviderCredential"][];
+        };
+        FailoverParty: {
+            /** Format: uuid */
+            accountId: string;
+            label: string;
+            /** @enum {string} */
+            provider: "assemblyai" | "deepgram" | "openai_whisper";
+            keyHint: string;
+        };
+        /** @description Operator-facing record of an automatic move, kept until dismissed. Identical pending transitions share one notice and a count. */
+        FailoverNotice: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "moved" | "blocked";
+            /** @enum {string} */
+            reason: "rejected" | "exhausted";
+            status: number | null;
+            from: components["schemas"]["FailoverParty"];
+            to: components["schemas"]["FailoverParty"] | null;
+            serviceChanged: boolean;
+            count: number;
+            /** Format: date-time */
+            firstAt: string;
+            /** Format: date-time */
+            lastAt: string;
+        };
+        FailoverState: {
+            enabled: boolean;
+            /** @description Operator-ordered accounts allowed to take over work. */
+            order: string[];
+            /** @description Where new work for the active provider would go now. */
+            effective: {
+                /** @enum {string} */
+                provider: "assemblyai" | "deepgram" | "openai_whisper";
+                /** Format: uuid */
+                accountId: string;
+                /** Format: uuid */
+                credentialId: string;
+            } | null;
+            blocked: boolean;
+            unhealthyKeys: number;
+            notices: components["schemas"]["FailoverNotice"][];
         };
         ProviderAccountAction: {
             /** @constant */
@@ -1660,9 +1716,36 @@ export interface components {
             /** @enum {string} */
             provider: "assemblyai" | "deepgram" | "openai_whisper";
             token: string;
+        } | {
+            /** @constant */
+            action: "set_failover";
+            enabled: boolean;
+        } | {
+            /** @constant */
+            action: "set_failover_order";
+            accountIds: string[];
+        } | {
+            /** @constant */
+            action: "set_key_order";
+            /** Format: uuid */
+            accountId: string;
+            credentialIds: string[];
+        } | {
+            /** @constant */
+            action: "reset_key_health";
+            /** Format: uuid */
+            accountId: string;
+            /** Format: uuid */
+            credentialId: string;
+        } | {
+            /** @constant */
+            action: "dismiss_notice";
+            /** Format: uuid */
+            noticeId: string;
         };
         ProviderAccountsSnapshot: {
             configured: boolean;
+            failover: components["schemas"]["FailoverState"];
             /** @enum {string} */
             activeProvider: "assemblyai" | "deepgram" | "openai_whisper";
             selectedAccountId: string | null;
@@ -1852,7 +1935,9 @@ export interface operations {
     };
     getMediaPipelineStatus: {
         parameters: {
-            query?: never;
+            query?: {
+                include?: "stt_account_failover";
+            };
             header?: never;
             path?: never;
             cookie?: never;

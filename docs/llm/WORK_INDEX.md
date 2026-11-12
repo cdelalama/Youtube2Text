@@ -18,3 +18,5 @@ This index records custody and disposition, not permission to delete a checkout.
 - [provider-accounts-ui-20261023](work/provider-accounts-ui-20261023.json): closed proposal; authenticated UI inspection and exact Opus consensus/source review complete. Multi-account credential management remains unimplemented; retain checkout and private evidence.
 
 - [provider-accounts-implementation-20261023](work/provider-accounts-implementation-20261023.json): pending-integration; Installed account UI is usable. Complete the existing-password event binding and owner delivery witness after Home/Sentinel documentary holds are resolved; no audio or budget change is authorized.
+
+- [stt-failover-20261112](work/stt-failover-20261112.json): pending-integration; source 0.43.0 for automatic key and account failover with operator notice (D-029) is prepared on the task branch, not deployed. Independent review by a different model family, merge, deployment and the separate Sentinel notification work remain. Retain this checkout.

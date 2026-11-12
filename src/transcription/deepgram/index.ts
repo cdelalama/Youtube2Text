@@ -3,7 +3,7 @@ import { extname, basename } from "node:path";
 import { randomUUID } from "node:crypto";
 import { TranscriptionProvider, type ProviderCapabilities } from "../provider.js";
 import { TranscriptJson, TranscriptionOptions } from "../types.js";
-import { sanitizeProviderErrorText } from "../errors.js";
+import { ProviderRefusalError, sanitizeProviderErrorText, type ProviderRefusalKind } from "../errors.js";
 import { fetchWithTimeout, isAbortError } from "../../utils/fetch.js";
 
 const DEFAULT_MAX_AUDIO_BYTES = 2 * 1024 * 1024 * 1024;
@@ -43,6 +43,19 @@ type DeepgramResponse = {
   results?: DeepgramResults;
   metadata?: Record<string, unknown>;
 };
+
+/**
+ * /v1/listen answers synchronously, so an HTTP error status means the audio was
+ * not accepted as work. Documented shapes (developers.deepgram.com/docs/errors):
+ * 401 INVALID_AUTH / INSUFFICIENT_PERMISSIONS, 403 INSUFFICIENT_PERMISSIONS
+ * (project lacks access to the model) and 402 ASR_PAYMENT_REQUIRED (no credits).
+ * 429, 5xx and everything else stay unclassified on purpose.
+ */
+export function classifyDeepgramRefusal(status: number): ProviderRefusalKind | undefined {
+  if (status === 401 || status === 403) return "rejected";
+  if (status === 402) return "exhausted";
+  return undefined;
+}
 
 function normalizeDeepgramLanguage(code?: string): string | undefined {
   if (!code) return undefined;
@@ -154,7 +167,10 @@ export class DeepgramProvider implements TranscriptionProvider {
     if (!res.ok) {
       const text = await res.text();
       const safe = sanitizeProviderErrorText(text, [this.apiKey]);
-      throw new Error(`Deepgram API error (${res.status}): ${safe || res.statusText}`);
+      const message = `Deepgram API error (${res.status}): ${safe || res.statusText}`;
+      const kind = classifyDeepgramRefusal(res.status);
+      if (kind) throw new ProviderRefusalError({ provider: "deepgram", kind, status: res.status }, message);
+      throw new Error(message);
     }
 
     const data = (await res.json()) as DeepgramResponse;

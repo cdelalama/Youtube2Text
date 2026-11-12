@@ -105,3 +105,11 @@ integration guidance. `.forgeos/dossier.json` declares only
 
 - `.forgeos/integration-plan.json`: owner-derived Portal/Dossier obligations.
 - `docs/operations/DOSSIER.md`: project-native Dossier operating entrypoint.
+
+## Automatic account failover (0.43.0 candidate)
+
+- `src/transcription/errors.ts`: typed definitive-refusal errors; adapters classify.
+- `src/credentials/store.ts`: switch, ordered list, key health, audit events, notices.
+- `src/pipeline/run.ts`: `transcribePiece`, the only place where work may move.
+- `tests/sttFailover.test.ts`: safety rule, order, caps, notices and status shape.
+- `docs/operations/STT_FAILOVER_2026-11-12.md`: decision record, error shapes, limits.

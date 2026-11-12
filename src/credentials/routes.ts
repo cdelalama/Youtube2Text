@@ -23,6 +23,12 @@ const actionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("use_legacy"), provider }).strict(),
   z.object({ action: z.literal("probe"), accountId: id }).strict(),
   z.object({ action: z.literal("probe_unsaved"), provider, token }).strict(),
+  // Automatic key/account failover (D-029). Off until the operator turns it on.
+  z.object({ action: z.literal("set_failover"), enabled: z.boolean() }).strict(),
+  z.object({ action: z.literal("set_failover_order"), accountIds: z.array(id).max(100) }).strict(),
+  z.object({ action: z.literal("set_key_order"), accountId: id, credentialIds: z.array(id).max(20) }).strict(),
+  z.object({ action: z.literal("reset_key_health"), accountId: id, credentialId: id }).strict(),
+  z.object({ action: z.literal("dismiss_notice"), noticeId: id }).strict(),
 ]);
 
 export function credentialRoutes(store: CredentialStore | undefined, baseConfig: AppConfig, manager: RunManager,
@@ -34,7 +40,9 @@ export function credentialRoutes(store: CredentialStore | undefined, baseConfig:
     const accounts = store?.list() ?? [];
     const activeProvider = effectiveConfig().sttProvider;
     const selected = accounts.find((account) => account.selected && account.provider === activeProvider);
-    return { configured: Boolean(store), activeProvider, selectedAccountId: selected?.id ?? null, accounts,
+    const failover = store?.failoverState(activeProvider)
+      ?? { enabled: false, order: [], effective: null, blocked: false, unhealthyKeys: 0, notices: [] };
+    return { configured: Boolean(store), activeProvider, selectedAccountId: selected?.id ?? null, accounts, failover,
       legacy: PROVIDERS.map((provider) => ({ provider, keys: legacyKeys(baseConfig, provider).map((key) => `••••${key.slice(-4)}`),
         selected: !accounts.some((account) => account.provider === provider && account.selected) })),
       selectionReady: selected ? selected.enabled && selected.keys.some((key) => key.id === selected.currentCredentialId && !key.revoked)
@@ -98,6 +106,11 @@ export function credentialRoutes(store: CredentialStore | undefined, baseConfig:
         case "use_key": store.useKey(action.accountId, action.credentialId); break;
         case "select": store.select(action.accountId); break;
         case "use_legacy": store.useLegacy(action.provider); break;
+        case "set_failover": store.setFailover(action.enabled); break;
+        case "set_failover_order": store.setFailoverOrder(action.accountIds); break;
+        case "set_key_order": store.setKeyOrder(action.accountId, action.credentialIds); break;
+        case "reset_key_health": store.resetKeyHealth(action.accountId, action.credentialId); break;
+        case "dismiss_notice": store.dismissNotice(action.noticeId); break;
         case "revoke":
           store.revoke(action.accountId, action.credentialId);
           cancelledRuns = manager.revokeCredential(action.credentialId); break;

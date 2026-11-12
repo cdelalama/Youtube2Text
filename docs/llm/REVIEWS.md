@@ -1,3 +1,14 @@
+## 2026-11-12 - Automatic account failover 0.43.0: independent review pending
+
+No independent review yet: Claude author (claude-fable-5-2), so a Claude review
+would not be independent. The requesting Cortex session obtains the review from
+Codex, a different model family. Until that verdict is recorded here, candidate
+0.43.0 on branch work/stt-failover-20261112 is unreviewed source. The author's
+own tests and mutation checks are validation, not review. Points the reviewer
+should test first: the safety rule in D-029, the provider shapes marked assumed
+in docs/operations/STT_FAILOVER_2026-11-12.md, release of a refused usage
+reservation on a service change, and the fixed default status shape.
+
 ## 2026-10-24 - Account delivery actual-view review and curation
 
 Strict schema2 native capture accepted without warnings. Manifest SHA-256: product R10 448d3dc2f67025cdda3f1b78866e1475298a9b3674f2101d577705127206140d; integration R14 fe6f5128e169cca3e3742739a0091a481c03764cbe2a26f9faa0401a7bb0db54.

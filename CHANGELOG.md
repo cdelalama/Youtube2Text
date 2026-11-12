@@ -5,6 +5,46 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.43.0] - 2026-11-12
+
+Source prepared on task branch `work/stt-failover-20261112`; not deployed.
+Decision D-029. Details: `docs/operations/STT_FAILOVER_2026-11-12.md`.
+
+### Added
+
+- Automatic key and account failover for saved transcription accounts. One
+  switch in Settings, off by default, plus an operator-ordered list of accounts
+  (it can mix services) and an order for each account's keys.
+- Key health per key (ok, rejected, out of credit or quota), set only from a
+  definitive provider answer, shown with the time since when. "Mark as
+  available" re-enables a key.
+- A notice in the web UI for every automatic change, kept until dismissed and
+  shown as a banner on every screen. It names the account and key (last four
+  characters) that stopped, the reason and what took over, and states in plain
+  words when the transcription service changed and that quality may differ.
+- Audit events for every automatic move, with no secret values.
+- Typed definitive-refusal errors in the Deepgram, OpenAI and AssemblyAI
+  adapters.
+- Opt-in `stt_account_failover` check on the public status route with
+  `?include=stt_account_failover` (`pending_notices`, `service_changed`,
+  `blocked`).
+
+### Changed
+
+- Work moves to another key or account only when the provider definitively
+  refused the request before accepting the audio. Timeouts, network errors,
+  5xx, rate limits and anything after acceptance fail the job as before.
+- The transcript record names the service that actually produced it after a
+  cross-service move. Transcript Ready v1 is unchanged.
+- The default status response keeps its exact three-check shape; a pending
+  automatic change degrades its aggregate condition and summary.
+- Existing usage caps apply to the service that ends up doing the work.
+
+### Fixed
+
+- The legacy key pool no longer logs the first characters of a key when it
+  cools a key down; it logs the key's position in the pool.
+
 ## [0.42.2]
 
 - Wait for public web readiness during deployment; accept relative and absolute

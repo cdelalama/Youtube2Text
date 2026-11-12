@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Media2Text API
-  version: 0.42.2
+  version: 0.43.0
   description: |
     Minimal local HTTP API for Media2Text, backed by the youtube2text engine.
     Notes:
@@ -55,7 +55,9 @@ paths:
         HMAC over exact body bytes, fixed method/path, expiry and nonce. API key
         alone is insufficient. Proofs expire within thirty seconds and are
         single-use. Save/import never selects. Revocation is local; a provider may
-        finish already accepted work. No automatic account failover.
+        finish already accepted work. Automatic key/account failover (D-029) is
+        off until set_failover enables it; it moves work only after a definitive
+        provider refusal before acceptance, within the operator's ordered list.
       security:
         - ApiKeyAuth: []
           CredentialAdminProof: []
@@ -104,7 +106,21 @@ paths:
     get:
       operationId: getMediaPipelineStatus
       summary: Get sanitized Home Infra media-pipeline status
+      description: The default response keeps exactly three checks. An automatic
+        transcription account change awaiting operator review degrades the
+        aggregate condition and summary. The named, machine-readable
+        stt_account_failover check (pending_notices, service_changed, blocked) is
+        added only with include=stt_account_failover, so consumers that pin the
+        default shape are unaffected. No account alias or key hint is exposed.
       security: []
+      parameters:
+        - name: include
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - stt_account_failover
       responses:
         "200":
           description: Current sanitized producer snapshot
@@ -2660,6 +2676,33 @@ components:
           anyOf:
             - $ref: "#/components/schemas/CredentialAccessCheck"
             - type: "null"
+        health:
+          $ref: "#/components/schemas/CredentialHealth"
+    CredentialHealth:
+      type: object
+      description: Set only from a definitive provider answer. Rejected and
+        exhausted keys are skipped for new work while automatic failover is on.
+      additionalProperties: false
+      required:
+        - state
+        - since
+        - status
+      properties:
+        state:
+          type: string
+          enum:
+            - ok
+            - rejected
+            - exhausted
+        since:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        status:
+          anyOf:
+            - type: integer
+            - type: "null"
     ProviderAccount:
       type: object
       additionalProperties: false
@@ -2672,6 +2715,7 @@ components:
         - currentCredentialId
         - createdAt
         - balance
+        - keyOrder
         - keys
       properties:
         id: *a1
@@ -2704,11 +2748,120 @@ components:
               const: unknown
             scope:
               const: account
+        keyOrder:
+          description: Non-revoked keys in automatic attempt order, current key first.
+          type: array
+          maxItems: 20
+          items: *a1
         keys:
           type: array
           maxItems: 20
           items:
             $ref: "#/components/schemas/ProviderCredential"
+    FailoverParty:
+      type: object
+      additionalProperties: false
+      required:
+        - accountId
+        - label
+        - provider
+        - keyHint
+      properties:
+        accountId: *a1
+        label: *a3
+        provider: *a2
+        keyHint:
+          type: string
+    FailoverNotice:
+      type: object
+      description: Operator-facing record of an automatic move, kept until
+        dismissed. Identical pending transitions share one notice and a count.
+      additionalProperties: false
+      required:
+        - id
+        - kind
+        - reason
+        - status
+        - from
+        - to
+        - serviceChanged
+        - count
+        - firstAt
+        - lastAt
+      properties:
+        id: *a1
+        kind:
+          type: string
+          enum:
+            - moved
+            - blocked
+        reason:
+          type: string
+          enum:
+            - rejected
+            - exhausted
+        status:
+          anyOf:
+            - type: integer
+            - type: "null"
+        from:
+          $ref: "#/components/schemas/FailoverParty"
+        to:
+          anyOf:
+            - $ref: "#/components/schemas/FailoverParty"
+            - type: "null"
+        serviceChanged:
+          type: boolean
+        count:
+          type: integer
+          minimum: 1
+        firstAt:
+          type: string
+          format: date-time
+        lastAt:
+          type: string
+          format: date-time
+    FailoverState:
+      type: object
+      additionalProperties: false
+      required:
+        - enabled
+        - order
+        - effective
+        - blocked
+        - unhealthyKeys
+        - notices
+      properties:
+        enabled:
+          type: boolean
+        order:
+          description: Operator-ordered accounts allowed to take over work.
+          type: array
+          maxItems: 100
+          items: *a1
+        effective:
+          description: Where new work for the active provider would go now.
+          anyOf:
+            - type: object
+              additionalProperties: false
+              required:
+                - provider
+                - accountId
+                - credentialId
+              properties:
+                provider: *a2
+                accountId: *a1
+                credentialId: *a1
+            - type: "null"
+        blocked:
+          type: boolean
+        unhealthyKeys:
+          type: integer
+          minimum: 0
+        notices:
+          type: array
+          items:
+            $ref: "#/components/schemas/FailoverNotice"
     ProviderAccountAction:
       oneOf:
         - type: object
@@ -2849,6 +3002,67 @@ components:
               const: probe_unsaved
             provider: *a2
             token: *a4
+        - type: object
+          additionalProperties: false
+          required:
+            - action
+            - enabled
+          properties:
+            action:
+              type: string
+              const: set_failover
+            enabled:
+              type: boolean
+        - type: object
+          additionalProperties: false
+          required:
+            - action
+            - accountIds
+          properties:
+            action:
+              type: string
+              const: set_failover_order
+            accountIds:
+              type: array
+              maxItems: 100
+              items: *a1
+        - type: object
+          additionalProperties: false
+          required:
+            - action
+            - accountId
+            - credentialIds
+          properties:
+            action:
+              type: string
+              const: set_key_order
+            accountId: *a1
+            credentialIds:
+              type: array
+              maxItems: 20
+              items: *a1
+        - type: object
+          additionalProperties: false
+          required:
+            - action
+            - accountId
+            - credentialId
+          properties:
+            action:
+              type: string
+              const: reset_key_health
+            accountId: *a1
+            credentialId: *a1
+        - type: object
+          additionalProperties: false
+          required:
+            - action
+            - noticeId
+          properties:
+            action:
+              type: string
+              const: dismiss_notice
+            noticeId: *a1
     ProviderAccountsSnapshot:
       type: object
       additionalProperties: false
@@ -2858,10 +3072,13 @@ components:
         - selectedAccountId
         - selectionReady
         - accounts
+        - failover
         - legacy
       properties:
         configured:
           type: boolean
+        failover:
+          $ref: "#/components/schemas/FailoverState"
         activeProvider: *a2
         selectedAccountId:
           anyOf:

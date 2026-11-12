@@ -324,10 +324,11 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
     if (!credentialStore) return;
     const effective = effectiveConfigSync();
     const provider = effective.sttProvider;
-    const pin = credentialStore.pin(provider);
+    // With automatic failover on, a key already marked rejected/exhausted is skipped here.
+    const pin = credentialStore.pinForNewWork(provider, `intake:${intakeId}`);
     if (pin) credentialStore.resolve(pin);
     else if (!legacyKeys(effective, provider).length) throw new CredentialError("selected_account_unavailable");
-    credentialStore.recordWork(`intake:${intakeId}`, provider, pin);
+    credentialStore.recordWork(`intake:${intakeId}`, pin?.provider ?? provider, pin);
   });
   for (const transcript of (await transcriptStore.listAll()).reverse()) {
     mediaJobStore.enqueueTranscriptReady(transcript);
@@ -527,6 +528,53 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
     });
   }
 
+  /**
+   * Sanitized, public view of automatic key/account failover: counts and flags
+   * only, never an account alias, key hint or identifier.
+   */
+  function sttFailoverStatus() {
+    const check = (attention: boolean, summary: string, pending = 0, serviceChanged = false, blocked = false) => ({
+      attention,
+      // One short sentence for the aggregate summary of the default response.
+      headline: blocked
+        ? "No healthy transcription key or account is left; new work fails until the operator acts."
+        : "An automatic transcription account change needs operator review.",
+      check: {
+        name: "stt_account_failover",
+        label: "Transcription account failover",
+        condition: attention ? "degraded" : "ok",
+        severity: attention ? "warning" : "none",
+        summary,
+        pending_notices: pending,
+        service_changed: serviceChanged,
+        blocked,
+      },
+    });
+    if (!credentialStore) return check(false, "Account registry is not configured; automatic account change is unavailable.");
+    let state;
+    try {
+      state = credentialStore.failoverState(effectiveConfigSync().sttProvider);
+    } catch {
+      // The fixed default response is not altered by an internal read failure.
+      const unavailable = check(false, "Automatic account change state could not be read.");
+      return { ...unavailable, check: { ...unavailable.check, condition: "degraded", severity: "warning" } };
+    }
+    const pending = state.notices.length;
+    const serviceChanged = state.notices.some((notice) => notice.serviceChanged);
+    if (state.blocked) {
+      return check(true, "No enabled, healthy transcription key or account is left; new work fails until the operator acts.",
+        pending, serviceChanged, true);
+    }
+    if (pending > 0) {
+      return check(true, `${pending} automatic account change notice(s) await operator review${
+        serviceChanged ? "; the transcription service changed." : "."}`, pending, serviceChanged);
+    }
+    if (!state.enabled) return check(false, "Automatic account change is off.");
+    return check(false, state.unhealthyKeys > 0
+      ? `Automatic account change is on; ${state.unhealthyKeys} key(s) stay marked rejected or exhausted.`
+      : "Automatic account change is on; no change is pending review.");
+  }
+
   const server = createServer(async (req, res) => {
     setCors(req, res);
     if (req.method === "OPTIONS") {
@@ -578,14 +626,27 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
       const failed = counts.intakes.failed;
       const dead = counts.outbox.dead;
       const sourceStatusDead = counts.intakeStatusOutbox.dead;
-      const degraded = failed > 0 || dead > 0 || sourceStatusDead > 0;
+      const pipelineDegraded = failed > 0 || dead > 0 || sourceStatusDead > 0;
+      // D-029: an automatic account change awaiting review degrades the aggregate.
+      // The default response keeps its fixed three-check shape, which a deployed
+      // monitor pins exactly; the named check is added only on explicit request.
+      const failover = sttFailoverStatus();
+      const includeRaw = parseUrl(req.url ?? "", true).query?.include;
+      const includeFailover = (Array.isArray(includeRaw) ? includeRaw : [includeRaw]).includes(
+        "stt_account_failover"
+      );
+      const degraded = pipelineDegraded || failover.attention;
       json(res, 200, {
         observed_at: new Date().toISOString(),
         condition: degraded ? "degraded" : "ok",
         severity: degraded ? "warning" : "none",
-        summary: degraded
-          ? "Media processing has failed work requiring operator review."
-          : "Media intake and transcript delivery state is healthy.",
+        summary: failover.attention
+          ? pipelineDegraded
+            ? `Media processing has failed work requiring operator review. ${failover.headline}`
+            : failover.headline
+          : pipelineDegraded
+            ? "Media processing has failed work requiring operator review."
+            : "Media intake and transcript delivery state is healthy.",
         checks: [
           {
             name: "media_intake",
@@ -617,6 +678,7 @@ export async function startApiServer(config: AppConfig, opts: ServerOptions) {
                 ? `${sourceStatusDead} source status event(s) exhausted retries.`
                 : `${counts.intakeStatusOutbox.delivered} delivered; ${counts.intakeStatusOutbox.pending + counts.intakeStatusOutbox.delivering} pending.`,
           },
+          ...(includeFailover ? [failover.check] : []),
         ],
       });
       return;
