@@ -1,8 +1,8 @@
-## Automatic key and account failover: reviewed for deployment with the switch off - 2026-11-12
+## Automatic key and account failover: deployed with the switch off - 2026-11-12
 
 Last Updated: 2026-11-12 - Claude (Fable 5.2).
 
-- Version: 0.43.5 in source on main since 2026-11-12 (reviewed; task branch work/stt-failover-20261112). Not deployed: the NAS still runs 0.42.2 from 8c3f0a542691144a80c0c1819dbf4d350b36f43f. The deployment adds five tables to the private database and waits for Carlos's go-ahead.
+- Version: 0.43.5 on main and deployed to the NAS on 2026-11-12 (20:40 UTC) from 6bab5a283ab8aed7558816790dea405583a4a068, after Carlos's go-ahead ("Haz todo"). Images: registry.lamanoriega.com/youtube2text-api:0.43.5@sha256:e442245a0f8b845e28ce204fe91bb2e4ceb8ad98fe802610dadd58fdf6dab74f and youtube2text-web:0.43.5@sha256:2919026ac111f073a7f0dc7fb3dbf05f7c6ce926b87b1168ce050b8aec4fe99c. Previous: 0.42.2 (rollback: scripts/deploy-nas.sh --rollback 0.42.2).
 
 Carlos decided on 2026-11-12 (D-029) that Media2Text must move by itself when a
 key is rejected or out of credit: first to the next key of the same account,
@@ -11,8 +11,13 @@ time, above all when the service changes, because quality can change. His words
 are quoted in docs/operations/STT_FAILOVER_2026-11-12.md. This supersedes only the
 D-028 exclusion of automatic account failover.
 
-What Carlos can use today: nothing new. The installed 0.42.2 account screen
-works as before. Nothing of this work is deployed.
+What Carlos can use today: the installed 0.43.5. In Settings > Cuentas de
+transcripcion there is a new switch for the automatic change, which is off, so
+jobs go to the same account as before. He can already add accounts to the list
+and order them. With the switch off the changes listed below under "Changes
+that apply even with the switch off" are live. The switch should stay off until
+the first follow-up of the fifth review (pending notices past the view's limits)
+is fixed.
 
 Review state. Codex (a different model family) reviewed 0.43.0, 0.43.1, 0.43.3
 and 0.43.4 through the requesting Cortex session; each verdict was do not merge
@@ -66,32 +71,58 @@ Before the switch is turned on (reviewer's conditions, stated in Spanish in the
 operator guide): a saved account is selected and the fallback order has been
 reviewed, because the existing (legacy) configuration takes no part.
 
-Not done: review of 0.43.5; deployment; a browser exercise of the new screen;
-the immediate phone message, which needs separate Home Infra and Sentinel work
-and Carlos's choice to receive it. No paid transcription, budget increase,
-secret, login or runtime change occurred.
+Deployment record (2026-11-12, by the requesting Cortex session, Claude
+claude-fable-5-2): scripts/deploy-nas.sh 0.43.5. Its gates passed on 6bab5a2
+(279 of 279 tests, 4 of 4 verifier tests, backend and web builds, version,
+naming and API contract checks, yt-dlp pin); the build then ran with
+--skip-checks on the same commit, because the first full run had been wrapped
+in the DEV job manager and blocked itself at the image build (see HISTORY).
+The script's verification passed: API health 0.43.5, missing key refused,
+public status served, usage enforcement on (cap 25 USD, 18.59 used in 30 days),
+scheduler disabled, web root protected, operator login and authenticated BFF.
+Read back afterwards without any credential: the private database has the new
+tables (failover_events, failover_notices, failover_order, key_marks,
+key_order), no failover_enabled row (the switch is off), no failover event or
+notice, one saved account; anonymous requests to the BFF, to the notices view
+and to the API accounts route are refused; the web process listens on
+127.0.0.1:3000 only and the Buzz and Media2Text redirects on port 3000 answer
+308. A copy of the private database from before the deployment is on the NAS
+at .deploy-backups/pre-0.43.5-credentials-20261112T195301Z (owner only).
+
+Not done: a browser exercise of the new screen; the three follow-ups of the
+fifth review; the immediate phone message, which needs separate Home Infra and
+Sentinel work and Carlos's choice to receive it; the Dossier refresh for this
+release. Home Infra's reconciliation script was not run after this deployment:
+the product start script already applies the owner's loopback overlay, and the
+script would have replaced the live edge configuration with a source that
+lacks a route now in use (reported to Home Infra). No paid transcription,
+budget increase or secret change occurred.
 
 ### Open work - next concrete step
 
-The requesting session sends branch work/stt-failover-20261112 back to Codex for
-review of the current candidate against docs/llm/REVIEWS.md, then merges and
-deploys it with docs/operations/DEPLOY_PLAYBOOK.md. After that Carlos opens
-Settings > Cuentas de transcripcion, checks that a saved account is selected,
-adds his accounts to the list, orders them and turns on the switch; he should
-see the switch stay on and the list in his order. Earlier work keeps its own
-scope and priority: the account delivery witness, M1-M3 and the long-recording
-economics.
+Fix the first follow-up of the fifth review (docs/llm/REVIEWS.md: pending
+notices past 500 entries or 262,144 characters stop the band from updating,
+silently) in src/credentials/store.ts, web/lib/failoverNoticesProxy.ts and the
+web refresh, have it reviewed by a different model family, and deploy it.
+After that Carlos opens Settings > Cuentas de transcripcion at
+https://y2t.lamanoriega.com/?screen=settings, checks that a saved account is
+selected, adds his accounts to the list, orders them and turns on the switch;
+he should see the switch stay on and the list in his order. The other two
+follow-ups (uncertain provider activation shown as failed; failed status read
+leaving the aggregate green) are tracked in the same review entry. Earlier work
+keeps its own scope and priority: the account delivery witness, M1-M3 and the
+long-recording economics.
 
 ### Trace Anchor
 
 - Role: executor
-- Sent: 2026-11-12 18:42:35 CET (17:42:35 UTC)
-- Subject: D-029 automatic key and account failover, fourth review answered; source 0.43.5
-- Resulting state: branch work/stt-failover-20261112; version=0.43.5; gate=independent review of this candidate; not deployed
-- Repo state: managed task worktree from published baseline 139b0c5aac1d4d8fe0e6c8c02b5526b27ca7633a; primary and peer checkouts untouched
-- Validation: observed on the code of source commit 1b6bfce (0.43.5; its fingerprint did not change between the checks and the commit): npm test 279 tests, 279 pass, 0 fail (248 existing plus 31 in tests/sttFailover.test.ts); backend tsc --noEmit exit 0; web tsc --noEmit exit 0; npm run api:contract:check exit 0; web production build (next build) exit 0. An earlier run of the suite on the same code, before the HANDOFF version line was updated, had 278 pass and 1 fail (the version marker test, for that line only). No provider was called. The screen was not exercised in a browser.
-- Next gate: requesting session obtains the Codex review of this candidate, then merge and deployment; Carlos turns the switch on afterwards
-- Dossier: refresh_required after acceptance of the reviewed change; not refreshed from this unreviewed task branch
+- Sent: 2026-11-12 21:44:00 CET (20:44:00 UTC)
+- Subject: D-029 automatic key and account failover; 0.43.5 deployed to the NAS with the switch off
+- Resulting state: main at the deployed source 6bab5a2 plus documentation; version=0.43.5; gate=first follow-up of the fifth review before the switch is turned on
+- Repo state: primary checkout on main, equal to origin/main; task branch work/stt-failover-20261112 merged
+- Validation: release gates on 6bab5a2 (279 of 279 tests, 4 of 4 verifier tests, builds, contract checks); scripts/deploy-nas.sh verification passed; read-back of the stored switch (off), anonymous refusals and loopback bind
+- Next gate: executing agent fixes the notice-limit follow-up with independent review; Carlos then turns the switch on
+- Dossier: refresh_required for the deployed release; not refreshed
 
 ## Media2Text account delivery readback - 2026-10-24
 

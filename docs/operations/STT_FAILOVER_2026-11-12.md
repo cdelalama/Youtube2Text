@@ -400,30 +400,35 @@ this repository, none of it done:
 
 Recovery is natural: when he dismisses the notices the check returns to ok.
 
-## Deployment: what remains
+## Deployment: done on 2026-11-12, switch off
 
-Nothing below was done. The NAS runs 0.42.2.
+Carlos gave the go-ahead on 2026-11-12 ("Haz todo", to the requesting Cortex
+session, in answer to the question whether to deploy 0.43.5 with the switch
+off).
 
-1. Review of the current candidate by a different model family: done for
-   0.43.5 (fifth pass, docs/llm/REVIEWS.md): merge and deployment with the
-   switch off are acceptable. Then merge to `main`.
-2. Build and publish immutable API and web images of the reviewed version and
-   deploy with
-   `docs/operations/DEPLOY_PLAYBOOK.md`. No new secret, environment variable,
-   port or mount. The private database gains five tables on first start
-   (`CREATE TABLE IF NOT EXISTS`); 0.42.2 ignores them, so rollback is safe.
-   The web and the API need not be replaced at the same instant: while a new
-   web faces an older API (or the API is rolled back first), the banner's read
-   is refused by the web proxy and the band stays empty; the accounts screen
-   keeps working on the older answer. The automatic change itself needs both.
-3. Update Home Infra's deployed-reality records for the new version.
-4. Carlos opens Settings, adds or imports the accounts he wants, orders the
-   list and turns the switch on. Until then routing is unchanged. The
-   reviewer's conditions before turning it on: he has selected a saved account
-   and has reviewed the fallback order, because the existing (legacy)
-   configuration does not take part in automatic changes. The operator guide
-   states both in Spanish.
-5. A first real automatic change can only be observed when a real key is
+1. Review by a different model family: done for 0.43.5 (fifth pass,
+   docs/llm/REVIEWS.md): merge and deployment with the switch off accepted.
+   Merged to `main`.
+2. Deployed with `scripts/deploy-nas.sh 0.43.5` from 6bab5a2 at 20:40 UTC.
+   Images `youtube2text-api:0.43.5@sha256:e442245a…dab74f` and
+   `youtube2text-web:0.43.5@sha256:2919026a…4fe99c`. No new secret,
+   environment variable, port or mount. The private database gained its tables
+   on first start; 0.42.2 ignores them, so
+   `scripts/deploy-nas.sh --rollback 0.42.2` stays possible. A copy of the
+   database from before the start is kept on the NAS, owner only, at
+   `.deploy-backups/pre-0.43.5-credentials-20261112T195301Z`.
+3. Read-back: the stored switch is off (no `failover_enabled` row), there is no
+   failover event or notice, one saved account. The script's own verification
+   passed, anonymous requests are refused, and the web process is bound to
+   loopback.
+4. Home Infra's deployed-reality records: updated by the same session.
+5. Still to do, by Carlos: open Settings, add or import the accounts he wants,
+   order the list and turn the switch on. Until then routing is unchanged. The
+   reviewer's conditions before turning it on: the notice-limit follow-up is
+   fixed, he has selected a saved account and has reviewed the fallback order,
+   because the existing (legacy) configuration does not take part in automatic
+   changes. The operator guide states the last two in Spanish.
+6. A first real automatic change can only be observed when a real key is
    refused. No paid test is implied or authorized by this work.
 
 ## Known limits
