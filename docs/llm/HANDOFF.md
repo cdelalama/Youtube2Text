@@ -76,11 +76,11 @@ economics.
 ### Trace Anchor
 
 - Role: executor
-- Sent: 2026-11-12 18:35:24 CET (17:35:24 UTC)
+- Sent: 2026-11-12 18:42:35 CET (17:42:35 UTC)
 - Subject: D-029 automatic key and account failover, fourth review answered; source 0.43.5
 - Resulting state: branch work/stt-failover-20261112; version=0.43.5; gate=independent review of this candidate; not deployed
 - Repo state: managed task worktree from published baseline 139b0c5aac1d4d8fe0e6c8c02b5526b27ca7633a; primary and peer checkouts untouched
-- Validation: VALIDATION-PENDING: observed on the code of this commit (its fingerprint did not change between the checks and the commit): npm test 279 tests, 279 pass, 0 fail (248 existing plus 31 in tests/sttFailover.test.ts); backend tsc --noEmit exit 0; web tsc --noEmit exit 0; npm run api:contract:check exit 0. The web production build was still running. An earlier run of the suite on the same code, before the HANDOFF version line was updated, had 278 pass and 1 fail (the version marker test, for that line only). No provider was called. The screen was not exercised in a browser.
+- Validation: observed on the code of source commit 1b6bfce (0.43.5; its fingerprint did not change between the checks and the commit): npm test 279 tests, 279 pass, 0 fail (248 existing plus 31 in tests/sttFailover.test.ts); backend tsc --noEmit exit 0; web tsc --noEmit exit 0; npm run api:contract:check exit 0; web production build (next build) exit 0. An earlier run of the suite on the same code, before the HANDOFF version line was updated, had 278 pass and 1 fail (the version marker test, for that line only). No provider was called. The screen was not exercised in a browser.
 - Next gate: requesting session obtains the Codex review of this candidate, then merge and deployment; Carlos turns the switch on afterwards
 - Dossier: refresh_required after acceptance of the reviewed change; not refreshed from this unreviewed task branch
 
