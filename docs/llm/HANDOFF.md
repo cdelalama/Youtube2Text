@@ -89,6 +89,17 @@ and to the API accounts route are refused; the web process listens on
 308. A copy of the private database from before the deployment is on the NAS
 at .deploy-backups/pre-0.43.5-credentials-20261112T195301Z (owner only).
 
+Secrets for Cortex's event route (2026-11-12, about 22:30 Europe/Madrid, on
+Carlos's authorization "Si a las dos cosas" to the Cortex executor): Doppler
+youtube2text/prd gained Y2T_CORTEX_TRANSCRIPT_READ_KEY,
+Y2T_TRANSCRIPT_READY_SECRET and Y2T_TRANSCRIPT_READY_KEY_ID. The two secrets
+were generated on dev-vm and written straight to Doppler; no value was printed
+or stored elsewhere. The service was not restarted, so the running 0.43.5 does
+not know them yet: the read key starts to be accepted at the next start.
+Y2T_TRANSCRIPT_READY_URL stays unset, so no event is delivered; setting it
+still needs the consumer's receiver and the ratified contract version and
+commits (docs/operations/DEPLOY_PLAYBOOK.md, verification checklist).
+
 Not done: a browser exercise of the new screen; the three follow-ups of the
 fifth review; the immediate phone message, which needs separate Home Infra and
 Sentinel work and Carlos's choice to receive it; publication of the refreshed
