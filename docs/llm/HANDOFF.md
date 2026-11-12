@@ -94,8 +94,15 @@ Carlos's authorization "Si a las dos cosas" to the Cortex executor): Doppler
 youtube2text/prd gained Y2T_CORTEX_TRANSCRIPT_READ_KEY,
 Y2T_TRANSCRIPT_READY_SECRET and Y2T_TRANSCRIPT_READY_KEY_ID. The two secrets
 were generated on dev-vm and written straight to Doppler; no value was printed
-or stored elsewhere. The service was not restarted, so the running 0.43.5 does
-not know them yet: the read key starts to be accepted at the next start.
+or stored elsewhere. On Carlos's further go-ahead ("Sí, a todo.") the service
+was restarted through start.sh at 22:39 UTC so that the running 0.43.5 loads
+them; only the API container was recreated. Verified from dev-vm: the read key
+lists transcripts (200) and is refused (401) by runs, cost, settings, intakes,
+accounts, POST /runs and PATCH /settings; a request without a key is refused;
+health, the loopback bind of the web process and the public status are
+unchanged. Cortex then pulled the 39 transcripts it did not have (195 listed,
+155 known, 1 excluded by Cortex). Carlos chose that Cortex reads the key from
+this project at each run instead of holding a copy.
 Y2T_TRANSCRIPT_READY_URL stays unset, so no event is delivered; setting it
 still needs the consumer's receiver and the ratified contract version and
 commits (docs/operations/DEPLOY_PLAYBOOK.md, verification checklist).
