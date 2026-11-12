@@ -2,7 +2,7 @@
 
 Last Updated: 2026-11-12 - Claude (Fable 5.2).
 
-- Version: 0.43.5 candidate in source on task branch work/stt-failover-20261112. Not deployed: the NAS still runs 0.42.2 from 8c3f0a542691144a80c0c1819dbf4d350b36f43f.
+- Version: 0.43.5 in source on main since 2026-11-12 (reviewed; task branch work/stt-failover-20261112). Not deployed: the NAS still runs 0.42.2 from 8c3f0a542691144a80c0c1819dbf4d350b36f43f. The deployment adds five tables to the private database and waits for Carlos's go-ahead.
 
 Carlos decided on 2026-11-12 (D-029) that Media2Text must move by itself when a
 key is rejected or out of credit: first to the next key of the same account,
