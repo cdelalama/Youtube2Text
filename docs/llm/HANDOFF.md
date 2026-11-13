@@ -139,7 +139,7 @@ witness, M1-M3 and the long-recording economics.
 - Repo state: primary checkout on main, equal to origin/main; task branch work/stt-notice-limit-20261113 merged
 - Validation: release gates on 82b5216 (280 of 280 tests, 4 of 4 verifier tests, builds, contract checks); scripts/deploy-nas.sh verification passed; read-back of the stored switch (off), of the running API's notices view (with total), anonymous refusals, loopback bind and the Cortex read key
 - Next gate: Carlos selects a saved account and turns the switch on when he wants
-- Dossier: refresh in progress for 0.43.6 (L4, local, still says not to turn the switch on)
+- Dossier: native local capture L5 (observed 2026-11-13T01:05:41Z, Spanish, local:e75d10ee7643626e644d5dab0230cd8f77f3c32d029c8ea39d5f40d1229ddd9a) from the curated source at 98bc78c: 0.43.6 installed, the switch may be turned on, a saved account must be selected first. Reviewed by Codex gpt-6-astra at effort max (session 01a1d26d-5d49-7d01-befb-3c0eeee5a481, GO WITH FIXES, three wording findings applied and not reviewed again); export verified by trace; read back through Portal's temporary local reader (five records, new headline, page 200). Not shared
 
 ## Media2Text account delivery readback - 2026-10-24
 
