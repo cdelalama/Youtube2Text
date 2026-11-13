@@ -449,6 +449,14 @@ off).
    changes. The operator guide states the last two in Spanish.
 6. A first real automatic change can only be observed when a real key is
    refused. No paid test is implied or authorized by this work.
+7. 0.43.6 (the notice-limit follow-up) was deployed with the same script on
+   2026-11-13 at 00:58 UTC from 82b5216, images
+   `youtube2text-api:0.43.6@sha256:fb1227c7…3245bf` and
+   `youtube2text-web:0.43.6@sha256:c0bb6db0…522a80a`; previous 0.43.5. No
+   schema change. Read-back: the stored switch is still off; the running API
+   answers the notices view with `total`; routing state `legacy`, that is, no
+   saved account is selected yet. The reviewer's condition about the notice
+   limit is met, so item 5 is now only the operator's step.
 
 ## Known limits
 

@@ -1,10 +1,10 @@
-## Automatic key and account failover: notice-limit fix reviewed (0.43.6); 0.43.5 deployed with the switch off - 2026-11-13
+## Automatic key and account failover: 0.43.6 deployed with the switch off; the operator may turn it on - 2026-11-13
 
 Last Updated: 2026-11-13 - Claude (Fable 5.2).
 
-- Version: 0.43.6 on main, reviewed: it fixes the first follow-up of the fifth review (the band's read is bounded at the API to the 50 newest pending notices plus their total, and a read that keeps failing is said on the band). Two independent passes by Codex, the second with verdict GO (docs/llm/REVIEWS.md). Its deployment follows in the same session and is recorded here when done.
-
-- Installed: 0.43.5, deployed to the NAS on 2026-11-12 (20:40 UTC) from 6bab5a283ab8aed7558816790dea405583a4a068, after Carlos's go-ahead ("Haz todo"). Images: registry.lamanoriega.com/youtube2text-api:0.43.5@sha256:e442245a0f8b845e28ce204fe91bb2e4ceb8ad98fe802610dadd58fdf6dab74f and youtube2text-web:0.43.5@sha256:2919026ac111f073a7f0dc7fb3dbf05f7c6ce926b87b1168ce050b8aec4fe99c. Previous: 0.42.2 (rollback: scripts/deploy-nas.sh --rollback 0.42.2).
+- Version: 0.43.6 on main and deployed to the NAS on 2026-11-13 (00:58 UTC) from 82b52168c2c70cd1253481322392d2958ac13abf. Images: registry.lamanoriega.com/youtube2text-api:0.43.6@sha256:fb1227c78b737651f79e9177233acf28a334990370b5f4c15fe23b646e3245bf and youtube2text-web:0.43.6@sha256:c0bb6db0381a28d38fd451925b43e84858b72bd1f820c1ea08afe493f522a80a. Previous: 0.43.5 (rollback: scripts/deploy-nas.sh --rollback 0.43.5). It fixes the first follow-up of the fifth review (the band's read is bounded at the API to the 50 newest pending notices plus their total, and a read that keeps failing is said on the band); two independent passes by Codex, the second with verdict GO (docs/llm/REVIEWS.md).
+- Deployment of 0.43.6: every gate of scripts/deploy-nas.sh passed on that commit (280 of 280 tests, 4 of 4 verifier tests, builds, version, naming and API contract checks, yt-dlp pin) and its verification passed (health 0.43.6, missing key refused, public status served, usage enforcement on with 19.52 of 25 USD used in 30 days, scheduler disabled, web root protected, operator login and authenticated BFF). Read back without credentials: the stored switch is off (no failover_enabled row), no failover event or notice, one stored account; the running API answers the notices view with exactly notices, routing, total and view (total 0, routing off, state legacy: no saved account is selected) and refuses any other query; anonymous BFF and notices view 401; web on 127.0.0.1:3000 with HOSTNAME=127.0.0.1; port-3000 redirects 308; the Cortex read key still lists transcripts and is refused elsewhere. A first run of the gates had stopped at the version test because this file and docs/PROJECT_CONTEXT.md still named 0.43.5 as the source version (fixed in 82b5216, nothing built or installed by that run).
+- Earlier: 0.43.5 was deployed to the NAS on 2026-11-12 (20:40 UTC) from 6bab5a283ab8aed7558816790dea405583a4a068, after Carlos's go-ahead ("Haz todo"). Images: registry.lamanoriega.com/youtube2text-api:0.43.5@sha256:e442245a0f8b845e28ce204fe91bb2e4ceb8ad98fe802610dadd58fdf6dab74f and youtube2text-web:0.43.5@sha256:2919026ac111f073a7f0dc7fb3dbf05f7c6ce926b87b1168ce050b8aec4fe99c. Previous: 0.42.2 (rollback: scripts/deploy-nas.sh --rollback 0.42.2).
 
 Carlos decided on 2026-11-12 (D-029) that Media2Text must move by itself when a
 key is rejected or out of credit: first to the next key of the same account,
@@ -13,13 +13,13 @@ time, above all when the service changes, because quality can change. His words
 are quoted in docs/operations/STT_FAILOVER_2026-11-12.md. This supersedes only the
 D-028 exclusion of automatic account failover.
 
-What Carlos can use today: the installed 0.43.5. In Settings > Cuentas de
-transcripcion there is a new switch for the automatic change, which is off, so
-jobs go to the same account as before. He can already add accounts to the list
-and order them. With the switch off the changes listed below under "Changes
-that apply even with the switch off" are live. The switch should stay off until
-the first follow-up of the fifth review (pending notices past the view's limits)
-is fixed.
+What Carlos can use today: the installed 0.43.6. In Settings > Cuentas de
+transcripcion the switch for the automatic change is off, so jobs go where they
+went before. Nothing stands between him and the switch any more: the
+correction the reviewer asked for is installed. Before he turns it on he has to
+select a saved account, because right now new work uses the existing (legacy)
+configuration, which takes no part in automatic changes; then he adds his
+accounts to the list, orders them and turns the switch on.
 
 Review state. Codex (a different model family) reviewed 0.43.0, 0.43.1, 0.43.3
 and 0.43.4 through the requesting Cortex session; each verdict was do not merge
@@ -120,28 +120,26 @@ budget increase or secret change occurred.
 
 ### Open work - next concrete step
 
-Deploy 0.43.6 with docs/operations/DEPLOY_PLAYBOOK.md (scripts/deploy-nas.sh
-0.43.6, not wrapped in dev-stage) and read back that the stored switch is still
-off. After that the first follow-up no longer stands between Carlos and the
-switch: he opens Settings > Cuentas de transcripcion at
-https://y2t.lamanoriega.com/?screen=settings, checks that a saved account is
-selected, adds his accounts to the list, orders them and turns on the switch;
-he should see the switch stay on and the list in his order. Tracked, not
-blocking (docs/llm/REVIEWS.md): two failed band reads finishing in reverse
-order count as one; an uncertain provider activation shown as failed; a failed
-status read leaving the aggregate green. Earlier work keeps its own scope and
-priority: the account delivery witness, M1-M3 and the long-recording economics.
+Carlos, when he wants: open Settings > Cuentas de transcripcion at
+https://y2t.lamanoriega.com/?screen=settings, select a saved account, add his
+accounts to the list, order them and turn on the switch; he should see the
+switch stay on and the list in his order. Agent, without urgency
+(docs/llm/REVIEWS.md): two failed band reads finishing in reverse order count
+as one; an uncertain provider activation shown as failed; a failed status read
+leaving the aggregate green; publication of the refreshed Dossier to the shared
+reader. Earlier work keeps its own scope and priority: the account delivery
+witness, M1-M3 and the long-recording economics.
 
 ### Trace Anchor
 
 - Role: executor
-- Sent: 2026-11-13 01:20:27 CET (00:20:27 UTC)
-- Subject: D-029 automatic key and account failover; notice-limit follow-up fixed as 0.43.6 and reviewed
-- Resulting state: task branch work/stt-notice-limit-20261113 at 0.43.6; gate=deployment with the switch off; production still 0.43.5
-- Repo state: managed task worktree from published main eaf7bba; primary checkout untouched until the merge
-- Validation: tests/sttFailover.test.ts 32 of 32; backend and web tsc --noEmit exit 0; openapi lint valid; Codex second pass GO (session 01a1d241-10a6-7d61-b0d2-7156b3042421). The full suite and the builds run as the deployment's gates
-- Next gate: executing agent deploys 0.43.6; then Carlos may turn the switch on
-- Dossier: refresh_required for 0.43.6 once deployed; L4 (local) describes 0.43.5 and says not to turn the switch on yet
+- Sent: 2026-11-13 02:00:38 CET (01:00:38 UTC)
+- Subject: D-029 automatic key and account failover; 0.43.6 deployed to the NAS with the switch off
+- Resulting state: main at the deployed source 82b5216 plus documentation; version=0.43.6; gate=cleared for the operator to turn the switch on
+- Repo state: primary checkout on main, equal to origin/main; task branch work/stt-notice-limit-20261113 merged
+- Validation: release gates on 82b5216 (280 of 280 tests, 4 of 4 verifier tests, builds, contract checks); scripts/deploy-nas.sh verification passed; read-back of the stored switch (off), of the running API's notices view (with total), anonymous refusals, loopback bind and the Cortex read key
+- Next gate: Carlos selects a saved account and turns the switch on when he wants
+- Dossier: refresh in progress for 0.43.6 (L4, local, still says not to turn the switch on)
 
 ## Media2Text account delivery readback - 2026-10-24
 

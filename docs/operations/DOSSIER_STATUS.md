@@ -1,25 +1,31 @@
 # Media2Text curated project status
 
-Observed: 2026-11-12. This is the sole source admitted to the dedicated technical
+Observed: 2026-11-13. This is the sole source admitted to the dedicated technical
 Dossier. It contains no media content, personal titles, raw conversations or
 credentials. Engineering documentation remains English; the operator reader is
 curated in Spanish. It is a project status, not a complete operational archive.
 
-## Current automatic-failover increment (2026-11-12)
+## Current automatic-failover increment (2026-11-13)
 
-Media2Text 0.43.5 is installed on the NAS since November 12 (20:40 UTC), from
-source 6bab5a2, which is the reviewed 0.43.5 code. The previous version was
-0.42.2 and can be restored.
+Media2Text 0.43.6 is installed on the NAS since November 13, from source
+82b5216. It replaces 0.43.5, installed the evening before with the same
+feature; the previous release can be restored.
 
 What Carlos can use now: everything he had, plus, in Settings > Cuentas de
-transcripcion, a new switch for the automatic change of key and account. The
+transcripcion, the switch for the automatic change of key and account. The
 switch is off, so new transcriptions go to the same account as before and
-nothing moves by itself. He can already add his accounts to the list and order
-them. He should leave the switch off for now: one correction requested by the
-independent review comes first (below).
+nothing moves by itself. He can turn it on when he wants: the correction that
+the independent review asked for before that is installed.
 
-What the switch will do once it is on (decision D-029, his words of November
-12: "si una cuenta se queda sin saldo, debería intentar con la misma cuenta
+How he turns it on: he opens Settings > Cuentas de transcripcion and selects a
+saved account. Right now none is selected: new work uses the existing (legacy)
+configuration, which takes no part in automatic changes, so the switch would
+change nothing until he selects one. Then he adds his accounts to the list in
+the order he wants and turns the switch on. His step is done when he sees the
+switch stay on and the list in his order.
+
+What the switch does once it is on (decision D-029, his words of November 12:
+"si una cuenta se queda sin saldo, debería intentar con la misma cuenta
 conseguir un token nuevo y si no, cambiar de cuenta. Y decídmelo, sobre todo
 porque puede cambiar la calidad"): when a provider definitively refuses a
 request before accepting the audio, in a shape that provider documents (for
@@ -29,38 +35,48 @@ It tells him every time with a notice that is kept until he dismisses it and is
 shown on every screen, with a plain sentence when the service changed. Any
 other failure fails the job as before. Usage caps are unchanged.
 
-What already changed, with the switch off: provider errors are worded with
-fixed parts and never show what the provider wrote; a refused key is marked on
-the accounts screen until he clears the mark, and is still used; the console
-re-reads accounts every 20 seconds and shows a band when a notice is pending or
-new jobs are being refused; the public status says degraded while the selected
-account cannot take work.
+What changed with 0.43.6: the band at the top of every screen spells out the
+newest pending notice and says how many more there are, whatever their number;
+all of them are listed in Settings, each with its dismiss button. If the
+console cannot read the state of the accounts twice in a row, the band says
+"Estado sin comprobar" and that what it shows may be out of date; it keeps
+retrying and the message goes away when a read works. Before, with a very large
+number of pending notices the band could stop updating without saying so.
 
-How it was checked: a model from a different family (Codex) reviewed the work
-in five passes and accepted its deployment with the switch off. The test suite
-passes (279 of 279). The deployment's own verification passed (version, refusal
-without a key, usage enforcement, scheduler off, operator login). Afterwards
-the stored switch was read as off, with no automatic change recorded and his
-one saved account in place. The agent did not exercise the new screen in a
-browser.
+What already applied with the switch off, since 0.43.5: provider errors are
+worded with fixed parts and never show what the provider wrote; a refused key
+is marked on the accounts screen until he clears the mark, and is still used;
+the console re-reads accounts every 20 seconds; the public status says degraded
+while the selected account cannot take work.
+
+How it was checked: a model from a different family (Codex) reviewed the
+feature in five passes and accepted its deployment with the switch off, and
+reviewed the correction in two more passes, the second with the verdict that it
+can be deployed and that the correction no longer stands between him and the
+switch. The test suite passes (280 of 280). The deployment's own verification
+passed (version, refusal without a key, usage enforcement, scheduler off,
+operator login). Afterwards the stored switch was read as off, with no
+automatic change recorded and one stored account in place, and the running
+service answered the band's read in its new form. The agent did not exercise
+the screen in a browser.
 
 What remains and who acts:
 
-- Executing agent: correct the first of three follow-ups left by the review
-  (with more than 500 pending notices the band would stop updating without
-  saying so), have it reviewed and install it. The other two are smaller and
-  are written down.
-- Carlos, after that: open Settings > Cuentas de transcripcion, check that a
-  saved account is selected, add his accounts to the list in the order he
-  wants and turn the switch on. He should see the switch stay on and the list
-  in his order. The existing (legacy) configuration takes no part in automatic
-  changes, which is why a saved account must be selected first.
+- Carlos: select a saved account and turn the switch on when he wants, as
+  described above.
+- Executing agent, without urgency: three small points the review left written
+  down (the "Estado sin comprobar" message can appear one attempt, 20 seconds,
+  late in one ordering of failures; a provider activation whose answer is lost
+  can be shown as failed although it was saved; a failed read of the account
+  state leaves the public status as ok).
 - Not built: an immediate message to his phone when a change happens. It needs
   separate work and his choice to receive it.
 
 A first real automatic change can only be seen when a real key is refused. No
-paid test was made and none is implied. The account-management section below
-describes 0.42.2 and stays as the record of that delivery.
+paid test was made and none is implied. Since the evening of November 12 the
+service also accepts a key that can only read transcripts, which Cortex uses to
+import new recordings; no event is sent to Cortex yet. The account-management
+section below describes 0.42.2 and stays as the record of that delivery.
 
 ## Account-management increment (2026-10-24)
 

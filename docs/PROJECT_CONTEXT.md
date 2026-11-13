@@ -53,16 +53,15 @@ This separation keeps the pipeline local-first and makes later extensions straig
 | Orchestrator (CLI) | Pipeline coordination | TBD | Concurrency, retries, filters. |
 
 ## Current Status (2026-11-13)
-v0.43.6 candidate in source on `main` carries automatic key and account
-failover with operator notice (D-029), off by default, and fixes the first
-follow-up of its fifth independent review: the band's read of pending notices
-is bounded at the API and a read that keeps failing is reported on the band. A
-different model family reviewed the feature in five passes and this fix in two,
-the second with the verdict GO; see `docs/llm/REVIEWS.md` and
-`docs/operations/STT_FAILOVER_2026-11-12.md`. The NAS has run the feature with
-its switch off since 2026-11-12; `docs/llm/HANDOFF.md` names the installed
-release and records each deployment. The section below describes the earlier
-account-interface runtime.
+v0.43.6 stable runtime on the NAS since 2026-11-13 carries automatic key and
+account failover with operator notice (D-029), with its switch off, and the fix
+for the first follow-up of its fifth independent review: the band's read of
+pending notices is bounded at the API and a read that keeps failing is reported
+on the band. A different model family reviewed the feature in five passes and
+this fix in two, the second with the verdict GO; see `docs/llm/REVIEWS.md` and
+`docs/operations/STT_FAILOVER_2026-11-12.md`. `docs/llm/HANDOFF.md` records
+each deployment. The section below describes the earlier account-interface
+runtime.
 
 ## Installed runtime (2026-10-24)
 v0.42.2 stable runtime includes the reviewed account interface. Actual mobile/
