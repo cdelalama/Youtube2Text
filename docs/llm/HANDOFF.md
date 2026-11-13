@@ -2,9 +2,9 @@
 
 Last Updated: 2026-11-13 - Claude (Fable 5.2).
 
-- Candidate: 0.43.6 in source, fixing the first follow-up of the fifth review (the band's read is bounded at the API to the 50 newest pending notices plus their total, and a read that keeps failing is said on the band). Two independent passes by Codex, the second with verdict GO (docs/llm/REVIEWS.md). Deployment follows in the same session and is recorded below when done.
+- Version: 0.43.6 on main, reviewed: it fixes the first follow-up of the fifth review (the band's read is bounded at the API to the 50 newest pending notices plus their total, and a read that keeps failing is said on the band). Two independent passes by Codex, the second with verdict GO (docs/llm/REVIEWS.md). Its deployment follows in the same session and is recorded here when done.
 
-- Version: 0.43.5 on main and deployed to the NAS on 2026-11-12 (20:40 UTC) from 6bab5a283ab8aed7558816790dea405583a4a068, after Carlos's go-ahead ("Haz todo"). Images: registry.lamanoriega.com/youtube2text-api:0.43.5@sha256:e442245a0f8b845e28ce204fe91bb2e4ceb8ad98fe802610dadd58fdf6dab74f and youtube2text-web:0.43.5@sha256:2919026ac111f073a7f0dc7fb3dbf05f7c6ce926b87b1168ce050b8aec4fe99c. Previous: 0.42.2 (rollback: scripts/deploy-nas.sh --rollback 0.42.2).
+- Installed: 0.43.5, deployed to the NAS on 2026-11-12 (20:40 UTC) from 6bab5a283ab8aed7558816790dea405583a4a068, after Carlos's go-ahead ("Haz todo"). Images: registry.lamanoriega.com/youtube2text-api:0.43.5@sha256:e442245a0f8b845e28ce204fe91bb2e4ceb8ad98fe802610dadd58fdf6dab74f and youtube2text-web:0.43.5@sha256:2919026ac111f073a7f0dc7fb3dbf05f7c6ce926b87b1168ce050b8aec4fe99c. Previous: 0.42.2 (rollback: scripts/deploy-nas.sh --rollback 0.42.2).
 
 Carlos decided on 2026-11-12 (D-029) that Media2Text must move by itself when a
 key is rejected or out of credit: first to the next key of the same account,
