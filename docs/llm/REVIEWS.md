@@ -1,3 +1,55 @@
+## 2026-11-13 - Automatic account failover: notice-limit follow-up (0.43.6), two independent passes, GO
+
+The first follow-up of the fifth review (pending notices past the proxy's
+limits stop the band from updating, silently) was fixed by the requesting
+Cortex session (Claude, claude-fable-5-2), which also obtained the reviews and
+writes this entry. Both passes: Codex gpt-6-astra, read-only, inline packet
+with the complete diff against the deployed 0.43.5 and the surrounding code;
+model metadata read from each session header. The reviewer did not run the
+tests.
+
+First pass, session 01a1d231-a1cf-7583-bf67-36b1d65060d7, reasoning effort
+high (the Codex default configured on dev-vm at that moment; the earlier passes
+of this work ran at max). Bounded response coordinated with the producer:
+CLOSED. Access to every pending notice: CLOSED. Visible failures: NOT CLOSED.
+Verdict GO WITH FIXES (finding 1).
+
+1. SHOULD-FIX. The console recorded a successful read before asking the
+   snapshot gate, so an answer the gate drops could clear the warning and
+   restart the count of failures; the next failure then counted as the first
+   and old state stayed on screen without a warning. Fixed: `createNoticeReader`
+   (web/lib/failoverNotices.ts) joins both rules; an answer that the gate drops
+   leaves the warning and the count as they were, and only an applied answer
+   records the success. A test drives the tracker and the real gate through the
+   reviewer's scenario and three related ones.
+2. MINOR. `MAX_TOTAL = 1_000_000` was one more limit that depended on
+   accumulation. Fixed: no ceiling; `total` is a safe integer not less than the
+   notices carried.
+
+Also taken from that pass: the longest-answer test now uses labels of control
+characters, the longest serialization, and the record says that a 0.43.6 web in
+front of a 0.43.5 API still fails past 500 pending notices, now with the
+warning, and that the band's rendering has no test of its own.
+
+Second pass, session 01a1d241-10a6-7d61-b0d2-7156b3042421, reasoning effort
+max (set for the call). Finding 1: RESOLVED. Finding 2: RESOLVED. Verdict: GO,
+deploy 0.43.6 with the switch off; the first follow-up no longer blocks the
+operator from turning it on. The reviewer found no defect in
+`createNoticeReader` (one call to `gate.accepts`, the count kept across dropped
+answers, the warning cleared by an applied answer, nothing shown before
+removed).
+
+Open from the second pass, MINOR, not blocking, NOT fixed in 0.43.6 so that
+the deployed code is exactly the reviewed code: in `createNoticeReadTracker`,
+two failed reads that finish in reverse order count as one (the older one is
+ignored), so the warning appears one attempt later than announced; during a
+lasting failure the next attempt raises it. Wanted: count distinct failures
+since the last applied success whatever their order, with a test.
+
+Still open from the fifth review, not touched by 0.43.6: an uncertain provider
+activation shown as a definite failure; a failed status read leaving the
+aggregate health green.
+
 ## 2026-11-12 - Automatic account failover: fifth independent review (0.43.5): merge and deploy with the switch off
 
 Review obtained by the requesting Cortex session (Claude, claude-fable-5-2),

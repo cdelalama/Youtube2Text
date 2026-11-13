@@ -125,3 +125,88 @@ export function failoverRoutingText(routing: FailoverRouting, t: Translate): str
   return routing.enabled ? where
     : `${where} ${t("El cambio automático está desactivado.", "Automatic change is off.")}`;
 }
+
+/**
+ * How many pending notices exist beyond the one the banner spells out. `total`
+ * comes from the API (0.43.6 or later, which carries only the newest notices
+ * in the view). An API from 0.43.0 to 0.43.5 sends every notice and no total,
+ * so the number shown stands in for it.
+ */
+export function moreNoticesCount(total: number | undefined, shown: number): number {
+  const all = typeof total === "number" && Number.isInteger(total) && total > shown ? total : shown;
+  return Math.max(0, all - 1);
+}
+
+/** After this many failed reads in a row the banner says that it may be out of date. */
+export const NOTICE_READ_FAILURES_BEFORE_WARNING = 2;
+
+/**
+ * Counts consecutive failed reads of the notices view. One failed read is
+ * normal while a release is being replaced or the network blinks; a second in
+ * a row means the banner may be hiding a change, and the console says so
+ * instead of keeping what it last knew in silence. Results can arrive out of
+ * order: one that is older than a result already counted changes nothing.
+ * `succeeded` and `failed` return whether the banner must warn now.
+ */
+export function createNoticeReadTracker(threshold = NOTICE_READ_FAILURES_BEFORE_WARNING) {
+  let started = 0;
+  let counted = 0;
+  let failures = 0;
+  return {
+    /** Call when a read starts; give the token to succeeded() or failed(). */
+    begin(): number {
+      started += 1;
+      return started;
+    },
+    succeeded(token: number): boolean {
+      if (token > counted) {
+        counted = token;
+        failures = 0;
+      }
+      return failures >= threshold;
+    },
+    failed(token: number): boolean {
+      if (token > counted) {
+        counted = token;
+        failures += 1;
+      }
+      return failures >= threshold;
+    },
+    /** Whether the banner must warn now, without counting anything. */
+    warns(): boolean {
+      return failures >= threshold;
+    },
+  };
+}
+
+/** The part of the snapshot gate (snapshotGate.ts) that a read needs. */
+type ReadGate = { beginRead(): number; accepts(token: number): boolean };
+
+/**
+ * One read of the notices view, from its start to what the console does with
+ * the answer. It joins the two rules that decide that: the snapshot gate, which
+ * drops an answer that is older than a change made on the screen, and the
+ * tracker of failed reads. An answer the gate drops did not refresh what the
+ * banner shows, so it neither clears the warning nor restarts the count of
+ * failures; only an answer that is applied does.
+ */
+export function createNoticeReader(gate: ReadGate, tracker = createNoticeReadTracker()) {
+  return {
+    /** Call when the read starts; give the token to settle() with its answer. */
+    begin(): { read: number; attempt: number } {
+      return { read: gate.beginRead(), attempt: tracker.begin() };
+    },
+    /** `apply`: show this answer. `warn`: the banner must say it may be out of date. */
+    settle(token: { read: number; attempt: number }, answered: boolean): { apply: boolean; warn: boolean } {
+      if (!answered) return { apply: false, warn: tracker.failed(token.attempt) };
+      if (!gate.accepts(token.read)) return { apply: false, warn: tracker.warns() };
+      return { apply: true, warn: tracker.succeeded(token.attempt) };
+    },
+  };
+}
+
+/** What the banner says when it could not read notices and routing. */
+export function failoverReadFailureText(t: Translate): string {
+  return t("No se ha podido comprobar el estado de las cuentas de transcripción; lo que se muestra aquí puede estar desactualizado. Se vuelve a intentar solo.",
+    "The state of the transcription accounts could not be checked; what is shown here may be out of date. It retries by itself.");
+}

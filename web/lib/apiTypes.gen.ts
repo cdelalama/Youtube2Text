@@ -1638,11 +1638,13 @@ export interface components {
             /** Format: date-time */
             lastAt: string;
         };
-        /** @description Pending notices and where new work goes now. A key hint appears only inside a notice. `view` marks this answer, so a reader can tell it from the account listing that a release before 0.43.0 returns for the same request. */
+        /** @description Pending notices and where new work goes now. A key hint appears only inside a notice. `view` marks this answer, so a reader can tell it from the account listing that a release before 0.43.0 returns for the same request. `notices` carries at most the 50 newest; `total` counts every pending notice (releases 0.43.0 to 0.43.5 sent every notice and no `total`). */
         FailoverNoticesView: {
             /** @enum {string} */
             view: "notices";
             notices: components["schemas"]["FailoverNotice"][];
+            /** @description Every pending notice, including those not carried in `notices`. */
+            total: number;
             routing: {
                 enabled: boolean;
                 /**

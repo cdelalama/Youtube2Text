@@ -47,7 +47,7 @@ Installed account UI is usable. Complete the existing-password event binding and
 
 Media2Text 0.42.2 is installed and its real account/login/recovery checks pass. Follow docs/llm/HANDOFF.md and the operator guide; formal access metadata and reviewed documentary delivery remain open. Earlier independent priorities are unchanged.
 
-<!-- doc-version: 0.43.5 -->
+<!-- doc-version: 0.43.6 -->
 
 ## Current continuation - approved STT account administration, 2026-10-23
 

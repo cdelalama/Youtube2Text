@@ -8,7 +8,7 @@ import { RunManager, type RunCreateRequest, type RunRecord } from "../src/api/ru
 import { startApiServer } from "../src/api/server.js";
 import { configSchema, type AppConfig, type SttProviderId } from "../src/config/schema.js";
 import { signAdminProof } from "../src/credentials/adminProof.js";
-import { CredentialError, CredentialStore, type CredentialPin } from "../src/credentials/store.js";
+import { CredentialError, CredentialStore, NOTICES_VIEW_LIMIT, type CredentialPin } from "../src/credentials/store.js";
 import type { PipelineEvent } from "../src/pipeline/events.js";
 import { runPipeline } from "../src/pipeline/run.js";
 import {
@@ -43,7 +43,7 @@ import { TranscriptStore } from "../src/transcripts/store.js";
 import { UsageLedger, type UsagePolicy } from "../src/usage/index.js";
 import { proxyPublicMediaStatus } from "../web/lib/publicStatusProxy.js";
 import { proxyCredentials } from "../web/lib/credentialProxy.js";
-import { failoverNoticeText, failoverNoticeTitle, failoverRoutingText, routingRefusesNewWork, type FailoverNotice, type FailoverRouting } from "../web/lib/failoverNotices.js";
+import { createNoticeReader, createNoticeReadTracker, failoverNoticeText, failoverNoticeTitle, failoverReadFailureText, failoverRoutingText, moreNoticesCount, routingRefusesNewWork, type FailoverNotice, type FailoverRouting } from "../web/lib/failoverNotices.js";
 import { runAccountAction } from "../web/lib/accountAction.js";
 import { isExactNoticesQuery, readNoticesView } from "../web/lib/failoverNoticesProxy.js";
 import { createSnapshotGate } from "../web/lib/snapshotGate.js";
@@ -1499,7 +1499,7 @@ test("web proxy: the banner's read needs the operator session and the exact quer
     to: { accountId: accountB, label: "Cuenta de respaldo", provider: "assemblyai", keyHint: `••••${K3.slice(-4)}` },
     serviceChanged: true, count: 2, firstAt: "2026-11-12T10:00:00.000Z", lastAt: "2026-11-12T10:05:00.000Z" };
   const routing = { enabled: true, state: "account", reason: null, provider: "assemblyai", accountLabel: "Cuenta de respaldo" };
-  const noticesView = { view: "notices", notices: [notice], routing };
+  const noticesView = { view: "notices", notices: [notice], total: 1, routing };
   // What an API older than 0.43.0 answers to the very same request: it ignores the query and lists the accounts.
   const olderApi = { configured: true, activeProvider: "deepgram", selectedAccountId: accountA, selectionReady: true,
     accounts: [{ id: accountA, provider: "deepgram", label: "Cuenta personal", enabled: true, selected: true, currentCredentialId: notice.id,
@@ -1568,6 +1568,22 @@ test("web proxy: the banner's read needs the operator session and the exact quer
       assert.equal(readNoticesView(other), undefined);
     }
 
+    // The view carries its newest notices and the total of pending ones, which may be larger. An API from
+    // 0.43.0 to 0.43.5 sends every notice and no total: its view is still read, and the list is its own total.
+    const beforeTotal = { view: "notices", notices: [notice], routing };
+    assert.deepEqual(readNoticesView(beforeTotal), noticesView);
+    assert.deepEqual(readNoticesView({ ...noticesView, total: 620 }), { ...noticesView, total: 620 });
+    assert.deepEqual(readNoticesView({ ...noticesView, total: Number.MAX_SAFE_INTEGER }), { ...noticesView, total: Number.MAX_SAFE_INTEGER },
+      "the count of pending notices is never a reason to refuse the view");
+    for (const total of [0, -1, 1.5, "1", null, 2 ** 53]) {
+      assert.equal(readNoticesView({ ...noticesView, total }), undefined, `total ${String(total)} is not a count of at least the notices carried`);
+    }
+    assert.equal(readNoticesView({ ...noticesView, total: 620, accounts: olderApi.accounts }), undefined);
+    upstream = () => Response.json(beforeTotal);
+    assert.deepEqual(await (await request("?view=notices")).json(), noticesView, "the view of an older API gets its total from its list");
+    upstream = () => Response.json({ ...noticesView, total: 620 });
+    assert.deepEqual(await (await request("?view=notices")).json(), { ...noticesView, total: 620 });
+
     // Without a query the same path is the accounts screen's own read.
     upstream = () => Response.json(olderApi);
     assert.equal((await request("")).status, 200);
@@ -1582,6 +1598,98 @@ test("web proxy: the banner's read needs the operator session and the exact quer
     for (const key of Object.keys(process.env)) if (!(key in previous)) delete process.env[key];
     Object.assign(process.env, previous);
   }
+});
+
+test("notices view: the 50 newest and the true total whatever is pending, every notice still on the accounts screen, and a read that keeps failing is said", () => {
+  const f = fixture();
+  try {
+    const a = f.store.create("deepgram", "Personal", [K1]); const b = f.store.create("assemblyai", "Respaldo", [K3]);
+    f.store.select(a);
+    assert.deepEqual([f.store.noticesView("deepgram").total, f.store.noticesView("deepgram").notices.length], [0, 0]);
+
+    // Far more pending notices than the web proxy accepts in one answer (500, or 262,144 characters).
+    const pending = 620;
+    const id = (n: number) => `notice-${String(n).padStart(4, "0")}`;
+    const db = new DatabaseSync(join(f.dir, "credentials.sqlite"));
+    try {
+      const insert = db.prepare("INSERT INTO failover_notices VALUES(?,?,?,?,?,?,?,?,?,1,?,?,NULL)");
+      for (let n = 0; n < pending; n++) {
+        const at = new Date(Date.UTC(2026, 10, 12, 10, 0, n)).toISOString();
+        insert.run(id(n), "moved", "exhausted", 402, a, f.keyId(a, K1), b, f.keyId(b, K3), 1, at, at);
+      }
+    } finally { db.close(); }
+
+    const view = f.store.noticesView("deepgram");
+    assert.equal(NOTICES_VIEW_LIMIT, 50);
+    assert.deepEqual([view.total, view.notices.length, view.notices[0]!.id, view.notices.at(-1)!.id], [pending, 50, id(619), id(570)]);
+    // The answer the banner reads stays small and is the view the web proxy accepts, total included.
+    const wire = JSON.stringify(view);
+    assert.ok(wire.length < 262_144 / 8, `the bounded view is ${wire.length} characters`);
+    assert.deepEqual(readNoticesView(JSON.parse(wire)), JSON.parse(wire));
+    // The unbounded list of the same notices is what crossed the proxy's limits before: it is refused.
+    const unbounded = { view: "notices", notices: f.store.notices(), routing: view.routing };
+    assert.equal(unbounded.notices.length, pending); assert.equal(readNoticesView(unbounded), undefined);
+    // Every pending notice is still listed for the accounts screen, where each can be dismissed.
+    assert.equal(f.store.failoverState("deepgram").notices.length, pending);
+    assert.equal(f.store.pendingNoticeCount(), pending);
+
+    // Dismissing the newest brings the next one into the view; the total follows.
+    f.store.dismissNotice(id(619));
+    const next = f.store.noticesView("deepgram");
+    assert.deepEqual([next.total, next.notices.length, next.notices[0]!.id, next.notices.at(-1)!.id], [619, 50, id(618), id(569)]);
+    for (let n = 618; n >= 40; n--) f.store.dismissNotice(id(n));
+    const few = f.store.noticesView("deepgram");
+    assert.deepEqual([few.total, few.notices.length, few.notices[0]!.id, few.notices.at(-1)!.id], [40, 40, id(39), id(0)]);
+
+    // The longest answer this API can give: 50 notices with every field at its longest. A label of 80
+    // control characters is the longest on the wire, because JSON writes each of them with six.
+    const wide = "\u0001".repeat(80);
+    assert.equal(JSON.stringify(wide).length, 482);
+    const party = (provider: string) => ({ accountId: "f".repeat(64), label: wide, provider, keyHint: "••••wxyz" });
+    const longest = { view: "notices", total: Number.MAX_SAFE_INTEGER, routing: { enabled: true, state: "unavailable", reason: "provider_mismatch", provider: "openai_whisper", accountLabel: wide },
+      notices: Array.from({ length: NOTICES_VIEW_LIMIT }, (_, n) => ({ id: `${"e".repeat(60)}${String(n).padStart(4, "0")}`, kind: "blocked", reason: "exhausted", status: 599,
+        from: party("openai_whisper"), to: party("openai_whisper"), serviceChanged: false, count: Number.MAX_SAFE_INTEGER,
+        firstAt: "2026-11-12T10:00:00.000+00:00", lastAt: "2026-11-12T10:00:00.000+00:00" })) };
+    assert.ok(JSON.stringify(longest).length < 262_144 / 2, `the longest bounded view is ${JSON.stringify(longest).length} characters`);
+    assert.deepEqual(readNoticesView(longest), longest);
+
+    // "There are N more": the total when the API sends one, the list itself for an API that does not.
+    assert.deepEqual([moreNoticesCount(620, 50), moreNoticesCount(undefined, 3), moreNoticesCount(1, 1), moreNoticesCount(0, 0), moreNoticesCount(2, 50), moreNoticesCount(1.5, 2)],
+      [619, 2, 0, 0, 49, 1]);
+
+    // One failed read is not said; two in a row are; a success clears it; a late older result changes nothing.
+    const reads = createNoticeReadTracker();
+    const [r1, r2, r3, r4, r5, r6] = [reads.begin(), reads.begin(), reads.begin(), reads.begin(), reads.begin(), reads.begin()];
+    assert.equal(reads.failed(r1), false);
+    assert.equal(reads.failed(r2), true, "the second failure in a row is said on the banner");
+    assert.equal(reads.succeeded(r3), false, "a success clears the warning");
+    assert.equal(reads.failed(r5), false);
+    assert.equal(reads.succeeded(r4), false, "a success older than a counted failure does not clear it");
+    assert.equal(reads.failed(r4), false, "nor is an older failure counted twice");
+    assert.equal(reads.failed(r6), true);
+
+    // The two rules together, as the console uses them. An answer that the snapshot gate drops did not
+    // refresh the banner, so it must not clear the warning or restart the count of failures.
+    const gate = createSnapshotGate(); const reader = createNoticeReader(gate);
+    assert.deepEqual(reader.settle(reader.begin(), false), { apply: false, warn: false });
+    assert.deepEqual(reader.settle(reader.begin(), false), { apply: false, warn: true }, "two failed reads: the banner warns");
+    const overtaken = reader.begin();
+    gate.changed(); gate.changed();   // the operator changes something on the accounts screen while that read is in flight
+    assert.deepEqual(reader.settle(overtaken, true), { apply: false, warn: true }, "a dropped answer leaves the warning up");
+    assert.deepEqual(reader.settle(reader.begin(), false), { apply: false, warn: true }, "and the next failure still warns");
+    assert.deepEqual(reader.settle(reader.begin(), true), { apply: true, warn: false }, "an applied answer clears it");
+    // Without a warning up, a dropped answer does not hide the failures counted before it either.
+    assert.deepEqual(reader.settle(reader.begin(), false), { apply: false, warn: false });
+    const dropped = reader.begin(); gate.changed(); gate.changed();
+    assert.deepEqual(reader.settle(dropped, true), { apply: false, warn: false });
+    assert.deepEqual(reader.settle(reader.begin(), false), { apply: false, warn: true }, "the failure before the dropped answer still counts");
+    // An older answer arriving after a newer one was applied is dropped by the gate and changes nothing.
+    const older = reader.begin(); const newer = reader.begin();
+    assert.deepEqual(reader.settle(newer, true), { apply: true, warn: false });
+    assert.deepEqual(reader.settle(older, true), { apply: false, warn: false });
+    const es = failoverReadFailureText((spanish) => spanish); const en = failoverReadFailureText((_, english) => english);
+    assert.match(es, /No se ha podido comprobar/); assert.match(es, /puede estar desactualizado/); assert.match(en, /may be out of date/);
+  } finally { f.cleanup(); }
 });
 
 test("account API and public status: order, switch, notice, dismissal, unavailable selection and the fixed default status shape", async () => {
@@ -1684,8 +1792,9 @@ test("account API and public status: order, switch, notice, dismissal, unavailab
 
     // The banner shown on every screen reads notices and current routing only.
     const view = await (await fetch(`${base}/provider-accounts?view=notices`, { headers })).json() as
-      { view: string; notices: FailoverNotice[]; routing: Record<string, unknown> };
-    assert.deepEqual(Object.keys(view).sort(), ["notices", "routing", "view"], "no account listing and no legacy keys");
+      { view: string; notices: FailoverNotice[]; total: number; routing: Record<string, unknown> };
+    assert.deepEqual(Object.keys(view).sort(), ["notices", "routing", "total", "view"], "no account listing and no legacy keys");
+    assert.equal(view.total, 2, "the total counts every pending notice");
     assert.equal(view.view, "notices", "the answer is marked, so the web can tell it from an older API's account listing");
     assert.deepEqual(readNoticesView(view), view, "the web's reader accepts exactly what this API answers");
     assert.equal(readNoticesView(read), undefined, "and never the account listing");

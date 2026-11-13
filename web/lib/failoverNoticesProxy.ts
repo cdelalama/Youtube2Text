@@ -25,10 +25,16 @@ import type { FailoverNotice, FailoverParty, FailoverRouting } from "./failoverN
 //    are not the same release: an API older than 0.43.0 ignores the query and
 //    answers the whole account listing, with key suffixes. Such an answer has
 //    no `view: "notices"` mark, is refused with a fixed error and is dropped.
+// 5. Size: the API carries at most its 50 newest pending notices and their
+//    total (NOTICES_VIEW_LIMIT in src/credentials/store.ts), so its answer
+//    stays far below the limits kept here as a second line. An answer over
+//    them is refused like any other that is not the view, and the console
+//    reports a read that keeps failing instead of showing old state in
+//    silence (createNoticeReadTracker in failoverNotices.ts).
 
 export const NOTICES_VIEW = "notices";
 
-export type FailoverNoticesView = { view: typeof NOTICES_VIEW; notices: FailoverNotice[]; routing: FailoverRouting };
+export type FailoverNoticesView = { view: typeof NOTICES_VIEW; notices: FailoverNotice[]; total: number; routing: FailoverRouting };
 
 /** True when the query string is exactly `view=notices`. */
 export function isExactNoticesQuery(search: URLSearchParams): boolean {
@@ -41,7 +47,9 @@ const NOTICE_KINDS = ["moved", "blocked", "stopped"] as const;
 const NOTICE_REASONS = ["rejected", "exhausted"] as const;
 const ROUTING_STATES = ["legacy", "account", "blocked", "unavailable"] as const;
 const UNAVAILABLE_REASONS = ["account_disabled", "key_revoked", "provider_mismatch"] as const;
-const TOP_LEVEL_FIELDS = ["notices", "routing", "view"];
+const TOP_LEVEL_FIELDS = ["notices", "routing", "total", "view"];
+// An API from 0.43.0 to 0.43.5 sends every pending notice and no `total`.
+const TOP_LEVEL_FIELDS_BEFORE_TOTAL = ["notices", "routing", "view"];
 const MAX_BODY_CHARS = 262_144;
 const MAX_NOTICES = 500;
 const MAX_ID = 64;
@@ -105,14 +113,19 @@ function readRouting(value: unknown): FailoverRouting | undefined {
 /**
  * Reads an API answer as the notices view and returns a NEW object holding the
  * allowed fields only, or nothing when the answer is anything else. The top
- * level must be exactly `view: "notices"`, `notices` and `routing`: an answer
- * without the mark, or carrying any other field (such as `accounts`), is not
- * this view. Inside a notice or the routing, every allowed field must be
- * present and well formed; a field this code does not know is left behind.
+ * level must be exactly `view: "notices"`, `notices`, `total` and `routing`,
+ * or the same without `total` (an API from 0.43.0 to 0.43.5, where the list is
+ * every pending notice and so is its own total): an answer without the mark,
+ * or carrying any other field (such as `accounts`), is not this view. `total`
+ * is a whole number of any size, never less than the notices carried. Inside a notice or
+ * the routing, every allowed field must be present and well formed; a field
+ * this code does not know is left behind.
  */
 export function readNoticesView(body: unknown): FailoverNoticesView | undefined {
   if (!isRecord(body) || body.view !== NOTICES_VIEW) return undefined;
-  if (Object.keys(body).sort().join() !== TOP_LEVEL_FIELDS.join()) return undefined;
+  const fields = Object.keys(body).sort().join();
+  const carriesTotal = fields === TOP_LEVEL_FIELDS.join();
+  if (!carriesTotal && fields !== TOP_LEVEL_FIELDS_BEFORE_TOTAL.join()) return undefined;
   if (!Array.isArray(body.notices) || body.notices.length > MAX_NOTICES) return undefined;
   const notices: FailoverNotice[] = [];
   for (const item of body.notices) {
@@ -120,9 +133,12 @@ export function readNoticesView(body: unknown): FailoverNoticesView | undefined 
     if (!notice) return undefined;
     notices.push(notice);
   }
+  const total = carriesTotal ? body.total : notices.length;
+  // `total` has no ceiling of its own: the count of pending notices must never be a reason to refuse the view.
+  if (typeof total !== "number" || !Number.isSafeInteger(total) || total < notices.length) return undefined;
   const routing = readRouting(body.routing);
   if (!routing) return undefined;
-  return { view: NOTICES_VIEW, notices, routing };
+  return { view: NOTICES_VIEW, notices, total, routing };
 }
 
 export async function proxyFailoverNotices(request: Request): Promise<Response> {

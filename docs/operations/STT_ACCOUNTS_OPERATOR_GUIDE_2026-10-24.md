@@ -62,6 +62,14 @@ estas diferencias, con el interruptor apagado o encendido:
 - **La pantalla se actualiza sola** cada 20 segundos, y una banda en la parte
   superior de todas las pantallas te avisa si hay un aviso pendiente o si los
   trabajos nuevos se están rechazando.
+- **Si la banda dice «Estado sin comprobar».** Significa que la consola no ha
+  podido leer el estado de las cuentas dos veces seguidas, así que lo que
+  muestra puede estar desactualizado. Lo vuelve a intentar sola y el mensaje
+  desaparece en cuanto una lectura sale bien. Si no desaparece, recarga la
+  página; si sigue, el servicio no está respondiendo.
+- **Si hay muchos avisos pendientes.** La banda cuenta el más reciente y dice
+  cuántos más hay. Todos están en esta pantalla, cada uno con su botón
+  **Descartar aviso**.
 - **Cuenta elegida que no puede trabajar.** Si desactivas la cuenta elegida o
   revocas su clave actual, los trabajos nuevos se rechazan. La línea **Nuevos
   trabajos** y la banda lo dicen con el motivo («la cuenta elegida está

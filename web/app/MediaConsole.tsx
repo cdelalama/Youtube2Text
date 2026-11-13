@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { components } from "../lib/apiTypes.gen";
 import ProviderAccounts, { REFRESH_MS } from "./settings/ProviderAccounts";
-import { failoverNoticeText, failoverNoticeTitle, failoverRoutingText, routingRefusesNewWork, type FailoverNotice, type FailoverRouting } from "../lib/failoverNotices";
+import { createNoticeReader, failoverNoticeText, failoverNoticeTitle, failoverReadFailureText, failoverRoutingText, moreNoticesCount, routingRefusesNewWork, type FailoverNotice, type FailoverRouting } from "../lib/failoverNotices";
 import { createSnapshotGate } from "../lib/snapshotGate";
 
 type RunRecord = components["schemas"]["RunRecord"];
@@ -342,8 +342,11 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
   const [toast, setToast] = useState<string | undefined>();
   const [failoverNotices, setFailoverNotices] = useState<FailoverNotice[]>([]);
   const [failoverRouting, setFailoverRouting] = useState<FailoverRouting | undefined>();
+  const [failoverNoticeTotal, setFailoverNoticeTotal] = useState<number | undefined>();
+  const [failoverReadFailed, setFailoverReadFailed] = useState(false);
   const lastNoticeRefresh = useRef(0);
   const noticeGate = useRef(createSnapshotGate()).current;
+  const noticeReader = useRef(createNoticeReader(noticeGate)).current;
   const [busy, setBusy] = useState<string | undefined>();
   const [settingsDraft, setSettingsDraft] = useState<Record<string, string>>({});
   const [watchDraftUrl, setWatchDraftUrl] = useState("");
@@ -378,10 +381,15 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
   // suffix of the existing configuration reaches the other screens.
   async function refreshFailoverNotices() {
     lastNoticeRefresh.current = Date.now();
-    const read = noticeGate.beginRead();
-    const view = await maybeJson<{ notices?: FailoverNotice[]; routing?: FailoverRouting }>("/api/provider-accounts?view=notices");
-    if (!view || !noticeGate.accepts(read)) return;
+    const token = noticeReader.begin();
+    const view = await maybeJson<{ notices?: FailoverNotice[]; total?: number; routing?: FailoverRouting }>("/api/provider-accounts?view=notices");
+    // A read that keeps failing is said on the banner: what it shows may be old. Only an answer that is
+    // applied clears that; one dropped because the screen changed meanwhile leaves it as it was.
+    const outcome = noticeReader.settle(token, view !== undefined);
+    setFailoverReadFailed(outcome.warn);
+    if (!outcome.apply || !view) return;
     setFailoverNotices(view.notices ?? []);
+    setFailoverNoticeTotal(view.total);
     setFailoverRouting(view.routing);
   }
 
@@ -691,18 +699,25 @@ export function MediaConsole({ initialScreen = "status" }: { initialScreen?: Scr
           </div>
         </header>
         <main className="m2t-content">
-          {failoverNotices.length > 0 || routingRefusesNewWork(failoverRouting) ? (
+          {failoverNotices.length > 0 || routingRefusesNewWork(failoverRouting) || failoverReadFailed ? (
             <div role="alert">
               <button className="m2t-failover-banner" onClick={() => go("settings")}>
+                {failoverReadFailed ? (
+                  <><strong>{t(lang, "Estado sin comprobar.", "State not checked.")}</strong>{" "}{failoverReadFailureText((es, en) => t(lang, es, en))}{" "}</>
+                ) : null}
                 {failoverNotices.length > 0 ? (
                   <>
                     <strong>{failoverNoticeTitle(failoverNotices[0]!, (es, en) => t(lang, es, en))}.</strong>{" "}
                     {failoverNoticeText(failoverNotices[0]!, (es, en) => t(lang, es, en))}
-                    {failoverNotices.length > 1 ? t(lang, ` Hay ${failoverNotices.length - 1} aviso(s) más.`, ` There are ${failoverNotices.length - 1} more notice(s).`) : ""}{" "}
+                    {moreNoticesCount(failoverNoticeTotal, failoverNotices.length) > 0
+                      ? t(lang, ` Hay ${moreNoticesCount(failoverNoticeTotal, failoverNotices.length)} aviso(s) más.`,
+                        ` There are ${moreNoticesCount(failoverNoticeTotal, failoverNotices.length)} more notice(s).`) : ""}{" "}
                   </>
-                ) : <><strong>{t(lang, "Los trabajos nuevos se rechazan.", "New jobs are refused.")}</strong>{" "}</>}
+                ) : routingRefusesNewWork(failoverRouting)
+                  ? <><strong>{t(lang, "Los trabajos nuevos se rechazan.", "New jobs are refused.")}</strong>{" "}</> : null}
                 {failoverRouting ? `${failoverRoutingText(failoverRouting, (es, en) => t(lang, es, en))} ` : ""}
-                {failoverNotices.length === 0 ? t(lang, "Abre Ajustes para resolverlo.", "Open Settings to fix it.")
+                {failoverNotices.length === 0
+                  ? (routingRefusesNewWork(failoverRouting) ? t(lang, "Abre Ajustes para resolverlo.", "Open Settings to fix it.") : "")
                   : screen === "settings"
                     ? t(lang, "Descártalo más abajo, en Cuentas de transcripción.", "Dismiss it below, under Transcription accounts.")
                     : t(lang, "Abre Ajustes para revisarlo y descartarlo.", "Open Settings to review and dismiss it.")}

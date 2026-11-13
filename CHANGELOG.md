@@ -5,6 +5,19 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.43.6] - 2026-11-13
+
+### Fixed
+
+- The banner's read of pending failover notices can no longer be pushed past the web proxy's limits by the number of notices. `GET /provider-accounts?view=notices` now carries at most the 50 newest pending notices (`NOTICES_VIEW_LIMIT`) and `total`, the count of all of them; before, it carried every pending notice, and with more than 500, or an answer over 262,144 characters, the proxy refused it and the console kept showing what it last knew without saying so. First follow-up of the fifth independent review (docs/llm/REVIEWS.md).
+- A banner read that fails is said on the banner. From the second failed read in a row every screen shows "Estado sin comprobar" with a sentence that what is shown may be out of date; one applied answer clears it, and an answer dropped because the screen changed meanwhile does not.
+
+### Changed
+
+- The web proxy of the notices view reads `total` (a whole number of any size, never less than the notices carried) and still accepts the view of an API from 0.43.0 to 0.43.5, which has no `total`: its list is its own total. The banner's "there are N more" uses the total.
+- `openapi.yaml`: `FailoverNoticesView` requires `total` and bounds `notices` to 50 items.
+- Operator guide: what "Estado sin comprobar" means and where every pending notice is listed.
+
 ## [0.43.5] - 2026-11-12
 
 Answers the fourth independent review (of 0.43.4: do not merge yet, two release

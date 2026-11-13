@@ -5,6 +5,13 @@ import { DatabaseSync } from "node:sqlite";
 import type { AppConfig, SttProviderId } from "../config/schema.js";
 
 export const PROVIDERS = ["assemblyai", "deepgram", "openai_whisper"] as const;
+/**
+ * How many pending notices the banner's view carries, newest first. The view
+ * also says how many are pending in all, and the accounts screen lists every
+ * one. The bound keeps the answer far below what the web proxy accepts
+ * (web/lib/failoverNoticesProxy.ts), whatever number of notices is pending.
+ */
+export const NOTICES_VIEW_LIMIT = 50;
 export type CredentialPin = { provider: SttProviderId; accountId: string; credentialId: string };
 export type AccessCheck = { state: "accepted" | "rejected" | "permission_unknown" | "unavailable"; checkedAt: string };
 export type KeyRefusalKind = "rejected" | "exhausted";
@@ -511,12 +518,19 @@ export class CredentialStore {
     const account = this.account(accountId);
     return { accountId, label: account.label, provider: account.provider, keyHint: `••••${this.credential(credentialId).hint}` };
   }
-  notices(): FailoverNotice[] {
-    const rows = this.db.prepare("SELECT * FROM failover_notices WHERE dismissed_at IS NULL ORDER BY last_at DESC, id").all() as NoticeRow[];
+  /** Pending notices, newest first: all of them, or only the first `limit`. */
+  notices(limit?: number): FailoverNotice[] {
+    const rows = (limit === undefined
+      ? this.db.prepare("SELECT * FROM failover_notices WHERE dismissed_at IS NULL ORDER BY last_at DESC, id").all()
+      : this.db.prepare("SELECT * FROM failover_notices WHERE dismissed_at IS NULL ORDER BY last_at DESC, id LIMIT ?")
+        .all(Math.max(0, Math.floor(limit)))) as NoticeRow[];
     return rows.map((row) => ({ id: row.id, kind: row.kind, reason: row.reason, status: row.status,
       from: this.party(row.from_account_id, row.from_credential_id),
       to: row.to_account_id && row.to_credential_id ? this.party(row.to_account_id, row.to_credential_id) : null,
       serviceChanged: Boolean(row.service_changed), count: row.count, firstAt: row.first_at, lastAt: row.last_at }));
+  }
+  pendingNoticeCount(): number {
+    return (this.db.prepare("SELECT COUNT(*) AS n FROM failover_notices WHERE dismissed_at IS NULL").get() as { n: number }).n;
   }
   dismissNotice(noticeId: string): void {
     this.atomic(() => {
@@ -545,9 +559,9 @@ export class CredentialStore {
    * `blocked` means the switch is on, the selected key is marked unhealthy and
    * nothing listed can take over.
    */
-  failoverState(provider: SttProviderId) {
+  failoverState(provider: SttProviderId, noticeLimit?: number) {
     const enabled = this.failoverEnabled();
-    const notices = this.notices();
+    const notices = this.notices(noticeLimit);
     const selection = this.selection(provider);
     let effective: CredentialPin | null = null;
     let blocked = false;
@@ -566,17 +580,20 @@ export class CredentialStore {
    * inside a notice. `state` tells apart the existing configuration, a working
    * account, a selected account that refuses new work, and nothing left.
    * `view` marks the answer, so a reader can tell it from the account listing
-   * that an older API returns for the same request.
+   * that an older API returns for the same request. `notices` holds at most
+   * NOTICES_VIEW_LIMIT, newest first; `total` counts every pending notice, so
+   * the banner can say how many more there are. Both are read in one
+   * synchronous pass, so they describe the same moment.
    */
   noticesView(provider: SttProviderId) {
-    const view = this.failoverState(provider);
+    const view = this.failoverState(provider, NOTICES_VIEW_LIMIT);
     const { selection } = view;
     const state = selection.state === "legacy" ? "legacy" as const
       : selection.state === "unavailable" ? "unavailable" as const
         : view.blocked ? "blocked" as const : "account" as const;
     const accountId = view.effective?.accountId ?? (selection.state === "legacy" ? undefined : selection.accountId);
     const account = accountId ? this.account(accountId) : undefined;
-    return { view: "notices" as const, notices: view.notices, routing: { enabled: view.enabled, state,
+    return { view: "notices" as const, notices: view.notices, total: this.pendingNoticeCount(), routing: { enabled: view.enabled, state,
       reason: selection.state === "unavailable" ? selection.reason : null,
       provider: account?.provider ?? provider, accountLabel: account?.label ?? null } };
   }

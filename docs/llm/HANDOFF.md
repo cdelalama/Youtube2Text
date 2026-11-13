@@ -1,6 +1,8 @@
-## Automatic key and account failover: deployed with the switch off - 2026-11-12
+## Automatic key and account failover: notice-limit fix reviewed (0.43.6); 0.43.5 deployed with the switch off - 2026-11-13
 
-Last Updated: 2026-11-12 - Claude (Fable 5.2).
+Last Updated: 2026-11-13 - Claude (Fable 5.2).
+
+- Candidate: 0.43.6 in source, fixing the first follow-up of the fifth review (the band's read is bounded at the API to the 50 newest pending notices plus their total, and a read that keeps failing is said on the band). Two independent passes by Codex, the second with verdict GO (docs/llm/REVIEWS.md). Deployment follows in the same session and is recorded below when done.
 
 - Version: 0.43.5 on main and deployed to the NAS on 2026-11-12 (20:40 UTC) from 6bab5a283ab8aed7558816790dea405583a4a068, after Carlos's go-ahead ("Haz todo"). Images: registry.lamanoriega.com/youtube2text-api:0.43.5@sha256:e442245a0f8b845e28ce204fe91bb2e4ceb8ad98fe802610dadd58fdf6dab74f and youtube2text-web:0.43.5@sha256:2919026ac111f073a7f0dc7fb3dbf05f7c6ce926b87b1168ce050b8aec4fe99c. Previous: 0.42.2 (rollback: scripts/deploy-nas.sh --rollback 0.42.2).
 
@@ -118,29 +120,28 @@ budget increase or secret change occurred.
 
 ### Open work - next concrete step
 
-Fix the first follow-up of the fifth review (docs/llm/REVIEWS.md: pending
-notices past 500 entries or 262,144 characters stop the band from updating,
-silently) in src/credentials/store.ts, web/lib/failoverNoticesProxy.ts and the
-web refresh, have it reviewed by a different model family, and deploy it.
-After that Carlos opens Settings > Cuentas de transcripcion at
+Deploy 0.43.6 with docs/operations/DEPLOY_PLAYBOOK.md (scripts/deploy-nas.sh
+0.43.6, not wrapped in dev-stage) and read back that the stored switch is still
+off. After that the first follow-up no longer stands between Carlos and the
+switch: he opens Settings > Cuentas de transcripcion at
 https://y2t.lamanoriega.com/?screen=settings, checks that a saved account is
 selected, adds his accounts to the list, orders them and turns on the switch;
-he should see the switch stay on and the list in his order. The other two
-follow-ups (uncertain provider activation shown as failed; failed status read
-leaving the aggregate green) are tracked in the same review entry. Earlier work
-keeps its own scope and priority: the account delivery witness, M1-M3 and the
-long-recording economics.
+he should see the switch stay on and the list in his order. Tracked, not
+blocking (docs/llm/REVIEWS.md): two failed band reads finishing in reverse
+order count as one; an uncertain provider activation shown as failed; a failed
+status read leaving the aggregate green. Earlier work keeps its own scope and
+priority: the account delivery witness, M1-M3 and the long-recording economics.
 
 ### Trace Anchor
 
 - Role: executor
-- Sent: 2026-11-12 21:44:00 CET (20:44:00 UTC)
-- Subject: D-029 automatic key and account failover; 0.43.5 deployed to the NAS with the switch off
-- Resulting state: main at the deployed source 6bab5a2 plus documentation; version=0.43.5; gate=first follow-up of the fifth review before the switch is turned on
-- Repo state: primary checkout on main, equal to origin/main; task branch work/stt-failover-20261112 merged
-- Validation: release gates on 6bab5a2 (279 of 279 tests, 4 of 4 verifier tests, builds, contract checks); scripts/deploy-nas.sh verification passed; read-back of the stored switch (off), anonymous refusals and loopback bind
-- Next gate: executing agent fixes the notice-limit follow-up with independent review; Carlos then turns the switch on
-- Dossier: native local capture L4 (observed 2026-11-12T21:03:44Z, Spanish, local:4bb0259c9a4cb57c77a0a5c477b6f51194488b4ebc9c443ade7a3cd8842a16b8) from the curated source at 6dc5faf, reviewed by Codex gpt-6-astra (session 01a1d188-5b63-7a40-ab16-011d33019c98, GO WITH FIXES, ten wording findings applied with the reviewer's text and not reviewed again); export verified by trace; read back through Portal's temporary local reader (four records, new headline, page 200). Not shared: publication to the shared reader was not attempted
+- Sent: 2026-11-13 01:20:27 CET (00:20:27 UTC)
+- Subject: D-029 automatic key and account failover; notice-limit follow-up fixed as 0.43.6 and reviewed
+- Resulting state: task branch work/stt-notice-limit-20261113 at 0.43.6; gate=deployment with the switch off; production still 0.43.5
+- Repo state: managed task worktree from published main eaf7bba; primary checkout untouched until the merge
+- Validation: tests/sttFailover.test.ts 32 of 32; backend and web tsc --noEmit exit 0; openapi lint valid; Codex second pass GO (session 01a1d241-10a6-7d61-b0d2-7156b3042421). The full suite and the builds run as the deployment's gates
+- Next gate: executing agent deploys 0.43.6; then Carlos may turn the switch on
+- Dossier: refresh_required for 0.43.6 once deployed; L4 (local) describes 0.43.5 and says not to turn the switch on yet
 
 ## Media2Text account delivery readback - 2026-10-24
 
@@ -259,7 +260,7 @@ The executor publishes the qualified source and immutable images and the existin
 - Next gate: executor qualifies focused review and actual deployment/access/recovery
 - Dossier: refresh_required; previous native/shared history retained; new reader revision unavailable
 
-<!-- doc-version: 0.43.5 -->
+<!-- doc-version: 0.43.6 -->
 
 ## Current continuation - approved STT account administration, 2026-10-23
 

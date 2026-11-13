@@ -103,8 +103,9 @@ or any response that another screen needs.
   accounts screen. Any other query on that route is refused with 400.
 - The web proxy of that read (`web/lib/failoverNoticesProxy.ts`) never passes on
   what the API sent. The API marks the answer with `view: "notices"`. The proxy
-  accepts only a body whose top level is exactly `view`, `notices` and
-  `routing`, checks every allowed field of each notice and of the routing, and
+  accepts only a body whose top level is exactly `view`, `notices`, `total` and
+  `routing` (or the same without `total`, which is what 0.43.0 to 0.43.5 send),
+  checks every allowed field of each notice and of the routing, and
   builds a new response from those fields. Anything else is answered with a
   fixed error (`api_answer_not_notices_view`, or `api_refused_notices` when the
   API did not answer 200) and the API's body is dropped. This is what makes a
@@ -114,6 +115,20 @@ or any response that another screen needs.
   banner gets the fixed error and shows nothing; no account data reaches the
   other screens. A field inside a notice or the routing that this web release
   does not know is left behind, not passed on.
+- The view is bounded at its source since 0.43.6. The API carries at most the
+  50 newest pending notices (`NOTICES_VIEW_LIMIT` in
+  `src/credentials/store.ts`) and `total`, the count of every pending notice.
+  With every field at its longest, such an answer is about a quarter of what
+  the proxy accepts (262,144 characters; 500 notices), so the number of pending
+  notices can no longer push it over those limits. The accounts screen reads
+  the full snapshot and still lists every pending notice, each with its dismiss
+  button; dismissing the newest brings the next one into the view.
+- A banner read that fails is no longer silent. The console counts failed reads
+  of the view; from the second in a row it shows, on every screen, that the
+  state of the transcription accounts could not be checked and that what it
+  shows may be out of date, and it keeps retrying. One answer that is applied
+  clears it; an answer dropped because the screen changed meanwhile (the
+  snapshot gate) leaves the warning and the count of failures as they were.
 
 Provider text is closed off for every provider error, not only for refusals.
 A provider can echo a key in its answer, whole or in fragments, and no filter
@@ -225,6 +240,10 @@ Routing does not change until the switch is on. These things do:
 9. An AssemblyAI job identifier no longer appears in any log line or error.
 10. A change on the accounts screen whose answer is lost is not sent again; the
     stored state is read back and shown, with a message that says so.
+11. Since 0.43.6 the banner's read carries the 50 newest pending notices and
+    their total, and the banner says "there are N more" from that total. When
+    the read fails twice in a row the banner says that the state could not be
+    checked, also with no notice pending.
 
 ## Order of attempts
 
@@ -433,12 +452,25 @@ off).
 
 ## Known limits
 
-- Open from the fifth review, to fix before the switch is turned on: with more
-  than 500 pending notices, or an answer over 262,144 characters, the band
-  stops updating and does not say so.
+- Closed in 0.43.6 (first follow-up of the fifth review): pending notices past
+  the proxy's limits used to stop the band from updating in silence. The view
+  is now bounded at the API and a failing read is said on the band.
 - Open from the fifth review: a provider activation whose answer is lost can be
   shown as failed although it was stored; a failed read of the account state
   leaves the public status `ok`.
+- While the two containers are not the same release: a 0.43.5 web in front of
+  a 0.43.6 API refuses the view (it does not know `total`), so its band shows
+  nothing new until the web is replaced, which the deployment does seconds
+  later; a 0.43.6 web in front of a 0.43.5 API works and takes the total from
+  the list, within that API's old limits: past 500 pending notices its answer
+  is still refused, and the band now says that the state could not be checked.
+- The band's wording and conditions are not exercised by a rendering test; the
+  rules behind them (`createNoticeReader`, `moreNoticesCount`) are.
+- Open from the review of 0.43.6, minor: two failed reads of the band that
+  finish in reverse order count as one, so the "state not checked" warning can
+  appear one attempt (20 seconds) later than the second failure.
+- The band spells out one notice and counts the rest. With more than 50 pending
+  it still counts all of them, but only the accounts screen lists them.
 - A refused request still reaches the provider once per job pinned to that key.
   With AssemblyAI the audio is uploaded before the create call is refused.
 - An access check cannot prove credit, so it never clears "out of credit"; only
@@ -468,7 +500,7 @@ off).
 
 ## Validation
 
-`tests/sttFailover.test.ts`, 31 tests, all with local fakes: same-account next
+`tests/sttFailover.test.ts`, 32 tests, all with local fakes: same-account next
 key; next account after every key; cross-service move and transcript provider;
 no move on timeout, network error, 5xx, rate limit and post-acceptance failures;
 no move after a 2xx or after the upload; switch off identical to an unpinned

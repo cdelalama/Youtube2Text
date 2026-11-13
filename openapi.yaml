@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Media2Text API
-  version: 0.43.5
+  version: 0.43.6
   description: |
     Minimal local HTTP API for Media2Text, backed by the youtube2text engine.
     Notes:
@@ -2866,11 +2866,14 @@ components:
       description: Pending notices and where new work goes now. A key hint appears
         only inside a notice. `view` marks this answer, so a reader can tell it
         from the account listing that a release before 0.43.0 returns for the
-        same request.
+        same request. `notices` carries at most the 50 newest; `total` counts
+        every pending notice (releases 0.43.0 to 0.43.5 sent every notice and
+        no `total`).
       additionalProperties: false
       required:
         - view
         - notices
+        - total
         - routing
       properties:
         view:
@@ -2879,8 +2882,14 @@ components:
             - notices
         notices:
           type: array
+          maxItems: 50
           items:
             $ref: "#/components/schemas/FailoverNotice"
+        total:
+          type: integer
+          minimum: 0
+          description: Every pending notice, including those not carried in
+            `notices`.
         routing:
           type: object
           additionalProperties: false
