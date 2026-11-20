@@ -47,7 +47,7 @@ Installed account UI is usable. Complete the existing-password event binding and
 
 Media2Text 0.42.2 is installed and its real account/login/recovery checks pass. Follow docs/llm/HANDOFF.md and the operator guide; formal access metadata and reviewed documentary delivery remain open. Earlier independent priorities are unchanged.
 
-<!-- doc-version: 0.43.6 -->
+<!-- doc-version: 0.43.7 -->
 
 ## Current continuation - approved STT account administration, 2026-10-23
 
@@ -566,6 +566,22 @@ review constraints remain in force. Projects that exclude this section through
 The source policy belongs to LLM-DocKit; Claude Code's user `model` setting is a
 separate runtime default and does not prove that project copies were synchronized.
 <!-- DOCKIT-TEMPLATE:END independent-review-policy -->
+
+<!-- DOCKIT-TEMPLATE:START runtime-lifecycle -->
+### Retire disposable test runtime
+
+Follow docs/RUNTIME_LIFECYCLE.md whenever a task creates disposable runtime.
+Preserve durable evidence outside the container, then retire its exact ID and
+verify disappearance before declaring success. Persist creation intent and run ID;
+reconcile interrupted attempts before retrying. A failed cleanup stops that
+producer. Respect host creation holds and allocation checks before engine writes.
+Debug holds require an owner, reason, finite lease and next action. Record one
+sanitized receipt per run in docs/llm/runtime; none is task-specific with a reason,
+never inferred from missing records. Use scripts/dockit-runtime.py --strict for
+runtime closeout. Do not delete unknown objects, data volumes, images or historical
+snapshots by age. DocKit checks declarations; host reconciliation finds undeclared
+objects. Installing this rule does not install a garbage collector.
+<!-- DOCKIT-TEMPLATE:END runtime-lifecycle -->
 
 <!-- DOCKIT-TEMPLATE:START footer -->
 ---

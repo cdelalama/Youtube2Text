@@ -1,3 +1,9 @@
+Last Updated: 2026-11-20 - Codex (shared tooling installation; historical observations preserved).
+
+- Version: 0.43.7 source tooling update; observed NAS runtime remains 0.43.6.
+
+Last Updated: 2026-11-20 - Codex (shared tooling installation; historical observations preserved).
+
 ## Automatic key and account failover: 0.43.6 deployed with the switch off; the operator may turn it on - 2026-11-13
 
 Last Updated: 2026-11-13 - Claude (Fable 5.2).
@@ -258,7 +264,7 @@ The executor publishes the qualified source and immutable images and the existin
 - Next gate: executor qualifies focused review and actual deployment/access/recovery
 - Dossier: refresh_required; previous native/shared history retained; new reader revision unavailable
 
-<!-- doc-version: 0.43.6 -->
+<!-- doc-version: 0.43.7 -->
 
 ## Current continuation - approved STT account administration, 2026-10-23
 
@@ -783,6 +789,10 @@ roadmap.
   diff check, and npm audit with zero vulnerabilities.
 
 ## Current Status
+
+- Last Updated: 2026-11-20 - Codex (shared tooling only).
+
+Shared tooling maintenance (2026-11-20): adopted reviewed LLM-DocKit aa04548 disposable-runtime lifecycle and advisory receipt checks. Undeclared runtime coverage is unproven. No application runtime or roadmap acceptance changed. See docs/RUNTIME_LIFECYCLE.md.
 
 - Last Updated: 2026-10-01 - Codex (M0 operator acceptance).
 - Source tooling: DocKit 4.16.3 adopted; see `docs/llm/DOCKIT_ADOPTION.md`.

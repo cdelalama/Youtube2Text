@@ -1,4 +1,6 @@
-<!-- doc-version: 0.43.6 -->
+v0.43.7 candidate source: reviewed disposable-runtime tooling only; deployed NAS application remains 0.43.6.
+
+<!-- doc-version: 0.43.7 -->
 # Project Context - Media2Text
 
 ## Vision

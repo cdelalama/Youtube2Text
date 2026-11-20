@@ -5,6 +5,12 @@ is tracked by `docs/version-sync-manifest.yml` and updated via
 `scripts/bump-version.sh`.
 For the detailed, append-only session log see `docs/llm/HISTORY.md`.
 
+## [0.43.7] - 2026-11-20
+
+### Changed
+
+- Adopt reviewed disposable-runtime lifecycle and advisory receipt validation; runtime unchanged.
+
 ## [0.43.6] - 2026-11-13
 
 ### Fixed
