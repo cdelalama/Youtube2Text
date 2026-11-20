@@ -569,6 +569,15 @@
         "REF-D-029"
       ],
       "no_ideas_reason": null
+    },
+    {
+      "task": "docs/llm/work/stt-notice-limit-20261113.json",
+      "ideas": [
+        "IDEA-0009",
+        "IDEA-0010",
+        "REF-D-029"
+      ],
+      "no_ideas_reason": null
     }
   ]
 }

@@ -1,6 +1,7 @@
-Last Updated: 2026-11-20 - Codex (shared tooling installation; historical observations preserved).
+Last Updated: 2026-11-20 - Claude (Opus 5.5) (task-workspace dispositions: all ten youtube2text worktrees closed; Codex shared tooling installation of the same day preserved).
 
 - Version: 0.43.7 source tooling update; observed NAS runtime remains 0.43.6.
+- Task workspaces (2026-11-20): all ten checkouts under ~/src/.worktrees/youtube2text are clean, their commits are on origin/main and their ledger records are closed (docs/llm/WORK_INDEX.md). They are retained, not deleted: retiring them (about 2.7 GB, mostly node_modules and web/.next) waits for a Home Infra custody procedure for closed, merged worktrees. The open follow-ups that the three newly closed records name stay open here: the existing-password event binding and owner delivery witness for the account UI, and Carlos turning the failover switch on plus the separate Sentinel notice.
 
 Last Updated: 2026-11-20 - Codex (shared tooling installation; historical observations preserved).
 

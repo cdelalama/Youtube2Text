@@ -1,3 +1,4 @@
+2026-11-20 - Claude (Opus 5.5) - On Carlos's go-ahead ("Sí a todo") recorded closed dispositions for the last three open task workspaces (provider-accounts-implementation-20261023, stt-failover-20261112, stt-notice-limit-20261113) through task-workspace disposition, exported their records to docs/llm/work (stt-notice-limit had none) and updated docs/llm/WORK_INDEX.md. All ten worktrees are clean and contained in origin/main; none was removed or pruned (Home Infra custody still forbids it). Remaining follow-ups stay in HANDOFF. Docs only; no code, version or runtime change.
 2026-11-20 - Codex - Selectively installed reviewed DocKit aa04548 disposable-runtime policy and advisory checker; managed hashes/selected checks recorded by Home Infra. Runtime and product priorities unchanged; Dossier no_change for tooling-only adoption.
 ## 2026-11-13 - Dossier refreshed locally for 0.43.6 (L5)
 

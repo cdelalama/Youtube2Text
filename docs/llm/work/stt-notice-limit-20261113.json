@@ -1,0 +1,10 @@
+{
+  "artifacts": [],
+  "branch": "work/stt-notice-limit-20261113",
+  "id": "stt-notice-limit-20261113",
+  "next_step": "Checkout task closed 2026-11-20; 0.43.6 merged and deployed to the NAS on 2026-11-13 after a Codex GO. Remaining failover follow-ups (operator switch, Sentinel notice) are tracked in the project HANDOFF.",
+  "project": "youtube2text",
+  "purpose": "Bound the failover notices view and report failed banner reads (first follow-up of the fifth review of D-029)",
+  "schema": 1,
+  "state": "closed"
+}

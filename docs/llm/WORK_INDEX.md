@@ -17,6 +17,8 @@ This index records custody and disposition, not permission to delete a checkout.
 
 - [provider-accounts-ui-20261023](work/provider-accounts-ui-20261023.json): closed proposal; authenticated UI inspection and exact Opus consensus/source review complete. Multi-account credential management remains unimplemented; retain checkout and private evidence.
 
-- [provider-accounts-implementation-20261023](work/provider-accounts-implementation-20261023.json): pending-integration; Installed account UI is usable. Complete the existing-password event binding and owner delivery witness after Home/Sentinel documentary holds are resolved; no audio or budget change is authorized.
+- [provider-accounts-implementation-20261023](work/provider-accounts-implementation-20261023.json): closed 2026-11-20; account UI shipped and installed. The existing-password event binding and owner delivery witness remain open in HANDOFF after the Home/Sentinel documentary holds.
 
-- [stt-failover-20261112](work/stt-failover-20261112.json): pending-integration; source 0.43.5 for automatic key and account failover with operator notice (D-029) is prepared on the task branch, not deployed. It answers the fourth independent review; the next review, merge, deployment and the separate Sentinel notification work remain. Retain this checkout.
+- [stt-failover-20261112](work/stt-failover-20261112.json): closed 2026-11-20; 0.43.5 merged and deployed (2026-11-12), superseded by 0.43.6. Carlos turning the switch on and the separate Sentinel notice remain open in HANDOFF.
+
+- [stt-notice-limit-20261113](work/stt-notice-limit-20261113.json): closed 2026-11-20; 0.43.6 merged and deployed (2026-11-13) after a Codex GO. Remaining failover follow-ups are tracked in HANDOFF.
